@@ -6,8 +6,8 @@ leyendo el código, no es creencia.
 
 **Re-verificado el 2026-11-07 a las 15:30 por el agente nuevo**, leyendo el repo completo
 y corriendo las pruebas en otra máquina (Windows 11, Python 3.14, scikit-learn 1.9.1).
-Resultado: **TODO OK, 81 pruebas** (49 del motor y de las noticias RSS + 32 nuevas de la
-puerta de Brio; la prueba V corre en 3 tamaños).
+Resultado: **TODO OK, 90 pruebas** (49 del motor y de las noticias RSS + 32 de la puerta de
+Brio + 9 del bloque VA de ventaja; la prueba V corre en 3 tamaños).
 Los números "24" y "39" que aparecían en el README estaban desactualizados.
 Lo que este agente corrigió o confirmó está marcado en la sección 8.
 
@@ -56,7 +56,7 @@ Se corrigió leyendo el repo, no recordando. Estado real, verificado archivo por
 | 8 | README con los números reales | **hecho ahora** |
 
 Después de cada cambio corro `py -3.12 bot/pruebas.py`. Si no sale TODO OK, no sigue nada.
-Hoy: **81 pruebas, TODO OK** (contadas en la salida real, no en el documento).
+Hoy: **90 pruebas, TODO OK** (contadas en la salida real, no en el documento).
 
 ### La parte C, en limpio (lo que está y lo que no)
 
@@ -64,10 +64,10 @@ Hoy: **81 pruebas, TODO OK** (contadas en la salida real, no en el documento).
 |---|---|---|
 | 1 | Calculadora de riesgo por moneda | **hecha ahora**: sigue a la moneda que estás mirando, no solo a Bitcoin |
 | 2 | Alertas que sí sirven | hechas (filtro de importancia + freno de 90 min) |
-| 3 | Comparador de monedas | **no está** — queda pendiente |
+| 3 | Comparador de monedas | **hecho ahora** (panel, hasta 3 monedas lado a lado, commit 23542b1) |
 | 4 | Historial de miedo y codicia 90 días | **hecho ahora** (vista On-chain, con datos reales) |
-| 5 | Simulador "qué hubiera pasado si" | **no está** — queda pendiente |
-| 6 | Lista de seguimiento personal (favoritos) | **no está** — queda pendiente |
+| 5 | Simulador "qué hubiera pasado si" | **hecho ahora** (laboratorio, comprar-y-sostener vs DCA vs nada, commit 23542b1) |
+| 6 | Lista de seguimiento personal (favoritos) | **hecho ahora** (★ en la lista + filtro, en localStorage, commit 23542b1) |
 | 7 | Explicación en una frase por pantalla | **hecho ahora**: barra "Para qué sirve" en las 8 vistas |
 | 8 | Modo claro/oscuro y celular | estaba; se le sumó la barra nueva en responsive |
 | 9 | Fuente y antigüedad de cada dato | estaba en noticias; **no está en todas las tarjetas** |
@@ -104,8 +104,10 @@ Dos cosas que salieron del camino y valen más que la tabla:
 2. **Predecir la agitación funciona solo si se pide como cambio, no como nivel.** Pronosticar
    el nivel de agitación salía 15,2 % **peor** que el tonto "supone que sigue igual".
    Pronosticar la razón de cambio sale **3,2 % mejor**. Con esa versión, la caída máxima baja
-   de 70,1 % a 58,6 % **en los 6 mercados**. Es protección, no ventaja: en un tramo que subió
-   296 % de promedio, proteger costó 300 puntos de ganancia.
+   de 69,9 % a 58,6 % **en los 6 mercados**. Es protección, no ventaja. Ojo: el "+296 % y costó
+   300 puntos" que decía acá antes salía de una vara inflada; al medir todas las estrategias en
+   el mismo tramo, la vara real es −0,8 % y la protección de S8 cuesta apenas unos puntos
+   (−4,1 % contra −0,8 %). Ver la corrección 3 de la sección 8.
 
 También se corrigió un error de este plan: afirmaba que "sigue igual" era un baseline roto a
 favor. Al programarlo bien, el baseline es fuerte y el modelo de nivel perdía contra él.
@@ -149,8 +151,10 @@ razón y esta tabla no.** Queda así, con la evidencia:
 | 9 | Fuente y edad de cada dato | "Binance, hace 2 minutos": si un dato es viejo, se ve viejo | **parcial** — solo Noticias tiene `haceTxt()` por tarjeta; el resto muestra un chip global de caché y las fuentes sin antigüedad |
 | 10 | Exportar la prueba y las decisiones a CSV | abrir en Excel el cuaderno, scorecards y decisiones del bot | **parcial** — cuaderno y decisiones sí (CSV); el botón de decisiones dice "Excel" pero baja CSV; Laboratorio y scorecard **no** se exportan |
 
-Pendientes reales de la parte C, por prioridad: **3 (comparador), 5 (simulador), 6 (favoritos)**,
-y completar 9 y 10. El detalle de 8 es un arreglo de una línea.
+**Cerrado el 2026-11-07 (commit 23542b1):** 3 (comparador), 5 (simulador) y 6 (favoritos) ya
+están implementados y verificados en navegador; el detalle de 8 (`aplicarTema` dejaba fuera
+`lab.grafico`) también quedó arreglado. Quedan pendientes 9 (fuente/edad en todas las tarjetas)
+y 10 (exportar laboratorio y scorecard), que no eran obligatorios en esta tanda.
 
 ## 6. Lo que necesito de Jairon (decisiones, no trabajos)
 
@@ -205,14 +209,14 @@ y en qué orden, siguiendo el prompt unido.
 
 | Paso | Qué | Estado |
 |---|---|---|
-| 1 | Leer todo + correr pruebas | **hecho** (49, TODO OK) |
+| 1 | Leer todo + correr pruebas | **hecho** (90, TODO OK) |
 | 2 | Este plan y corregir contradicciones | **hecho** |
 | 3 | Verificar los "YA ARREGLADO" | **hecho** (uno resultó a medias) |
-| 4 | Instalar `ta` + `ccxt` y Grid MIT | `ta` y `ccxt` instalados; Grid pendiente (va con S9) |
+| 4 | Instalar `ta` + `ccxt` y Grid MIT | **hecho**: `ta`+`ccxt` instalados; Grid MIT reescrito como S9 con atribución |
 | 5 | `POST /api/noticias/recibir` + unir B1 y B2 | **hecho y probado** (ver 8.4) |
-| 6 | Ventaja NUEVA, distinta a S1–S8 | siguiente |
-| 7 | Comparador, simulador y favoritos | después |
-| 8 | README con números reales + resumen | al cierre |
+| 6 | Ventaja NUEVA, distinta a S1–S8 | **hecho**: S9–S12 corridas; S11 aprueba (ver 8.5) |
+| 7 | Comparador, simulador y favoritos | **hecho y verificado en navegador** (commit 23542b1) |
+| 8 | README con números reales + resumen | **hecho** |
 
 ### 8.4 Cómo quedaron unidas B1 (RSS) y B2 (Brio) — hecho y probado
 
@@ -276,8 +280,19 @@ aprobó. Estas son mecanismos **distintos**, no variaciones de lo mismo:
    apuntada, no se simula con datos inventados.
 
 Misma vara para todas: walk-forward, comisión 0,1 % por lado, mismo deslizamiento, y
-**solo aprueba si le gana a comprar-y-sostener en 4 de 6 mercados o más**. Si pierde, se
-escribe igual en el README y en `ventaja.py`. El bot sigue apagado mientras tanto.
+**solo aprueba si le gana a comprar-y-sostener en más de la mitad de los mercados y no queda
+en rojo**. Si pierde, se escribe igual en el README y en `ventaja.py`.
+
+**Resultado corrido de verdad (commit aeedd48):** S9 grid −29,3 % (2/6), S10 rotación −19,7 %
+(2/6), S11 confirmación día+semana+mes **+69,2 % (4/6, aprueba)**, S12 DCA −1,4 % (4/6 pero en
+rojo, no aprueba). S11 baja la caída máxima de 69,9 % a 27,6 % en los 6; mediana por mercado
++31,6 %, mejor XRP +225,5 %, peor BNB +3,3 %. Es una regla de tendencia, no IA. El bot sigue en
+papel y `SOLO_PRUEBA=True`: falta la prueba en papel en vivo ~30 días y el visto bueno del dueño.
+
+**Corrección 3 (importante):** antes S0 (la vara) usaba toda la historia y las estrategias solo
+el tramo de prueba, así que la vara salía +296 % y todo parecía perder contra ella. Ahora todas
+corren en el mismo tramo (desde 2024-08) y la vara real es −0,8 %. Sin esto la comparación era
+mentira. S13 (sentimiento de noticias) sigue apuntada, no se simuló con datos inventados.
 
 ### 8.6 Código abierto que voy a usar (parte D)
 
@@ -299,3 +314,10 @@ escribe igual en el README y en `ventaja.py`. El bot sigue apagado mientras tant
    la reemplaza en ese mismo archivo y la puerta la toma al instante.
 3. **Telegram y CryptoPanic** siguen siendo opcionales, como en la sección 6.
 4. **Dinero real: no.** `SOLO_PRUEBA` queda en True todo este trabajo.
+5. **Probar S11 en papel en vivo ~30 días.** Ya ganó la prueba histórica; el siguiente paso del
+   plan (A.4) es correrla en papel, sin plata real, y mostrar el resultado en el panel antes de
+   cualquier decisión de dinero. Es un proceso de 30 días: necesita el visto bueno del dueño
+   para arrancar, no se salta ni se simula con datos inventados.
+6. **Python de los `.bat`.** Los `.bat` llaman a `py -3.12`; en esta PC el intérprete es 3.14 y
+   `py` no está en el PATH. Decidir si se ajustan los `.bat` a la versión instalada o se corre
+   a mano (el README ya explica los comandos sueltos).
