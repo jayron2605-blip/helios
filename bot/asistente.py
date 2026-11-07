@@ -111,10 +111,25 @@ def fotos_del_mercado():
     return salida
 
 
+def velas_publicas(simbolo, limite=1000):
+    """Cuando no hay velas en el disco (repo recien clonado), las pide al exchange. Sin clave."""
+    datos = traer_json("https://api.binance.com/api/v3/klines?symbol=%s&interval=1h&limit=%d"
+                       % (simbolo, limite))
+    if not isinstance(datos, list):
+        return []
+    return [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]), "l": float(k[3]),
+             "c": float(k[4]), "v": float(k[5])} for k in datos]
+
+
 def analizar(simbolo="BTCUSDT", capital=CAPITAL_POR_DEFECTO, riesgo=RIESGO_POR_DEFECTO):
     v = velas(simbolo)
-    if len(v) < 500:
-        return {"error": "no hay velas suficientes para %s" % simbolo}
+    origen = "las velas guardadas en tu disco"
+    if len(v) < 300:
+        v = velas_publicas(simbolo)
+        origen = "las últimas mil horas que publica el exchange"
+    if len(v) < 200:
+        return {"error": ("no tengo velas de %s. Corré Entrenar.bat una vez, o revisá la conexión."
+                          % simbolo)}
 
     precio = v[-1]["c"]
     a = atr(v) or precio * 0.005
@@ -257,6 +272,8 @@ def analizar(simbolo="BTCUSDT", capital=CAPITAL_POR_DEFECTO, riesgo=RIESGO_POR_D
         "momento": int(time.time() * 1000),
         "simbolo": simbolo,
         "capital": capital,
+        "origen": origen,
+        "velas": len(v),
         "precio": round(precio, 6),
         "estado": estado,
         "color": color,
@@ -300,10 +317,14 @@ if __name__ == "__main__":
     sim = sys.argv[1] if len(sys.argv) > 1 else "BTCUSDT"
     cap = float(sys.argv[2]) if len(sys.argv) > 2 else CAPITAL_POR_DEFECTO
     r = analizar(sim, cap)
+    if r.get("error"):
+        print("NO SE PUDO ANALIZAR:", r["error"])
+        raise SystemExit(1)
     with open(SALIDA, "w", encoding="utf-8") as f:
         json.dump(r, f, ensure_ascii=False, indent=2)
     print("ESTADO:", r["estado"].upper())
     print("motivos:", "; ".join(r["motivos"]) or "ninguno")
+    print("basado en %d velas de %s" % (r["velas"], r["origen"]))
     print()
     for f in r["que_pasa"]:
         print(" -", f)
