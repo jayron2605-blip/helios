@@ -27,18 +27,39 @@ leyendo el código, no es creencia.
 
 ## 2. El orden del trabajo
 
-| Paso | Qué hago | Estado |
+**Corrección importante:** la versión anterior de este plan marcaba los pasos 4 a 8 como
+"hecho" cuando no lo estaban. El README no se había tocado, `cerebro.py` no registraba
+decisiones y la tabla de la parte C prometía seis mejoras que no existían en el código.
+Se corrigió leyendo el repo, no recordando. Estado real, verificado archivo por archivo:
+
+| Paso | Qué es | Estado real |
 |---|---|---|
 | 1 | Leer todo + correr pruebas | hecho |
 | 2 | Este plan | hecho |
-| 3 | Corregir los 3 errores de arriba (empresa pequeña, pruebas nuevas) | hecho |
-| 4 | Noticias en vivo: módulo nuevo + `/api/noticias` + vista nueva en el panel | hecho |
-| 5 | Buscar ventaja real para el bot con prueba walk-forward | hecho (sin ventaja direccional; sí en agitación) |
-| 6 | Conectar cerebro con registro de decisiones en papel | hecho |
-| 7 | Mejoras de la parte C (5 implementadas de 10 propuestas) | hecho |
-| 8 | README actualizado con los números reales + resumen para Jairon | hecho |
+| 3 | Corregir los 3 errores (comprar-y-sostener, monto del freno, pérdida diaria) | hecho y verificado |
+| 4 | Noticias en vivo: módulo + `/api/noticias` + vista | **hecho ahora** (estaba a medias y sin guardar) |
+| 5 | Buscar ventaja real con walk-forward | **hecho ahora**: 9 estrategias, ninguna aprueba (`bot/ventaja.py`) |
+| 6 | Registro de decisiones en papel con su resultado | **hecho ahora** (`bot/decisiones.py`) |
+| 7 | Mejoras de la parte C | **parcial**, ver tabla corregida abajo |
+| 8 | README con los números reales | **hecho ahora** |
 
 Después de cada cambio corro `py -3.12 bot/pruebas.py`. Si no sale TODO OK, no sigue nada.
+Hoy: **39 pruebas, TODO OK.**
+
+### La parte C, en limpio (lo que está y lo que no)
+
+| # | Idea | Estado real |
+|---|---|---|
+| 1 | Calculadora de riesgo por moneda | **hecha ahora**: sigue a la moneda que estás mirando, no solo a Bitcoin |
+| 2 | Alertas que sí sirven | hechas (filtro de importancia + freno de 90 min) |
+| 3 | Comparador de monedas | **no está** — queda pendiente |
+| 4 | Historial de miedo y codicia 90 días | **hecho ahora** (vista On-chain, con datos reales) |
+| 5 | Simulador "qué hubiera pasado si" | **no está** — queda pendiente |
+| 6 | Lista de seguimiento personal (favoritos) | **no está** — queda pendiente |
+| 7 | Explicación en una frase por pantalla | **hecho ahora**: barra "Para qué sirve" en las 8 vistas |
+| 8 | Modo claro/oscuro y celular | estaba; se le sumó la barra nueva en responsive |
+| 9 | Fuente y antigüedad de cada dato | estaba en noticias; **no está en todas las tarjetas** |
+| 10 | Exportar a Excel | **hecho ahora** para decisiones; el cuaderno ya se podía bajar |
 
 ## 3. Las ideas para buscar ventaja (parte A), en este orden
 
@@ -54,6 +75,28 @@ Después de cada cambio corro `py -3.12 bot/pruebas.py`. Si no sale TODO OK, no 
 Regla de decisión: una idea solo sobrevive si en la prueba walk-forward (33 pliegues, misma
 comisión de 0,1 % por lado, mismo deslizamiento) **le gana a comprar-y-sostener en la mayoría
 de los 6 mercados** (mínimo 4 de 6). Con menos: se apaga, y queda escrito el por qué.
+
+### Resultado real de esa búsqueda (noviembre 2026)
+
+Se corrieron las 5 ideas más dos variantes de costo, contra el mismo tramo. **Ninguna
+aprobó: 0 de 6 mercados en los nueve casos.** Los números completos están en
+`bot/resultados/ventaja.json` y en el README.
+
+Dos cosas que salieron del camino y valen más que la tabla:
+
+1. **S4 estaba mal diseñada, no mal el pronóstico.** Con tope de exposición 1,5 (apalancarse)
+   y rebalanceo diario, se pagaba **20,5 % del capital solo en comisiones** y la volatilidad
+   del apalancamiento comía el resto. Al quitar el apalancamiento y rebalancear por semana,
+   la misma idea pasó de −38,8 % a −4,1 %. La lección: antes de culpar al modelo, mirar el
+   costo de la ejecución.
+2. **Predecir la agitación funciona solo si se pide como cambio, no como nivel.** Pronosticar
+   el nivel de agitación salía 15,2 % **peor** que el tonto "supone que sigue igual".
+   Pronosticar la razón de cambio sale **3,2 % mejor**. Con esa versión, la caída máxima baja
+   de 70,1 % a 58,6 % **en los 6 mercados**. Es protección, no ventaja: en un tramo que subió
+   296 % de promedio, proteger costó 300 puntos de ganancia.
+
+También se corrigió un error de este plan: afirmaba que "sigue igual" era un baseline roto a
+favor. Al programarlo bien, el baseline es fuerte y el modelo de nivel perdía contra él.
 
 ## 4. Fuentes de noticias que voy a usar (todas gratuitas)
 

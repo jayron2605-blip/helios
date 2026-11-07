@@ -45,33 +45,58 @@ def pedir(url, clave, segundos):
     return datos, "ok"
 
 
-ASISTENTE_CACHE = {"momento": 0, "datos": None}
+ASISTENTE_CACHE = {}
 ASISTENTE_SEG = 120
+CAPITAL_ASISTENTE = 1000.0
 
 
-def asistente_actual():
-    """Corre el asistente como mucho cada 2 minutos. Si falla, sirve el ultimo guardado."""
+def asistente_actual(simbolo="BTCUSDT", capital=None):
+    """Corre el asistente para el mercado que el panel esta mostrando.
+
+    Antes solo sabia Bitcoin: si uno miraba Ethereum, el texto de "cuanto podes
+    perder si entras ahora" hablaba de otra moneda. Cada mercado se calcula una
+    vez cada 2 minutos, y el capital no cambia el analisis: solo la cuenta.
+    """
+    global CAPITAL_ASISTENTE
+    if capital:
+        try:
+            CAPITAL_ASISTENTE = float(capital)
+        except (TypeError, ValueError):
+            pass
+    clave = simbolo.upper()
     ahora = time.time()
     with BLOQUEO:
-        if ASISTENTE_CACHE["datos"] and ahora - ASISTENTE_CACHE["momento"] < ASISTENTE_SEG:
-            return ASISTENTE_CACHE["datos"]
+        guardado = ASISTENTE_CACHE.get(clave)
+        if guardado and ahora - guardado[1] < ASISTENTE_SEG:
+            return guardado[0]
     try:
         if "bot" not in sys.path:
-            sys.path.insert(0, "bot")
+            sys.path.insert(0, os.path.abspath(os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "bot")))
         import asistente
-        datos = asistente.analizar()
+        datos = asistente.analizar(clave, CAPITAL_ASISTENTE)
         with open(os.path.join("bot", "asistente_estado.json"), "w", encoding="utf-8") as f:
             json.dump(datos, f, ensure_ascii=False, indent=2)
         with BLOQUEO:
-            ASISTENTE_CACHE["datos"] = datos
-            ASISTENTE_CACHE["momento"] = ahora
+            ASISTENTE_CACHE[clave] = (datos, ahora)
         return datos
     except Exception:
         guardado = leer_json("bot/asistente_estado.json")
         with BLOQUEO:
-            ASISTENTE_CACHE["datos"] = guardado
-            ASISTENTE_CACHE["momento"] = ahora
+            ASISTENTE_CACHE[clave] = (guardado, ahora)
         return guardado
+
+
+def leer_csv_generico(ruta_relativa, limite=400):
+    try:
+        with open(ruta_relativa, newline="", encoding="utf-8") as archivo:
+            filas = list(csv.reader(archivo))
+    except FileNotFoundError:
+        return None
+    if not filas:
+        return None
+    return {"cabecera": filas[0], "filas": filas[1:][-limite:][::-1],
+            "total": max(0, len(filas) - 1)}
 
 
 def varios(peticiones):
@@ -250,7 +275,11 @@ class Atencion(BaseHTTPRequestHandler):
             return self._json({"estado": "ok", "datos": paquete})
 
         if ruta.path == "/api/asistente":
-            return self._json({"estado": "ok", "datos": asistente_actual()})
+            sim = (parametros.get("simbolo") or ["BTCUSDT"])[0].upper()
+            cap = (parametros.get("capital") or [""])[0]
+            if not sim.replace("USDT", "").isalnum():
+                return self._json({"estado": "rechazado", "datos": None}, 400)
+            return self._json({"estado": "ok", "datos": asistente_actual(sim, cap)})
 
         if ruta.path == "/api/cinta":
             url = (GECKO + "/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc"
@@ -338,6 +367,22 @@ class Atencion(BaseHTTPRequestHandler):
 
         if ruta.path == "/api/cuaderno":
             return self._json({"estado": "ok", "datos": leer_cuaderno()})
+
+        if ruta.path == "/api/ventaja":
+            return self._json({"estado": "ok",
+                               "datos": leer_json("bot/resultados/ventaja.json")})
+
+        if ruta.path == "/api/decisiones":
+            return self._json({"estado": "ok",
+                               "datos": leer_csv_generico("bot/decisiones.csv")})
+
+        if ruta.path == "/api/miedo_hist":
+            datos, estado = pedir("https://api.alternative.me/fng/?limit=90",
+                                  "miedo_hist", CACHE_SEG["mundo"])
+            if isinstance(datos, dict):
+                datos = [{"valor": int(d["value"]), "texto": d["value_classification"],
+                          "dia": int(d["timestamp"])} for d in (datos.get("data") or [])]
+            return self._json({"estado": estado, "datos": datos})
 
         if ruta.path == "/api/noticias":
             import noticias

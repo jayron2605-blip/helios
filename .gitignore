@@ -17,8 +17,9 @@ bot/avisos_estado.json
 bot/avisos_pendientes.txt
 bot/contador_dia.json
 
-# El cuaderno es la contabilidad de tus decisiones: tuya, no del repo
+# El cuaderno y el registro son la contabilidad de tus decisiones: tuya, no del repo
 cuaderno.csv
+bot/decisiones.csv
 
 # CREDENCIALES — nunca van al repositorio
 bot/claves.json

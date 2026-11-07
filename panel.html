@@ -224,6 +224,11 @@ canvas{display:block;width:100%}
 .fng .num{font-family:var(--mono);font-size:var(--f5);font-weight:600}
 .fng .track{flex:1;height:5px;border-radius:3px;background:linear-gradient(90deg,var(--dn),var(--yel),var(--up));position:relative}
 .fng .track i{position:absolute;top:-4px;width:3px;height:13px;background:var(--tx);border-radius:2px;transition:left .6s ease}
+
+.paraque{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--bd);
+  background:var(--bg2);font-size:12px;color:var(--md);line-height:1.45;flex:0 0 auto}
+.paraque b{color:var(--cy);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+@media(max-width:900px){.paraque{flex-direction:column;align-items:flex-start;gap:3px;padding:7px 10px}}
 </style>
 <style>
 /* ---------- capa 2: tema, oficio, responsive ---------- */
@@ -398,6 +403,8 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
     <div class="tape"><div class="run" id="cinta"></div></div>
 
+    <div class="paraque" id="paraque"><b id="pqTitulo">—</b><span id="pqTexto">—</span></div>
+
     <div class="scroll">
 
       <!-- ================= PANEL ================= -->
@@ -562,6 +569,23 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <div id="botPuntaje"></div>
           </div>
         </div>
+        <div class="row split">
+          <div class="card"><h3>Las ideas que se probaron para ver si había ventaja</h3>
+            <div class="note">Nueve formas de operar, los mismos datos, la misma comisión. La vara es <b>comprar y no tocar nada</b>. Si ninguna gana, el bot se queda apagado.</div>
+            <div class="scrolly"><table><thead><tr>
+              <th>Idea</th><th>Resultado</th><th>$6.000 →</th><th>Caída media</th><th>Gana en</th><th>¿Aprueba?</th>
+            </tr></thead><tbody id="ventajaFilas"></tbody></table></div>
+            <div class="note" style="margin-top:9px" id="ventajaVeredicto"></div>
+          </div>
+          <div class="card"><h3>Registro de decisiones</h3>
+            <div class="note">Cada día se anota qué dijo el programa. Y 24 horas después vuelve y escribe <b>qué pasó de verdad</b>. Eso es lo único que se puede auditar.</div>
+            <div class="scrolly" style="max-height:260px"><table><thead><tr>
+              <th>Fecha</th><th>Mercado</th><th>Precio</th><th>Prob.</th><th>Qué dijo</th><th>Qué pasó</th>
+            </tr></thead><tbody id="decFilas"></tbody></table></div>
+            <div class="note" style="margin-top:9px" id="decResumen"></div>
+            <button class="btn" onclick="bajarDecisiones()">Descargar decisiones (Excel)</button>
+          </div>
+        </div>
         <div class="foot" id="botExplica"></div>
       </div></section>
 
@@ -590,6 +614,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <button data-t="red">Red de Bitcoin</button>
             <button data-t="exchanges">Exchanges</button>
             <button data-t="tendencia">En tendencia</button>
+            <button data-t="miedo">Miedo y codicia 90 días</button>
           </div>
           <div class="note" id="ocNota"></div>
           <div id="ocCuerpo"></div>
@@ -715,8 +740,11 @@ function url(tipo, params){
   if(tipo === 'exchanges') return LOCAL ? null : BASE + '/exchanges';
   if(tipo === 'tendencia') return LOCAL ? null : BASE + '/tendencia';
   if(tipo === 'historial') return LOCAL ? null : BASE + '/historial?simbolo=' + params.simbolo + '&intervalo=' + params.intervalo;
-  if(tipo === 'asistente') return LOCAL ? null : BASE + '/asistente';
+  if(tipo === 'asistente') return LOCAL ? null : BASE + '/asistente?simbolo=' + (params && params.simbolo ? params.simbolo : 'BTCUSDT');
   if(tipo === 'noticias') return LOCAL ? null : BASE + '/noticias' + (params && params.refrescar ? '?refrescar=1' : '');
+  if(tipo === 'ventaja') return LOCAL ? null : BASE + '/ventaja';
+  if(tipo === 'decisiones') return LOCAL ? null : BASE + '/decisiones';
+  if(tipo === 'miedo_hist') return LOCAL ? null : BASE + '/miedo_hist';
   return LOCAL ? null : BASE + '/cuaderno';
 }
 function pedir(tipo, params){
@@ -842,10 +870,27 @@ function cls(v){ return v>=0 ? 'g' : 'r'; }
 function hora(ts){ return new Date(ts).toTimeString().slice(0,8); }
 
 /* ==================== vistas ==================== */
+var PARA_QUE = {
+  panel: 'Es la pantalla de siempre. Arriba, en lenguaje simple, te dice cómo está el mercado, qué está pasando y cuánto perderías si entraras hoy con la plata que vos elijas. Abajo están los precios, el gráfico y las cuentas del programa.',
+  grafico: 'Acá se mira un solo mercado en grande. Podés prender o apagar las líneas de promedio, el volumen, el RSI y el abanico de escenarios. La línea gris del abanico no es una predicción: es qué tan ancho es lo desconocido.',
+  bot: 'Te dice si el programa está apagado o prendido, por qué, y qué pasó cuando lo probó con datos viejos. Acá también está el registro de decisiones: qué dijo cada día y qué pasó después de verdad.',
+  cuaderno: 'La libreta. Cada lectura que toma el programa queda escrita en un archivo de tu PC, con hora y precio. Es lo único que se puede auditar un mes después, y se puede abrir en Excel.',
+  onchain: 'El tamaño real de la industria, no el precio: cuánta plata hay bloqueada en cada red, qué protocolos la usan, cuántos dólares digitales hay dando vuelta, y cuánto cuesta mover Bitcoin.',
+  lab: 'El detector de humo. Vos elegís una regla simple y un corte, y el programa la prueba contra casi tres años de precios reales, descontando la comisión del exchange, y la compara contra no hacer nada.',
+  noticias: 'Lo que pasó de verdad en el mundo cripto, con hora y fuente. Lo distinto: mide qué hizo el precio en la hora siguiente a cada noticia. Noticias conectadas con el precio, no una lista suelta.',
+  ajustes: 'Cómo se usa cada cosa y de dónde sale cada dato, con la antigüedad de cada fuente. Si un dato está viejo, acá se ve viejo.'
+};
+
 function irA(v){
   PREF.vista = v; salvarPref();
   Array.prototype.forEach.call(document.querySelectorAll('.view'), function(s){ s.classList.toggle('on', s.id==='v-'+v); });
   Array.prototype.forEach.call(document.querySelectorAll('.rail button[data-v]'), function(b){ b.classList.toggle('on', b.dataset.v===v); });
+  var barra = document.getElementById('paraque');
+  if(barra && PARA_QUE[v]){
+    barra.style.display = 'flex';
+    document.getElementById('pqTitulo').textContent = 'Para qué sirve';
+    document.getElementById('pqTexto').textContent = PARA_QUE[v];
+  } else if(barra){ barra.style.display = 'none'; }
   if(v==='grafico') montarGrande();
   if(v==='panel'){ if(!serieVelas) montar(); }
   if(v==='onchain' && !oc.cadenas) traerOnchain();
@@ -1280,14 +1325,16 @@ var asisDatos = null;
 
 function pintarAsistente(a){
   if(!a || a.error) return;
+  if(a.simbolo && a.simbolo !== estado.simbolo) return;   // no pisar con datos de otra moneda
   asisDatos = a;
 
   var caja = document.getElementById('asisEstado');
   caja.className = 'asisEstado ' + (a.estado || 'normal');
   document.getElementById('asisEstadoTxt').textContent = (a.estado || '—').toUpperCase();
-  document.getElementById('asisMotivos').innerHTML = (a.motivos && a.motivos.length)
-    ? 'Por qué: ' + a.motivos.join('; ') + '.'
-    : 'Nada raro en los datos de hoy.';
+  document.getElementById('asisMotivos').innerHTML =
+    '<span style="color:var(--cy);font-weight:700">' + (a.simbolo || 'BTCUSDT').replace('USDT','') +
+    '</span> · ' + ((a.motivos && a.motivos.length) ? 'Por qué: ' + a.motivos.join('; ') + '.'
+                 : 'Nada raro en los datos de hoy.');
 
   document.getElementById('asisQuePasa').innerHTML = (a.que_pasa || [])
     .map(function(f){ return '<li>' + f + '</li>'; }).join('');
@@ -1324,9 +1371,9 @@ function pintarRiesgo(capital){
     + ', la compra tendría que ser de ' + dol(tamano) + '. Si comprás más que eso, perdés más que eso.</span>';
 }
 
-function traerAsistente(){
+function traerAsistente(simbolo){
   if(LOCAL) return;
-  return pedir('asistente','').then(function(r){
+  return pedir('asistente',{simbolo: simbolo || estado.simbolo || 'BTCUSDT'}).then(function(r){
     if(r && r.datos) pintarAsistente(r.datos);
   }).catch(function(){});
 }
@@ -1445,6 +1492,7 @@ function elegir(pair, sym){
   document.getElementById('internos').innerHTML = '<div class="note">Cargando derivados de '+sym+'…</div>';
   document.getElementById('libro').innerHTML = '<div class="note">Cargando libro…</div>';
   pintarHeat(); pintarDispersin(); pintarLista();
+  traerAsistente(pair);
   traerVelas();
 }
 function marcoTime(t){ estado.intervalo = t; pintarMarcos(); traerVelas(); }
@@ -1547,6 +1595,7 @@ function traerBot(){
   Promise.all([pedir('cerebro','').catch(function(){return{datos:null};}),
                pedir('puntaje',{h:'24'}).catch(function(){return{datos:null};})])
     .then(function(r){ pintarBot(r[0]&&r[0].datos, r[1]&&r[1].datos); });
+  traerVentaja(); traerDecisiones();
 }
 function recargar(){
   traerMercados().then(traerVelas).then(traerLog).catch(function(e){ avisar('No se pudo actualizar: '+e.message); });
@@ -1738,7 +1787,54 @@ document.getElementById('lista').addEventListener('click', function(e){
 });
 
 /* ==================== on-chain ==================== */
-var oc = { cadenas:null, protocolos:null, estables:null, red:null, exchanges:null, tendencia:null, tab:'cadenas' };
+var oc = { cadenas:null, protocolos:null, estables:null, red:null, exchanges:null, tendencia:null, tab:'cadenas', miedo_hist:null };
+function traerMiedoHist(){
+  pedir('miedo_hist','').then(function(r){
+    if(r && r.datos && r.datos.length){ oc.miedo_hist = r.datos; if(oc.tab==='miedo') pintarOnchain(); }
+  }).catch(function(){});
+}
+function pintarMiedoCurva(){
+  var cv = document.getElementById('miedoCurva');
+  if(!cv || !oc.miedo_hist) return;
+  var datos = oc.miedo_hist.slice().reverse();
+  var ancho = cv.clientWidth || 300, alto = 210, dpr = window.devicePixelRatio||1;
+  cv.width = ancho*dpr; cv.height = alto*dpr;
+  var g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,ancho,alto);
+
+  var pad = {l:30,r:8,t:10,b:22};
+  var X = function(i){ return pad.l + i/(Math.max(1,datos.length-1))*(ancho-pad.l-pad.r); };
+  var Y = function(v){ return pad.t + (1 - v/100)*(alto-pad.t-pad.b); };
+
+  var zonas = [[0,25,'rgba(246,70,93,.10)'],[25,45,'rgba(246,70,93,.05)'],
+               [45,55,'rgba(147,163,181,.06)'],[55,75,'rgba(240,185,11,.06)'],[75,100,'rgba(14,203,129,.09)']];
+  zonas.forEach(function(z){ g.fillStyle=z[2]; g.fillRect(pad.l, Y(z[1]), ancho-pad.l-pad.r, Y(z[0])-Y(z[1])); });
+
+  g.strokeStyle='#243040'; g.font='9px Cascadia Mono'; g.fillStyle='#5c6d80';
+  [0,25,50,75,100].forEach(function(v){
+    g.beginPath(); g.moveTo(pad.l, Y(v)); g.lineTo(ancho-pad.r, Y(v)); g.stroke();
+    g.fillText(String(v), 4, Y(v)+3);
+  });
+
+  g.beginPath();
+  datos.forEach(function(d,i){ i ? g.lineTo(X(i), Y(d.valor)) : g.moveTo(X(i), Y(d.valor)); });
+  g.strokeStyle='#00d1ff'; g.lineWidth=1.8; g.stroke();
+  g.lineTo(ancho-pad.r, Y(0)); g.lineTo(pad.l, Y(0)); g.closePath();
+  g.fillStyle='rgba(0,209,255,.08)'; g.fill();
+
+  var ultimo = datos[datos.length-1];
+  g.beginPath(); g.arc(X(datos.length-1), Y(ultimo.valor), 3.5, 0, 6.2832);
+  g.fillStyle = ultimo.valor>=50 ? '#0ecb81' : '#f6465d'; g.fill();
+
+  g.fillStyle='#5c6d80'; g.font='9px Inter, Segoe UI';
+  g.fillText('hace ' + datos.length + ' días', pad.l, alto-6);
+  g.fillText('hoy', ancho-pad.r-22, alto-6);
+
+  var minimo = Math.min.apply(null, datos.map(function(d){return d.valor;}));
+  var maximo = Math.max.apply(null, datos.map(function(d){return d.valor;}));
+  var caja = document.getElementById('miedoTxt');
+  if(caja) caja.innerHTML = 'Hoy: <b>' + ultimo.valor + ' (' + ultimo.texto + ')</b>. En 90 días osciló entre '
+    + minimo + ' y ' + maximo + '. Fuente: alternative.me, público y sin clave.';
+}
 function traerOnchain(){
   ['cadenas','protocolos','estables','red','exchanges','tendencia'].forEach(function(k){
     pedir(k,'').then(function(r){ if(r.datos){ oc[k]=r.datos; pintarOnchain(); } }).catch(function(){});
@@ -1824,7 +1920,7 @@ function pintarOnchain(){
         + '<td class="txt m">'+('012345'.charAt(Math.min(5,e.trust_score||0)))+' / 5</td>'
         + '<td><div class="mini"><div class="b" style="max-width:170px"><i style="width:'+((e.trade_volume_24h_btc||0)/mx*100).toFixed(1)+'%"></i></div></div></td></tr>';
       }).join('') + '</tbody></table>';
-  } else {
+  } else if(t==='tendencia'){
     nota.innerHTML = 'Lo que la gente está buscando en este minuto en CoinGecko. No es señal de compra: es temperatura de la calle.';
     cuerpo.innerHTML = '<table><thead><tr><th>Puesto</th><th>Moneda</th><th>Precio</th><th>Capital</th><th>Rango capital</th><th>24 h</th></tr></thead><tbody>'
       + (oc.tendencia||[]).map(function(c){
@@ -1833,6 +1929,11 @@ function pintarOnchain(){
         + '<td>'+(typeof c.capital==='string' ? c.capital : fmtCap(c.capital))+'</td><td class="m">'+(c.rango?('#'+c.rango):'—')+'</td>'
         + '<td class="'+cls(c.var24h||0)+'">'+pct(c.var24h,2)+'</td></tr>';
       }).join('') + '</tbody></table>';
+  } else if(t==='miedo'){
+    nota.innerHTML = 'Cada punto es un día. Arriba de 50 la gente tiene codicia, abajo tiene miedo. No es una señal de compra: es la temperatura de la calle, y sirve para saber en qué ambiente estás operando.';
+    if(!oc.miedo_hist){ cuerpo.innerHTML = '<div class="note">Cargando los últimos 90 días…</div>'; traerMiedoHist(); return; }
+    cuerpo.innerHTML = '<canvas id="miedoCurva" height="210"></canvas><div class="note" style="margin-top:8px" id="miedoTxt"></div>';
+    pintarMiedoCurva();
   }
 }
 Array.prototype.forEach.call(document.querySelectorAll('#ocTabs button'), function(b){
@@ -1840,6 +1941,77 @@ Array.prototype.forEach.call(document.querySelectorAll('#ocTabs button'), functi
     Array.prototype.forEach.call(document.querySelectorAll('#ocTabs button'), function(x){ x.classList.toggle('on', x===b); });
     pintarOnchain(); };
 });
+
+/* ==================== ventaja y decisiones ==================== */
+var ultDecisiones = null;
+
+function traerVentaja(){
+  return pedir('ventaja','').then(function(r){ if(r && r.datos) pintarVentaja(r.datos); }).catch(function(){});
+}
+function pintarVentaja(v){
+  var base = null;
+  (v.estrategias || []).forEach(function(e){ if(e.estrategia.indexOf('S0') === 0) base = e; });
+  document.getElementById('ventajaFilas').innerHTML = (v.estrategias || []).map(function(e){
+    var esBase = e.estrategia.indexOf('S0') === 0;
+    var g = e.le_gana_al_benchmark_en;
+    return '<tr><td class="txt" style="color:var(--tx);font-weight:600">' + e.estrategia + '</td>'
+      + '<td class="' + cls(e.retorno_promedio) + '">' + (e.retorno_promedio*100).toFixed(1) + ' %</td>'
+      + '<td>' + (e.desde_1000_total ? dol(e.desde_1000_total) : '—') + '</td>'
+      + '<td class="r">' + ((e.caida_media||0)*100).toFixed(1) + ' %</td>'
+      + '<td>' + (esBase ? '— (es la vara)' : (g + '/6')) + '</td>'
+      + '<td class="txt ' + (esBase ? 'm' : (e.aprueba ? 'g' : 'r')) + '">'
+      + (esBase ? '—' : (e.aprueba ? 'sí' : 'no')) + '</td></tr>';
+  }).join('');
+  var ag = v.agitacion_se_predice || {};
+  document.getElementById('ventajaVeredicto').innerHTML =
+    '<b>Lo que dice el veredicto:</b> ' + ((v.veredicto || {}).frase || '—')
+    + '<br><br><b>¿Se puede predecir la agitación?</b> El modelo se equivoca por <b>'
+    + n1(ag.error_modelo * 100) + ' puntos</b> de agitación diaria, y el truco de "suponer que sigue igual" por <b>'
+    + n1(ag.error_sigue_igual * 100) + '</b>. O sea: '
+    + (ag.mejora_vs_sigue_igual_pct >= 0 ? 'le gana por ' : 'le pierde por ')
+    + '<b>' + Math.abs(ag.mejora_vs_sigue_igual_pct).toFixed(1) + ' %</b>'
+    + ' (coincidencia de orden ' + (ag.rho_spearman || 0).toFixed(2) + '). '
+    + '<br><span style="color:var(--ft)">' + (v.ojo_tramo || '') + '</span>';
+}
+
+function traerDecisiones(){
+  return pedir('decisiones','').then(function(r){
+    if(r && r.datos) { ultDecisiones = r.datos; pintarDecisiones(r.datos); }
+  }).catch(function(){});
+}
+function pintarDecisiones(d){
+  var filas = d.filas || [];
+  document.getElementById('decFilas').innerHTML = filas.slice(0,60).map(function(f){
+    var dicho = (f[5] || '').replace('no opera: ', '');
+    var paso = f[9] || '';
+    var clase = /acerto/.test(paso) ? 'g' : (/equivoco/.test(paso) ? 'r' : 'm');
+    return '<tr><td class="m">' + f[0] + '</td><td style="color:var(--tx)">' + (f[2]||'').replace('USDT','') + '</td>'
+      + '<td>' + fmt(+f[3]) + '</td><td>' + Math.round((+f[4])*100) + ' %</td>'
+      + '<td class="txt ' + (/quieto|no opera/.test(dicho) ? 'm' : 'c') + '">' + (dicho || '—') + '</td>'
+      + '<td class="txt ' + (paso ? clase : 'm') + '">' + (paso || 'todavía sin resultado') + '</td></tr>';
+  }).join('') || '<tr><td colspan="6" class="m">Todavía no hay decisiones anotadas. Se llenan con Bot en papel.bat.</td></tr>';
+
+  var con = filas.filter(function(f){ return (f[9] || '').trim(); });
+  var ac = con.filter(function(f){ return /acerto/.test(f[9]); }).length;
+  var eq = con.filter(function(f){ return /equivoco/.test(f[9]); }).length;
+  var pl = con.filter(function(f){ return /plano/.test(f[9]); }).length;
+  var q  = con.filter(function(f){ return /no se hizo nada/.test(f[9]); }).length;
+  document.getElementById('decResumen').innerHTML =
+    '<b>' + (d.total || filas.length) + '</b> decisiones anotadas. De las <b>' + con.length +
+    '</b> que ya tienen 24 horas encima: <b class="g">' + ac + ' acertaron</b>, <b class="r">' + eq +
+    ' se equivocaron</b>, ' + pl + ' quedaron planas y ' + q + ' eran "no hacer nada". '
+    + (con.length ? 'Precisión real, con resultados de verdad: <b>' +
+        (100*ac/Math.max(1, ac+eq+pl)).toFixed(1) + ' %</b> sobre las que sí tomaron posición.' : '');
+}
+
+function bajarDecisiones(){
+  if(!ultDecisiones){ avisar('Todavía no se descargó el registro.'); return; }
+  var csv = ultDecisiones.cabecera.join(',') + '\n' +
+            ultDecisiones.filas.map(function(f){
+              return f.map(function(c){ return /[",]/.test(c) ? '"' + c.replace(/"/g,'""') + '"' : c; }).join(',');
+            }).join('\n');
+  descargar(csv, 'decisiones.csv');
+}
 
 /* ==================== laboratorio ==================== */
 var lab = { datos:null, simbolo:'BTCUSDT', cargando:false, grafico:null, serieBot:null, serieBh:null, lista:null };

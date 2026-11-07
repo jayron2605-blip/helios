@@ -74,12 +74,9 @@ def decide(horizonte=24, umbral=0.55):
         with open(RUTA_POSICIONES, encoding="utf-8") as f:
             posiciones = json.load(f)
 
-    x = exchange.cargar_config() if exchange.hay_claves() else {}
     puede, por_que = ventaja_demostrada(horizonte)
-    # Helios nunca opera dinero real: exchange.SOLO_PRUEBA lo hace imposible.
-    real = False
-    ex = exchange.Exchange(x) if x else None
-
+    # Helios nunca opera dinero real: exchange.SOLO_PRUEBA lo hace imposible,
+    # asi que aqui no se decide nada de eso, solo si la idea tiene ventaja.
     modo = "PRUEBA" if puede else "APAGADO"
 
     salida = {"momento": int(time.time() * 1000), "horizonte": horizonte,
@@ -106,24 +103,37 @@ def decide(horizonte=24, umbral=0.55):
             fila["posicion_abierta"] = pos
         salida["mercados"].append(fila)
 
-    if real:
-        try:
-            ex.saldo()
-        except Exception as e:
-            salida["freno"] = f"el exchange rechazo: {type(e).__name__}"
-    with open(ESTADO, "w", encoding="utf-8") as f:
-        json.dump(salida, f, ensure_ascii=False, indent=2)
+    # el asistente: las palabras y el riesgo, para los avisos y para el registro
+    asis = None
     try:
-        import avisos, asistente
-        a = asistente.analizar(os.environ.get("HELIOS_SIMBOLO", "BTCUSDT"))
-        r = avisos.registrar(salida, a)
+        import asistente
+        asis = asistente.analizar(os.environ.get("HELIOS_SIMBOLO", "BTCUSDT"))
+        salida["asistente"] = {"estado": asis.get("estado"),
+                               "motivos": asis.get("motivos"),
+                               "riesgo": asis.get("riesgo", {}).get("texto")}
+    except Exception as error:
+        salida["asistente"] = {"error": type(error).__name__}
+
+    # registro de decisiones, con el resultado escrito 24 horas despues
+    try:
+        import decisiones
+        nuevas, cerradas = decisiones.registrar(salida, asis)
+        salida["decisiones"] = {"nuevas": nuevas, "cerradas": cerradas,
+                                "resumen": decisiones.resumen()}
+    except Exception as error:
+        salida["decisiones"] = {"error": type(error).__name__ + ": " + str(error)[:100]}
+
+    try:
+        import avisos
+        r = avisos.registrar(salida, asis)
         n, porque = avisos.enviar()
         salida["avisos"] = {"encolados": r["encolados"], "frenados": r["frenados"],
                             "mandados": n, "por_que": porque}
-        with open(ESTADO, "w", encoding="utf-8") as f:
-            json.dump(salida, f, ensure_ascii=False, indent=2)
     except Exception as error:
-        salida["avisos"] = {"error": type(error).__name__ + ": " + str(error)[:120]}
+        salida["avisos"] = {"error": type(error).__name__}
+
+    with open(ESTADO, "w", encoding="utf-8") as f:
+        json.dump(salida, f, ensure_ascii=False, indent=2)
     return salida
 
 
