@@ -26,6 +26,13 @@ def actualizar_cache():
         bajar_mes(s, mes_actual)
 
 
+def _pct(v):
+    if v is None:
+        return "sin dato"
+    s = ("%.1f" % abs(v * 100)).replace(".", ",")
+    return ("+" if v >= 0 else "-") + s + " %"
+
+
 def ventaja_demostrada(horizonte):
     """Lee el scorecard walk-forward. Devuelve (puede_operar, explicacion).
 
@@ -34,7 +41,7 @@ def ventaja_demostrada(horizonte):
     """
     ruta = os.path.join(RAIZ, "resultados", f"scorecard_h{horizonte}.json")
     if not os.path.exists(ruta):
-        return False, "todavia no hay prueba walk-forward corrida"
+        return False, "todavía no hay prueba corrida"
     with open(ruta, encoding="utf-8") as f:
         s = json.load(f)
     detalle = s.get("detalle", {})
@@ -42,10 +49,10 @@ def ventaja_demostrada(horizonte):
                     if r.get("operaciones", 0) > 0 and r.get("retorno", 0) > r.get("comprar_y_sostener", 0))
     total = len(detalle)
     if ganadores == 0:
-        return False, (f"en la prueba de {s.get('horizonte_velas')} velas el bot perdio contra "
+        return False, (f"en la prueba de {s.get('horizonte_velas')} velas perdió contra "
                        f"comprar-y-sostener en {total} de {total} mercados "
-                       f"(bot {s.get('retorno_promedio_bot')}, comprar-y-sostener "
-                       f"{s.get('retorno_promedio_comprar_y_sostener')})")
+                       f"(el bot terminó en {_pct(s.get('retorno_promedio_bot'))} y quedarse quieto "
+                       f"en {_pct(s.get('retorno_promedio_comprar_y_sostener'))})")
     if ganadores * 2 <= total:
         return False, f"gana apenas en {ganadores} de {total} mercados: no es una ventaja, es suerte"
     return True, f"gana en {ganadores} de {total} mercados"
@@ -69,22 +76,15 @@ def decide(horizonte=24, umbral=0.55):
 
     x = exchange.cargar_config() if exchange.hay_claves() else {}
     puede, por_que = ventaja_demostrada(horizonte)
-    real = bool(x) and not x.get("solo_simulacro", True) and not exchange.apachado() and puede
-    en_papel_activo = bool(x) and puede
+    # Helios nunca opera dinero real: exchange.SOLO_PRUEBA lo hace imposible.
+    real = False
     ex = exchange.Exchange(x) if x else None
 
-    if not puede:
-        modo = "INHABILITADO"
-    elif real:
-        modo = "REAL"
-    elif en_papel_activo:
-        modo = "PAPEL"
-    else:
-        modo = "PAPEL"
+    modo = "PRUEBA" if puede else "APAGADO"
 
     salida = {"momento": int(time.time() * 1000), "horizonte": horizonte,
               "umbral": umbral, "modo": modo, "ventaja": por_que,
-              "permite_operar": puede,
+              "permite_operar": puede, "nunca_dinero_real": True,
               "mercados": [], "freno": None}
 
     for s in SIMBOLOS:
@@ -95,7 +95,7 @@ def decide(horizonte=24, umbral=0.55):
         p = float(modelo.predict_proba(sub[cols].tail(1))[0, 1])
         accion = "comprar" if p >= umbral else ("vender" if p <= 1 - umbral else "quieto")
         if not puede:
-            accion = "no opera: sin ventaja demostrada"
+            accion = "no opera: está apagado"
         fila = {"simbolo": s, "precio": round(float(ultima["close"]), 6),
                 "prob_suba": round(p, 4), "accion": accion,
                 "vela": pd.Timestamp(int(ultima["t"]), unit="ms", tz="UTC").isoformat(),
@@ -114,14 +114,16 @@ def decide(horizonte=24, umbral=0.55):
     with open(ESTADO, "w", encoding="utf-8") as f:
         json.dump(salida, f, ensure_ascii=False, indent=2)
     try:
-        import avisos
-        nuevos = avisos.registrar(salida)
+        import avisos, asistente
+        a = asistente.analizar(os.environ.get("HELIOS_SIMBOLO", "BTCUSDT"))
+        r = avisos.registrar(salida, a)
         n, porque = avisos.enviar()
-        salida["avisos"] = {"nuevos": nuevos, "mandados": n, "por_que": porque}
+        salida["avisos"] = {"encolados": r["encolados"], "frenados": r["frenados"],
+                            "mandados": n, "por_que": porque}
         with open(ESTADO, "w", encoding="utf-8") as f:
             json.dump(salida, f, ensure_ascii=False, indent=2)
     except Exception as error:
-        salida["avisos"] = {"error": type(error).__name__}
+        salida["avisos"] = {"error": type(error).__name__ + ": " + str(error)[:120]}
     return salida
 
 

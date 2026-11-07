@@ -1,14 +1,19 @@
-"""Avisos al telefono. Todo el cable esta listo; falta un solo dato: el token del bot.
+"""Avisos al telefono. Solo lo importante.
 
-Funciona asi:
-  - cerebro.py llama a registrar() despues de cada decision
-  - si la decision de un mercado CAMBIA, o si salta un freno, se guarda el mensaje
-  - enviar() los manda por Telegram cuando existe telegram.json con token y chat_id
+La regla es simple: si te avisa de todo, no te avisa de nada. Este modulo manda
+mensaje unicamente en cuatro casos:
 
-Sin telegram.json no intenta nada de red: deja los avisos en el disco y avisa
-que falta. No hay secreto escrito en el codigo.
+  1. el estado del mercado cambia de nivel (calmo -> nervioso -> peligroso)
+  2. aparece una senal fuerte (las cuatro lecturas de acuerdo) en un mercado
+  3. pasa algo de seguridad (salta un freno o el bot cambia de modo)
+  4. el resumen del dia, una sola vez
+
+Ademas hay un freno de mano: nunca mas de un aviso comun cada 90 minutos.
+Los de seguridad pasan siempre, porque dormirte un freno es peor que el ruido.
+
+Sin telegram.json no intenta red: deja los mensajes en avisos_pendientes.txt.
 """
-import json, os, time, urllib.parse, urllib.request
+import json, os, time
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 RUTA_CLAVES = os.path.join(RAIZ, "telegram.json")
@@ -16,93 +21,168 @@ RUTA_ESTADO = os.path.join(RAIZ, "avisos_estado.json")
 RUTA_COLA = os.path.join(RAIZ, "avisos_pendientes.txt")
 RUTA_PLANTILLA = os.path.join(RAIZ, "telegram.EJEMPLO.json")
 
+MINUTOS_ENTRE_AVISOS = 90
+HORAS_ENTRE_SENALES = 6
+NIVELES = ["calmado", "normal", "nervioso", "peligroso"]
+
 
 def hay_claves():
     return os.path.exists(RUTA_CLAVES)
 
 
-def ultimo_estado():
+def _leer(ruta, defecto):
     try:
-        with open(RUTA_ESTADO, encoding="utf-8") as f:
+        with open(ruta, encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return {}
+        return defecto
 
 
-def salvar_estado(e):
+def _guardar_estado(e):
     with open(RUTA_ESTADO, "w", encoding="utf-8") as f:
         json.dump(e, f, ensure_ascii=False, indent=2)
 
 
 def encolar(texto):
     with open(RUTA_COLA, "a", encoding="utf-8") as f:
-        f.write("[%s] %s\n" % (time.strftime("%Y-%m-%d %H:%M:%S"), texto))
+        f.write("[%s] %s\n" % (time.strftime("%Y-%m-%d %H:%M"), texto))
 
 
-def registrar(decision):
-    """Compara con la ultima decision guardada y encola lo que cambio."""
-    viejo = ultimo_estado()
-    nuevos = {}
+def _nivel(nombre):
+    try:
+        return NIVELES.index(nombre)
+    except ValueError:
+        return 1
+
+
+def que_avisar(decision, asistente, estado_previo):
+    """Devuelve lista de (clave, texto, es_urgente)."""
+    ahora = time.time()
     avisos = []
-    for m in decision.get("mercados", []):
-        clave = m["simbolo"]
-        banda = "compra" if m["prob_suba"] >= decision["umbral"] else (
-                "venta" if m["prob_suba"] <= 1 - decision["umbral"] else "neutral")
-        nuevos[clave] = banda
-        antes = viejo.get(clave)
-        if antes and antes != banda:
-            avisos.append("%s paso de %s a %s (prob %.2f, precio %s)"
-                          % (clave, antes, banda, m["prob_suba"], m["precio"]))
-        nuevos[clave + "_prob"] = round(m["prob_suba"], 3)
-    if decision.get("modo") != viejo.get("_modo"):
-        avisos.append("el modo del bot paso a %s" % decision.get("modo"))
-        nuevos["_modo"] = decision.get("modo")
-    if decision.get("freno"):
-        avisos.append("FRENO ACTIVO: %s" % decision["freno"])
-    if viejo and not viejo.get("_arranque"):
-        nuevos["_arranque"] = 1
-    if not viejo:
-        nuevos["_arranque"] = 1
-        avisos.append("bot prendido en modo %s (%s)"
-                      % (decision.get("modo"), decision.get("ventaja", "sin prueba")))
-    salvar_estado(nuevos)
-    for a in avisos:
-        encolar(a)
+    estado_mercado = (asistente or {}).get("estado")
+    anterior = estado_previo.get("mercado_estado")
+
+    # 1) cambio de estado del mercado
+    if estado_mercado and anterior and estado_mercado != anterior:
+        salto = abs(_nivel(estado_mercado) - _nivel(anterior))
+        if salto >= 1:
+            empeora = _nivel(estado_mercado) > _nivel(anterior)
+            urgencia = estado_mercado == "peligroso"
+            texto = "El mercado pasó de %s a %s. %s" % (
+                anterior, estado_mercado,
+                ("Ojo: " + "; ".join((asistente or {}).get("motivos", []))) if empeora
+                else "Se calmó.")
+            avisos.append(("estado:" + estado_mercado, texto, urgencia))
+
+    # 2) senal fuerte por mercado (con enfriamiento por mercado)
+    enfriamiento = estado_previo.get("senales", {})
+    umbral = (decision or {}).get("umbral", 0.55)
+    for m in (decision or {}).get("mercados", []):
+        if m.get("prob_suba", 0) < umbral:
+            continue
+        ultimo = enfriamiento.get(m["simbolo"], 0)
+        if ahora - ultimo < HORAS_ENTRE_SENALES * 3600:
+            continue
+        avisos.append(("senal:" + m["simbolo"],
+                       "Señal en %s: el modelo ve %.0f %% de chance de subir y el precio está en %s."
+                       % (m["simbolo"], m["prob_suba"] * 100, m["precio"]), False))
+        enfriamiento[m["simbolo"]] = ahora
+    estado_previo["senales"] = enfriamiento
+
+    # 3) seguridad: pasa siempre
+    if (decision or {}).get("freno"):
+        avisos.append(("freno", "Se activó un freno: " + decision["freno"], True))
+    modo = (decision or {}).get("modo")
+    if modo and estado_previo.get("modo") and modo != estado_previo["modo"]:
+        avisos.append(("modo:" + str(modo), "El bot cambió de modo: %s. %s"
+                       % (modo, (decision or {}).get("ventaja", "")), modo == "REAL"))
+
+    # 4) resumen del dia
+    hoy = time.strftime("%Y-%m-%d")
+    if estado_previo.get("digest") != hoy and time.localtime().tm_hour >= 9:
+        avisos.append(("digest", resumen_del_dia(decision, asistente), False))
+        estado_previo["digest"] = hoy
+
+    if estado_mercado:
+        if estado_mercado != anterior:
+            estado_previo["mercado_desde"] = ahora
+        estado_previo["mercado_estado"] = estado_mercado
+    if modo:
+        estado_previo["modo"] = modo
     return avisos
 
 
+def resumen_del_dia(decision, asistente):
+    if not asistente:
+        return "Resumen: todavía no hay análisis del asistente."
+    r = asistente.get("riesgo", {})
+    return ("Resumen del día. %s está en %s. %s Si entraras con %s, tu golpe máximo serían %s. "
+            "El bot sigue apagado porque en la prueba con datos viejos no le gana a quedarse quieto."
+            % (asistente.get("simbolo", "BTC").replace("USDT", ""),
+               asistente.get("estado", "?"),
+               (asistente.get("que_pasa") or [""])[0],
+               _dolares(asistente.get("capital", 1000)), _dolares(r.get("perdida_usd", 0))))
+
+
+def _dolares(v):
+    return "$" + format(int(round(v or 0)), ",d").replace(",", ".")
+
+
+def registrar(decision, asistente=None):
+    """Decide que es importante, aplica el freno de mano y encola."""
+    estado = _leer(RUTA_ESTADO, {})
+    candidatos = que_avisar(decision, asistente, estado)
+
+    ultimo = estado.get("ultimo_envio", 0)
+    puede_comun = (time.time() - ultimo) >= MINUTOS_ENTRE_AVISOS * 60
+
+    encolados, frenados = [], []
+    for clave, texto, urgente in candidatos:
+        if clave in estado.get("ya_avisado", {}) and not urgente:
+            piso = HORAS_ENTRE_SENALES * 3600 if clave.startswith("senal") else 6 * 3600
+            if time.time() - estado["ya_avisado"][clave] < piso:
+                continue
+        if not urgente and not puede_comun:
+            frenados.append(clave)
+            continue
+        encolar(texto)
+        encolados.append(texto)
+        estado.setdefault("ya_avisado", {})[clave] = time.time()
+        if not urgente:
+            estado["ultimo_envio"] = time.time()
+            puede_comun = False
+
+    _guardar_estado(estado)
+    return {"encolados": encolados, "frenados": frenados}
+
+
 def enviar():
-    """Manda la cola por Telegram. Devuelve (cuantos, explicacion)."""
     if not hay_claves():
-        return 0, ("Falta %s con el token del bot y el chat. "
-                   "Los avisos quedan en %s hasta entonces."
-                   % (os.path.basename(RUTA_CLAVES), os.path.basename(RUTA_COLA)))
-    with open(RUTA_CLAVES, encoding="utf-8") as f:
-        cfg = json.load(f)
+        return 0, ("Falta bot/telegram.json con el token del bot y el chat. "
+                   "Los avisos quedan guardados en avisos_pendientes.txt.")
+    cfg = _leer(RUTA_CLAVES, {})
     token, chat = cfg.get("token"), str(cfg.get("chat_id") or "")
     if not token or not chat:
-        return 0, "telegram.json esta incompleto: hace falta token y chat_id."
+        return 0, "telegram.json está incompleto: hacen falta token y chat_id."
     if not os.path.exists(RUTA_COLA):
         return 0, "no hay avisos pendientes."
     with open(RUTA_COLA, encoding="utf-8") as f:
         lineas = [l.strip() for l in f if l.strip()]
     if not lineas:
         return 0, "no hay avisos pendientes."
+
+    import urllib.parse, urllib.request
     url = "https://api.telegram.org/bot%s/sendMessage" % token
     enviados, errores = 0, []
-    for lote in [lineas[i:i + 10] for i in range(0, len(lineas), 10)]:
-        texto = "\n".join(lote)
-        cuerpo = urllib.parse.urlencode({"chat_id": chat, "text": texto,
+    for lote in [lineas[i:i + 8] for i in range(0, len(lineas), 8)]:
+        cuerpo = urllib.parse.urlencode({"chat_id": chat, "text": "\n\n".join(lote),
                                          "disable_web_page_preview": "true"}).encode()
         try:
             with urllib.request.urlopen(urllib.request.Request(url, data=cuerpo), timeout=20) as r:
-                respuesta = json.loads(r.read())
-            if respuesta.get("ok"):
-                enviados += len(lote)
-            else:
-                errores.append(str(respuesta.get("description"))[:120])
+                if json.loads(r.read()).get("ok"):
+                    enviados += len(lote)
         except Exception as error:
-            errores.append(type(error).__name__ + ": " + str(error)[:120])
+            errores.append(type(error).__name__ + ": " + str(error)[:100])
     if enviados:
         with open(RUTA_COLA, "w", encoding="utf-8") as f:
             f.write("")
@@ -111,23 +191,28 @@ def enviar():
 
 def crear_plantilla():
     with open(RUTA_PLANTILLA, "w", encoding="utf-8") as f:
-        json.dump({"token": "PEGA_AQUI_EL_TOKEN_DEL_BOT",
-                   "chat_id": 0}, f, ensure_ascii=False, indent=2)
+        json.dump({"token": "PEGA_AQUI_EL_TOKEN_DEL_BOT", "chat_id": 0},
+                  f, ensure_ascii=False, indent=2)
     return RUTA_PLANTILLA
 
 
 if __name__ == "__main__":
     import sys
     if "--probar" in sys.argv:
-        falso = {"modo": "PAPEL", "umbral": 0.55, "horizonte": 24,
-                 "ventaja": "prueba", "freno": None,
-                 "mercados": [{"simbolo": "BTCUSDT", "prob_suba": 0.61, "precio": 75000},
-                              {"simbolo": "ETHUSDT", "prob_suba": 0.44, "precio": 2300}]}
-        print("encolado:", registrar(falso))
-        print("segunda pasada (deberia avisar el cambio):")
-        falso["mercados"][0]["prob_suba"] = 0.40
-        print("encolado:", registrar(falso))
-        print("enviar():", enviar())
+        a1 = {"estado": "calmado", "simbolo": "BTCUSDT", "capital": 1000,
+              "que_pasa": ["BTC vale 77.000 dólares."], "riesgo": {"perdida_usd": 20}, "motivos": []}
+        d1 = {"modo": "APAGADO", "umbral": 0.55, "ventaja": "no le gana",
+              "mercados": [{"simbolo": "BTCUSDT", "prob_suba": 0.61, "precio": 77000},
+                           {"simbolo": "ETHUSDT", "prob_suba": 0.42, "precio": 2300}]}
+        print("1)", registrar(d1, a1))
+        print("2) mismo dia, nada nuevo:", registrar(d1, a1))
+        a2 = dict(a1, estado="peligroso", motivos=["la agitación está altísima"])
+        print("3) el mercado empeora:", registrar(d1, a2))
+        d2 = dict(d1, freno="se tocó el tope de pérdida diaria")
+        print("4) salta un freno:", registrar(d2, a2))
+        print("\ncola resultante:")
+        print(open(RUTA_COLA, encoding="utf-8").read())
+        print("envio:", enviar())
         sys.exit(0)
     n, porque = enviar()
     print("avisos mandados:", n, "|", porque)

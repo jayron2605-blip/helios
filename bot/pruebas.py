@@ -150,5 +150,30 @@ try:
 except exchange.Freno as e:
     check("Q sin clave no opera", True, str(e)[:48])
 
+# R) el candado de producto: aunque alguien cargue claves reales y apague el simulacro,
+#    el programa se niega a mandar ordenes. Helios es un asistente, no un operador.
+ex3 = exchange.Exchange({"api_key": "clave_real_falsa", "api_secret": "secreto_real_falso",
+                         "solo_simulacro": False, "mercados_permitidos": ["BTCUSDT"],
+                         "maximo_por_operacion_usd": 1e9, "maximo_operaciones_dia": 99,
+                         "tope_perdida_diaria_usd": 1e9})
+try:
+    ex3.comprar_mercado("BTCUSDT", 0.001)
+    check("R no manda orden real aunque se lo pidan", False)
+except exchange.ModoSoloPrueba as e:
+    check("R no manda orden real aunque se lo pidan", True, str(e)[:44])
+except Exception as e:
+    check("R no manda orden real aunque se lo pidan", False, type(e).__name__)
+
+try:
+    ex3.vender_mercado("BTCUSDT", 0.001)
+    check("S tampoco vende", False)
+except exchange.ModoSoloPrueba:
+    check("S tampoco vende", True)
+except Exception as e:
+    check("S tampoco vende", False, type(e).__name__)
+
+check("T el modo del exchange es PRUEBA FIJA", exchange.Exchange.modo == "PRUEBA FIJA")
+check("U puede_operar_de_verdad es falso", exchange.Exchange.puede_operar_de_verdad is False)
+
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)

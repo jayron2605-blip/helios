@@ -42,6 +42,35 @@ def pedir(url, clave, segundos):
     return datos, "ok"
 
 
+ASISTENTE_CACHE = {"momento": 0, "datos": None}
+ASISTENTE_SEG = 120
+
+
+def asistente_actual():
+    """Corre el asistente como mucho cada 2 minutos. Si falla, sirve el ultimo guardado."""
+    ahora = time.time()
+    with BLOQUEO:
+        if ASISTENTE_CACHE["datos"] and ahora - ASISTENTE_CACHE["momento"] < ASISTENTE_SEG:
+            return ASISTENTE_CACHE["datos"]
+    try:
+        if "bot" not in sys.path:
+            sys.path.insert(0, "bot")
+        import asistente
+        datos = asistente.analizar()
+        with open(os.path.join("bot", "asistente_estado.json"), "w", encoding="utf-8") as f:
+            json.dump(datos, f, ensure_ascii=False, indent=2)
+        with BLOQUEO:
+            ASISTENTE_CACHE["datos"] = datos
+            ASISTENTE_CACHE["momento"] = ahora
+        return datos
+    except Exception:
+        guardado = leer_json("bot/asistente_estado.json")
+        with BLOQUEO:
+            ASISTENTE_CACHE["datos"] = guardado
+            ASISTENTE_CACHE["momento"] = ahora
+        return guardado
+
+
 def varios(peticiones):
     """Dispara varias lecturas publicas en paralelo. Si una falla, las otras siguen."""
     salida = {}
@@ -216,6 +245,9 @@ class Atencion(BaseHTTPRequestHandler):
                 ("miedo", MIEDO, CACHE_SEG["mundo"]),
             ])
             return self._json({"estado": "ok", "datos": paquete})
+
+        if ruta.path == "/api/asistente":
+            return self._json({"estado": "ok", "datos": asistente_actual()})
 
         if ruta.path == "/api/cinta":
             url = (GECKO + "/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc"

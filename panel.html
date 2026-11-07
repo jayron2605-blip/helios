@@ -306,6 +306,46 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
 .mini .b{flex:1;height:6px;background:var(--raise);border-radius:3px;overflow:hidden}
 .mini .b i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cy),var(--vi))}
 .mini .v{font-family:var(--mono);font-size:11px;color:var(--md);width:74px;text-align:right}
+
+/* ---------- asistente: la cara principal ---------- */
+.asis{border:1px solid var(--bd);border-radius:var(--r3);margin-bottom:var(--sp3);overflow:hidden;
+  background:linear-gradient(150deg,var(--card2),var(--card) 55%)}
+.asisTop{display:grid;grid-template-columns:290px 1fr;gap:0;border-bottom:1px solid var(--bd)}
+.asisEstado{padding:18px 20px;border-right:1px solid var(--bd);position:relative}
+.asisEstado::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+.asisEstado.calmado::before{background:var(--up)}
+.asisEstado.normal::before{background:var(--md)}
+.asisEstado.nervioso::before{background:var(--yel)}
+.asisEstado.peligroso::before{background:var(--dn)}
+.asisEstado .lb{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ft);margin-bottom:6px}
+.asisEstado .big{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.05}
+.asisEstado.calmado .big{color:var(--up)}
+.asisEstado.normal .big{color:var(--tx)}
+.asisEstado.nervioso .big{color:var(--yel)}
+.asisEstado.peligroso .big{color:var(--dn)}
+.asisEstado .motivos{font-size:11px;color:var(--md);margin-top:9px;line-height:1.5}
+.asisTexto{padding:18px 22px}
+.asisTexto .lb{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ft);margin-bottom:8px}
+.asisTexto ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+.asisTexto li{font-size:13.5px;color:var(--tx);line-height:1.5;padding-left:16px;position:relative}
+.asisTexto li::before{content:"";position:absolute;left:2px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--cy)}
+.asisBottom{display:grid;grid-template-columns:1fr 1fr}
+.riesgo{padding:16px 20px;border-right:1px solid var(--bd)}
+.riesgo .lb,.veredictoBot .lb{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ft);margin-bottom:8px}
+.cap{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cap input{flex:1;accent-color:var(--cy)}
+.cap .mono{font-size:13px;color:var(--cy);min-width:74px;text-align:right}
+.riesgoTxt{font-size:13px;line-height:1.55;color:var(--tx)}
+.riesgoTxt b{color:var(--yel)}
+.veredictoBot{padding:16px 20px;background:rgba(246,70,93,.05)}
+.veredictoBot .txt{font-size:13px;line-height:1.55;color:var(--tx)}
+.veredictoBot .txt b{color:var(--dn)}
+.veredictoBot.encendido{background:rgba(14,203,129,.06)}
+.veredictoBot.encendido .txt b{color:var(--up)}
+.chipcito{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 8px;
+  border-radius:4px;border:1px solid rgba(14,203,129,.45);color:var(--up);margin-bottom:9px}
+@media(max-width:1100px){.asisTop{grid-template-columns:1fr}.asisEstado{border-right:0;border-bottom:1px solid var(--bd)}
+  .asisBottom{grid-template-columns:1fr}.riesgo{border-right:0;border-bottom:1px solid var(--bd)}}
 </style>
 </head>
 <body>
@@ -346,6 +386,35 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
       <!-- ================= PANEL ================= -->
       <section class="view on" id="v-panel"><div class="wrap">
         <div class="warn" id="aviso"></div>
+
+        <div class="asis" id="asis">
+          <div class="asisTop">
+            <div class="asisEstado" id="asisEstado">
+              <div class="lb">Estado del mercado</div>
+              <div class="big" id="asisEstadoTxt">—</div>
+              <div class="motivos" id="asisMotivos">mirando…</div>
+            </div>
+            <div class="asisTexto">
+              <div class="lb">Qué está pasando</div>
+              <ul id="asisQuePasa"><li>Cargando los datos del mercado…</li></ul>
+            </div>
+          </div>
+          <div class="asisBottom">
+            <div class="riesgo">
+              <div class="lb">Cuánto podés perder si entrás ahora</div>
+              <div class="cap">
+                <span style="font-size:11.5px;color:var(--md)">Pondría</span>
+                <input type="range" id="asisCapital" min="100" max="20000" step="100" value="1000">
+                <span class="mono" id="asisCapitalTxt">$1.000</span>
+              </div>
+              <div class="riesgoTxt" id="asisRiesgo">—</div>
+            </div>
+            <div class="veredictoBot" id="asisBot">
+              <div class="lb">El bot</div>
+              <div class="txt" id="asisBotTxt">—</div>
+            </div>
+          </div>
+        </div>
 
         <div class="seg big" style="margin-bottom:12px">
           <button id="bCompleto" class="on" onclick="marco('completo')">CÓMO LEEMOS NOSOTROS<small>mediana, rojos incluidos, los caminos que terminan mal y lo que el sistema decidió no hacer</small></button>
@@ -598,6 +667,7 @@ function url(tipo, params){
   if(tipo === 'exchanges') return LOCAL ? null : BASE + '/exchanges';
   if(tipo === 'tendencia') return LOCAL ? null : BASE + '/tendencia';
   if(tipo === 'historial') return LOCAL ? null : BASE + '/historial?simbolo=' + params.simbolo + '&intervalo=' + params.intervalo;
+  if(tipo === 'asistente') return LOCAL ? null : BASE + '/asistente';
   return LOCAL ? null : BASE + '/cuaderno';
 }
 function pedir(tipo, params){
@@ -708,6 +778,7 @@ function num(x){ return (x===null||x===undefined||isNaN(x)) ? null : +x; }
 function fmt(v){ v=+v; if(v>=1000) return v.toLocaleString('en-US',{maximumFractionDigits:0});
   if(v>=1) return v.toFixed(2); return v.toPrecision(4); }
 function dol(v){ return '$' + Math.round(+v||0).toLocaleString('es-AR'); }
+function n1(v){ return (+v).toFixed(1).replace('.', ','); }
 function fmtCap(v){
   v = Math.abs(+v||0);
   if(v>=1e12) return '$' + (v/1e12).toFixed(2) + ' B';
@@ -1104,7 +1175,7 @@ function pintarBot(c, s){
   var modo = document.getElementById('botModo');
   if(c && c.modo){
     modo.textContent = c.modo;
-    modo.className = 'pill ' + (c.modo==='REAL'?'bad':(c.modo==='INHABILITADO'?'warn':'ok'));
+    modo.className = 'pill ' + (c.modo==='APAGADO'?'warn':(c.modo==='PRUEBA'?'ok':'bad'));
     document.getElementById('botSub').innerHTML = 'Horizonte <b>'+c.horizonte+' velas</b> · umbral <b>'+c.umbral+'</b> · '
       + (c.ventaja ? '<b class="y">'+c.ventaja+'</b>' : '');
     document.getElementById('botSenales').innerHTML = (c.mercados||[]).map(function(m){
@@ -1117,10 +1188,10 @@ function pintarBot(c, s){
         + '<td class="txt m">'+m.accion+'</td><td class="m">'+(m.posicion_abierta?m.posicion_abierta.cantidad:'—')+'</td></tr>';
     }).join('') || '<tr><td colspan="5" class="m">sin mercados</td></tr>';
     document.getElementById('botFrenos').innerHTML = [
-      ['Claves de exchange', 'PEGA_AQUI_TU_CLAVE', 'Sin eso no puede ni intentar operar'],
-      ['Interruptor simulacro', 'solo_simulacro', 'Hay que apagarlo a mano para operar en serio'],
-      ['Archivo APAGADO', 'APAGADO', 'Si existe en la carpeta, el bot se detiene'],
-      ['Ventaja demostrada', 'scorecard', c.permite_operar ? 'sí' : 'no: por eso está inhibido']
+      ['Modo de prueba', 'FIJO', 'No se puede apagar: el programa no tiene forma de mandar una orden real'],
+      ['Claves de exchange', 'no hacen falta', 'Se ignoran aunque estén cargadas'],
+      ['Archivo APAGADO', 'bot/APAGADO', 'Si existe en la carpeta, todo se detiene'],
+      ['Ventaja demostrada', 'scorecard', c.permite_operar ? 'sí' : 'no: por eso está apagado']
     ].map(function(f){
       return '<div class="card stat"><div class="lb">freno · '+f[0]+'</div><div style="font-family:var(--mono);font-size:12.5px;color:var(--md)">'+f[1]+'</div><div class="dl">'+f[2]+'</div></div>';
     }).join('');
@@ -1130,9 +1201,10 @@ function pintarBot(c, s){
         : ('<b class="y">' + (av.por_que || 'todavía no se configuró el envío') + '</b>'))
       + (av.nuevos && av.nuevos.length ? (' · esta vuelta se encolaron ' + av.nuevos.length + ' cambios') : '')
       + '. El bot avisa cuando un mercado cambia de banda, cuando salta un freno y cuando cambia de modo.';
-    document.getElementById('botExplica').innerHTML = '<b>Por qué está inhibido:</b> el programa lee su propia prueba histórica antes de tocar una orden. '
-      + 'Si el bot no le gana a "comprar y no tocar nada" en la mayoría de los mercados, se niega a operar. '
-      + '<b>No es un defecto: es el producto.</b> Un bot que opera sin ventaja demostrada es una máquina de pagar comisiones.';
+    document.getElementById('botExplica').innerHTML = '<b>Por qué está apagado:</b> el programa lee su propia prueba con datos viejos antes de hacer nada. '
+      + 'Si no le gana a comprar-y-sostener, se queda apagado y lo dice. '
+      + '<b>No es un defecto: es el producto.</b> Un programa que opera sin ventaja demostrada es una máquina de pagar comisiones. '
+      + 'Y esto no es un bot que mueva dinero: está en <b>modo prueba fijo</b>, sin forma de mandar una orden real.';
   } else { modo.textContent = 'SIN MODELO'; modo.className='pill'; }
 
   if(s && s.detalle){
@@ -1152,6 +1224,65 @@ function pintarBot(c, s){
       + '<b>La prueba del modelo no predijo el futuro:</b> usó sólo datos anteriores a cada mes evaluado.</div>';
   }
 }
+
+/* ==================== el asistente ==================== */
+var asisDatos = null;
+
+function pintarAsistente(a){
+  if(!a || a.error) return;
+  asisDatos = a;
+
+  var caja = document.getElementById('asisEstado');
+  caja.className = 'asisEstado ' + (a.estado || 'normal');
+  document.getElementById('asisEstadoTxt').textContent = (a.estado || '—').toUpperCase();
+  document.getElementById('asisMotivos').innerHTML = (a.motivos && a.motivos.length)
+    ? 'Por qué: ' + a.motivos.join('; ') + '.'
+    : 'Nada raro en los datos de hoy.';
+
+  document.getElementById('asisQuePasa').innerHTML = (a.que_pasa || [])
+    .map(function(f){ return '<li>' + f + '</li>'; }).join('');
+
+  pintarRiesgo(+document.getElementById('asisCapital').value);
+
+  var bot = a.bot || {};
+  var cajaBot = document.getElementById('asisBot');
+  cajaBot.className = 'veredictoBot' + (bot.apagado ? '' : ' encendido');
+  document.getElementById('asisBotTxt').innerHTML =
+    '<span class="chipcito">' + (bot.apagado ? 'APAGADO A PROPÓSITO' : 'EN PRUEBA') + '</span><br>'
+    + (bot.texto || 'Todavía no hay prueba guardada.')
+    + '<br><br><span style="font-size:11.5px;color:var(--md)">Este programa está en modo prueba fijo: '
+    + 'no puede mandar órdenes ni mover dinero real, aunque alguien cargara claves.</span>';
+}
+
+function pintarRiesgo(capital){
+  var a = asisDatos;
+  if(!a) return;
+  document.getElementById('asisCapitalTxt').textContent = dol(capital);
+  var r = a.riesgo || {};
+  var stop = +r.stop_pct || 0;
+  var perdida = capital * (+r.perdida_pct || 2) / 100;
+  var tamano = stop > 0 ? perdida / (stop / 100) : 0;
+  document.getElementById('asisRiesgo').innerHTML =
+    'Si compraras ahora con <b>' + dol(capital) + '</b> y te saliera mal, el corte natural está <b>'
+    + n1(stop) + ' %</b> abajo del precio. Ahí perderías <b>' + dol(perdida) + '</b>, o sea el '
+    + n1(+r.perdida_pct || 2) + ' % de lo que pusiste.'
+    + '<br><br>Con un corte así, en los últimos 90 días te habría sacado <b>'
+    + Math.round(r.veces_tocado || 0) + ' de cada 100 veces</b> antes de que pasara un día.'
+    + (r.peor_dia_pct !== null && r.peor_dia_pct !== undefined
+        ? ' Y el peor día de los últimos tres meses fue de <b>' + n1(r.peor_dia_pct) + ' %</b>.' : '')
+    + '<br><br><span style="font-size:11.5px;color:var(--md)">Para que ese golpe sea de ' + dol(perdida)
+    + ', la compra tendría que ser de ' + dol(tamano) + '. Si comprás más que eso, perdés más que eso.</span>';
+}
+
+function traerAsistente(){
+  if(LOCAL) return;
+  return pedir('asistente','').then(function(r){
+    if(r && r.datos) pintarAsistente(r.datos);
+  }).catch(function(){});
+}
+document.getElementById('asisCapital').addEventListener('input', function(e){
+  pintarRiesgo(+e.target.value);
+});
 
 /* ==================== carga ==================== */
 function elegir(pair, sym){
@@ -1352,7 +1483,8 @@ function pintarAyuda(){
     ['Buscar', 'Escribí BTC, ETH, SOL… y toca el resultado para cargarlo en el gráfico.'],
     ['Escenarios', 'El abanico del gráfico es real: baraja variaciones reales de las últimas 400 velas.'],
     ['Cuaderno', 'Cada lectura se escribe en cuaderno.csv. Se puede abrir con el Bloc de notas.'],
-    ['El bot', 'Mira la vista 3. Hoy está INHABILITADO porque su prueba perdió contra no-hacer-nada.']
+    ['El asistente', 'Lo primero que ves en el Panel: si el mercado está calmo o peligroso, qué está pasando y cuánto podrías perder si entraras ahora. Mové la barra del capital para ver tu caso.'],
+    ['El bot', 'Mira la vista 3. Está apagado a propósito. Abajo de todo te dice, con plata, qué pasó cuando se probó con datos viejos.']
   ].map(function(f){ return '<div class="kv"><div class="k">'+f[0]+'</div><div class="v txt" style="font-size:11.5px;color:var(--md);max-width:340px">'+f[1]+'</div></div>'; }).join('');
   document.getElementById('fuentes').innerHTML = [
     ['Precios y velas', 'Binance público · sin clave'],
@@ -1807,12 +1939,12 @@ pintarMarcos();
 pintarAyuda();
 aplicarTema();
 if(PREF.vista && PREF.vista!=='panel') irA(PREF.vista);
-traerMercados().then(traerVelas).then(traerLog).then(traerBot).catch(function(e){
+traerMercados().then(traerVelas).then(traerLog).then(traerBot).then(traerAsistente).catch(function(e){
   avisar('No se pudo leer el mercado: '+e.message+'. Revisá la conexión y dale R.');
 });
 traerChispas(); traerMundo();
 setInterval(function(){
-  traerVelas(); traerChispas(); traerMundo(); traerBot();
+  traerVelas(); traerChispas(); traerMundo(); traerBot(); traerAsistente();
   if(document.getElementById('v-grafico').classList.contains('on')) traerExtra();
   if(document.getElementById('v-onchain').classList.contains('on')) traerOnchain();
 }, 90000);

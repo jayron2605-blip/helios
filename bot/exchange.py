@@ -21,12 +21,22 @@ RUTA_CONTADOR = os.path.join(RAIZ, "contador_dia.json")
 PRODUCCION = "https://api.binance.com"
 PRUEBAS = "https://testnet.binance.vision"
 
+# CANDADO DE PRODUCTO. Helios es un asistente de prueba: no mueve dinero real nunca.
+# Dejarlo en True es una decision del dueno del producto, no una configuracion.
+# Con esto en True, comprar_mercado() y vender_mercado() se niegan siempre, aunque
+# alguien cargue claves validas y apague el interruptor de simulacro.
+SOLO_PRUEBA = True
+
 
 class SinClaves(Exception):
     pass
 
 
 class Freno(Exception):
+    pass
+
+
+class ModoSoloPrueba(Freno):
     pass
 
 
@@ -56,9 +66,14 @@ def cargar_config():
 
 
 class Exchange:
+    puede_operar_de_verdad = not SOLO_PRUEBA
+    modo = "PRUEBA FIJA" if SOLO_PRUEBA else "REAL"
+
     def __init__(self, cfg=None):
         self.cfg = cfg or {}
-        base = PRUEBAS if self.cfg.get("entorno", "pruebas") == "pruebas" else PRODUCCION
+        # aunque alguien pida produccion, siempre habla con el entorno de prueba
+        base = PRUEBAS if SOLO_PRUEBA else (
+            PRUEBAS if self.cfg.get("entorno", "pruebas") == "pruebas" else PRODUCCION)
         self.base = base
         self.clave = self.cfg.get("api_key", "")
         self.secreto = self.cfg.get("api_secret", "")
@@ -161,6 +176,8 @@ class Exchange:
 
     # ---------- escritura ----------
     def comprar_mercado(self, simbolo, cantidad):
+        if SOLO_PRUEBA:
+            raise ModoSoloPrueba("Helios está en modo prueba fijo: no manda órdenes reales, nunca.")
         c = self.revisar_frenos(simbolo, 0)
         orden = self._post("/api/v3/order", {
             "symbol": simbolo, "side": "BUY", "type": "MARKET", "quantity": f"{cantidad:.8f}"})
@@ -170,6 +187,8 @@ class Exchange:
         return orden
 
     def vender_mercado(self, simbolo, cantidad):
+        if SOLO_PRUEBA:
+            raise ModoSoloPrueba("Helios está en modo prueba fijo: no manda órdenes reales, nunca.")
         c = self.revisar_frenos(simbolo, 0)
         orden = self._post("/api/v3/order", {
             "symbol": simbolo, "side": "SELL", "type": "MARKET", "quantity": f"{cantidad:.8f}"})

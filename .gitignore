@@ -12,6 +12,7 @@ _respaldo*/
 __pycache__/
 *.pyc
 bot/estado_cerebro.json
+bot/asistente_estado.json
 bot/avisos_estado.json
 bot/avisos_pendientes.txt
 bot/contador_dia.json
