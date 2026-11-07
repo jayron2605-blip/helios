@@ -29,3 +29,9 @@ bot/telegram.json
 # Plantillas con placeholders: esas sí pueden ir
 !bot/claves.EJEMPLO.json
 !bot/telegram.EJEMPLO.json
+!bot/noticias.EJEMPLO.json
+
+# Noticias: el cache se regenera solo y la clave va aparte
+bot/noticias.json
+bot/noticias_cache.json
+noticias.json

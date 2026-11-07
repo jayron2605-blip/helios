@@ -246,5 +246,71 @@ esperando = 101.0 / 100.0 - 1 - 2 * _cfg_bh.comision - 2 * _cfg_bh.deslizamiento
 check("Y comprar-y-sostener usa el cierre", abs(_sy(_bh_barras, _cfg_bh) - esperando) < 1e-9,
       "" )
 
+# Z) noticias: clasificar, resumir, detectar moneda y sacar duplicados (todo sin red)
+import noticias as _noticias
+
+cls1 = _noticias.clasificar("Regulatory approval secured for major crypto firm")
+check("Z1 titulo buena se clasifica buena", cls1[0] == "buena", str(cls1[0]))
+cls2 = _noticias.clasificar("Exchange hacked and funds stolen overnight")
+check("Z2 titulo mala se clasifica mala", cls2[0] == "mala", str(cls2[0]))
+cls3 = _noticias.clasificar("Bitcoin price remains stable around its weekly average")
+check("Z3 titulo sin senal queda sin clasificar", cls3[0] is None, str(cls3[0]))
+tema = _noticias.tema_una_linea("Bitcoin ETF inflows set another record")
+check("Z4 el tema describe la noticia en una linea",
+      tema[0] is not None and ("subida fuerte" in tema[0] or "ETF" in tema[0]),
+      tema[0] or "")
+check("Z5 detecta la moneda del texto", _noticias.detectar_moneda("Solana jumps before upgrade") == "SOL",
+      str(_noticias.detectar_moneda("Solana jumps before upgrade")))
+ahora = int(__import__("time").time() * 1000)
+crudas = [
+    {"fuente": "Prueba", "titulo": "Bitcoin ETF inflows set another record",
+     "enlace": "http://x/1", "cuando": ahora - 10 * 60 * 1000, "texto_fuente": ""},
+    {"fuente": "Prueba2", "titulo": "Bitcoin ETF inflows set another record today",
+     "enlace": "http://x/2", "cuando": ahora - 7 * 60 * 1000, "texto_fuente": ""},
+    {"fuente": "Prueba3", "titulo": "Sign up for free spins and bonus codes",
+     "enlace": "http://x/3", "cuando": ahora - 3 * 60 * 1000, "texto_fuente": ""},
+    {"fuente": "Prueba4", "titulo": "Ethereum network upgrade shipped on schedule",
+     "enlace": "http://x/4", "cuando": ahora - 50 * 3600 * 1000, "texto_fuente": ""},
+]
+resultado = _noticias.procesar(ahora, crudas)
+check("Z6 saca duplicados, spam y viejas", len(resultado) == 1 and resultado[0]["fuente"] == "Prueba",
+      f"{len(resultado)} quedaron")
+check("Z7 la nota guardada lleva sentimiento y clase", resultado[0]["sentimiento"] == "buena",
+      str(resultado[0]["sentimiento"]))
+
+# Z8: "U.S. Treasury" es el departamento del gobierno, no una reserva acumulada.
+# Si el tema dice "compras grandes" esta mintiendo sobre la noticia.
+t_tes = _noticias.tema_una_linea(
+    "U.S. Treasury moves to cut off crypto exchange over $16 billion in unregistered activity")
+check("Z8 el Tesoro de EE.UU. no se confunde con reservas",
+      t_tes[0] is None or "reservas" not in t_tes[0].lower(), str(t_tes[0]))
+c_tes = _noticias.procesar(ahora, [{"fuente": "Prueba", "enlace": "http://y/1",
+      "titulo": "U.S. Treasury moves to cut off crypto exchange over $16 billion",
+      "cuando": ahora - 60 * 60 * 1000, "texto_fuente": ""}])
+check("Z8b esa noticia se marca como mala", c_tes and c_tes[0]["sentimiento"] == "mala",
+      str(c_tes[0]["sentimiento"]) if c_tes else "la tiro fuera")
+
+# Z9: lo que no habla de cripto se descarta, y se cuenta (no se esconde)
+contador9 = {}
+cria = _noticias.procesar(ahora, [
+    {"fuente": "Prueba", "titulo": "Apple announces new laptop with a faster screen",
+     "enlace": "http://z/1", "cuando": ahora - 30 * 60 * 1000, "texto_fuente": ""},
+    {"fuente": "Prueba", "titulo": "Bitcoin ETF inflows set another record",
+     "enlace": "http://z/2", "cuando": ahora - 30 * 60 * 1000, "texto_fuente": ""},
+], contador9)
+check("Z9 descarta lo que no es de cripto", len(cria) == 1 and cria[0]["enlace"] == "http://z/2",
+      f"{len(cria)} quedaron")
+check("Z9b lo descartado se cuenta", contador9.get("no_cripto") == 1, str(contador9))
+
+# Z10: noticia de cripto sin senal clara se queda, sin clasificar (no se inventa)
+c10 = _noticias.procesar(ahora, [{"fuente": "Prueba",
+      "titulo": "Bitcoin network difficulty adjusts this weekend",
+      "enlace": "http://z/3", "cuando": ahora - 20 * 60 * 1000, "texto_fuente": ""}])
+check("Z10 se queda aunque no se pueda clasificar", len(c10) == 1 and c10[0]["sentimiento"] is None,
+      f"{len(c10)} | sent={c10[0]['sentimiento'] if c10 else '—'}")
+
+check("Z11 el molde de claves de noticias vive junto a los otros dos",
+      os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "noticias.EJEMPLO.json")))
+
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)

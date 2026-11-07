@@ -4,6 +4,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 PUERTO = 8765
 RUTA_CUADERNO = "cuaderno.csv"
 
+# Para poder usar los modulos del bot (asistente, noticias) como biblioteca
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot")))
+
 BINANCE = "https://api.binance.com"
 FUTUROS = "https://fapi.binance.com"
 GECKO = "https://api.coingecko.com"
@@ -336,6 +339,11 @@ class Atencion(BaseHTTPRequestHandler):
         if ruta.path == "/api/cuaderno":
             return self._json({"estado": "ok", "datos": leer_cuaderno()})
 
+        if ruta.path == "/api/noticias":
+            import noticias
+            refrescar = (parametros.get("refrescar") or [""])[0] == "1"
+            return self._json({"estado": "ok", "datos": noticias.traer(force=refrescar)})
+
         return self._json({"estado": "no_existe"}, 404)
 
     def do_POST(self):
@@ -353,12 +361,22 @@ class Atencion(BaseHTTPRequestHandler):
         return self._json({"estado": "anotado"})
 
 
+def calentar_noticias():
+    """Deja las noticias cargadas antes del primer pedido del panel."""
+    try:
+        import noticias
+        noticias.traer()
+    except Exception:
+        pass
+
+
 def main():
     servidor = ThreadingHTTPServer(("127.0.0.1", PUERTO), Atencion)
     direccion = f"http://127.0.0.1:{PUERTO}/"
     print("Helios panel andando en", direccion)
     print("Cuaderno en:", RUTA_CUADERNO, "(se abre con el Bloc de notas)")
     print("Ctrl+C o cerrar esta ventana para parar.")
+    threading.Thread(target=calentar_noticias, daemon=True).start()
     threading.Timer(1.2, lambda: webbrowser.open(direccion)).start()
     try:
         servidor.serve_forever()

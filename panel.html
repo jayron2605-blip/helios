@@ -346,6 +346,22 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
   border-radius:4px;border:1px solid rgba(14,203,129,.45);color:var(--up);margin-bottom:9px}
 @media(max-width:1100px){.asisTop{grid-template-columns:1fr}.asisEstado{border-right:0;border-bottom:1px solid var(--bd)}
   .asisBottom{grid-template-columns:1fr}.riesgo{border-right:0;border-bottom:1px solid var(--bd)}}
+
+/* ---------- noticias en vivo ---------- */
+.ntnHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.ntnList{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(max-width:1100px){.ntnList{grid-template-columns:1fr}}
+.ntn{background:var(--card);border:1px solid var(--bd);border-radius:var(--r2);padding:12px 14px;cursor:pointer;
+  transition:.14s;display:flex;flex-direction:column;gap:7px}
+.ntn:hover{border-color:var(--cy)}
+.ntn .meta{font-size:10px;color:var(--ft);display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:var(--mono)}
+.ntn .titular{font-size:13px;font-weight:600;line-height:1.45;color:var(--tx);color:var(--tx)}
+body[data-tema="claro"] .ntn .titular{color:var(--tx)}
+.ntn .resum{font-size:12px;color:var(--md);line-height:1.5}
+.ntn .mvto{font-size:10.5px;border-radius:4px;padding:2px 7px;border:1px solid var(--bd2);color:var(--md);display:inline-block}
+.ntn .mvto.g{border-color:rgba(14,203,129,.45);color:var(--up)}
+.ntn .mvto.r{border-color:rgba(246,70,93,.45);color:var(--dn)}
+.ntn .fuenteAbajo{font-size:10px;color:var(--ft);border-top:1px solid #131b24;padding-top:7px;margin-top:2px}
 </style>
 </head>
 <body>
@@ -358,6 +374,7 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
     <button data-v="cuaderno" title="Cuaderno (4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4a2 2 0 012-2h12v20H6a2 2 0 01-2-2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></button>
     <button data-v="onchain" title="On-chain (5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg></button>
     <button data-v="lab" title="Laboratorio (6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v6L4.5 19a2 2 0 001.7 3h11.6a2 2 0 001.7-3L14 9V3"/><path d="M7 15h10"/></svg></button>
+    <button data-v="noticias" title="Noticias (8)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M7 9h6M7 13h10M7 16h10"/><path d="M15 9h2"/></svg></button>
     <div class="grow"></div>
     <button data-v="ajustes" title="Ajustes (7)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7.7 1.6 1.6 0 01-1.8 1.5h-.2a2 2 0 110-4 1.6 1.6 0 00-.7-2.7 1.6 1.6 0 00-.7.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 004 12.6a1.6 1.6 0 01-1.5-1.8v-.2a2 2 0 114 0 1.6 1.6 0 002.7.7 1.6 1.6 0 00.7-.4l.1-.1A2 2 0 1112.8 4.3l-.1.1a1.6 1.6 0 001.8 2.7h.2a2 2 0 110 4 1.6 1.6 0 00-.7.7z"/></svg></button>
   </nav>
@@ -623,6 +640,37 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
         </div>
       </div></section>
 
+      <!-- ================= NOTICIAS ================= -->
+      <section class="view" id="v-noticias"><div class="wrap">
+        <div class="head"><h2>Últimas noticias relevantes</h2>
+          <p>Para qué sirve: es la pizarra de lo que pasó de verdad en el mundo cripto, con la hora, la moneda y una línea en español de qué trata — y lo distinto: marca si el precio se movió de verdad en la hora siguiente. Noticias conectadas con el precio, no una lista suelta.</p></div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="ntnHead">
+            <div class="seg" id="ntnFiltro" style="margin:0">
+              <button class="on" data-f="todas">Todas</button>
+              <button data-f="buena">Buenas</button>
+              <button data-f="mala">Malas</button>
+              <button data-f="neutra">Neutras</button>
+              <button data-f="sin">Sin clasificar</button>
+            </div>
+            <div style="flex:1"></div>
+            <span class="chip" id="ntnEdad">—</span>
+            <button class="btn" id="ntnRefrescar" style="margin:0">Actualizar ahora</button>
+          </div>
+          <div class="note" id="ntnFuentes">Mirando qué fuentes están vivas…</div>
+          <div class="ntnList" id="ntnList"></div>
+        </div>
+        <div class="foot">
+          <b>De dónde salen:</b> RSS públicos y gratuitos de CoinDesk, Cointelegraph y Decrypt
+          (y CryptoPanic además si cargás tu clave gratuita en <b>bot/noticias.json</b>; el molde está en
+          <b>bot/noticias.EJEMPLO.json</b>). <b>La conexión con el precio</b> se mide con velas horarias
+          cerradas de Binance: es el movimiento real de la hora siguiente a la noticia, no una opinión.
+          <b>Reglas:</b> sin duplicados ni spam, nada más viejo de 48 horas, actualización cada 10 minutos
+          como máximo, y si una fuente falla o un dato no se puede medir todavía, aquí mismo se lo dice.
+          Al tocar una noticia se abre la original en su página: nunca copiamos el texto completo.
+        </div>
+      </div></section>
+
       <!-- ================= AJUSTES ================= -->
       <section class="view" id="v-ajustes"><div class="wrap">
         <div class="row split">
@@ -637,7 +685,7 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
       <span id="stFuentes">—</span><span class="sep"></span>
       <span id="stVelas">—</span><span class="sep"></span>
       <span class="grow" style="flex:1"></span>
-      <span>1-7 vistas · / buscar · R actualizar · T tema · F pantalla completa</span>
+      <span>1-8 vistas · / buscar · R actualizar · T tema · F pantalla completa</span>
     </footer>
   </div>
 </div>
@@ -668,6 +716,7 @@ function url(tipo, params){
   if(tipo === 'tendencia') return LOCAL ? null : BASE + '/tendencia';
   if(tipo === 'historial') return LOCAL ? null : BASE + '/historial?simbolo=' + params.simbolo + '&intervalo=' + params.intervalo;
   if(tipo === 'asistente') return LOCAL ? null : BASE + '/asistente';
+  if(tipo === 'noticias') return LOCAL ? null : BASE + '/noticias' + (params && params.refrescar ? '?refrescar=1' : '');
   return LOCAL ? null : BASE + '/cuaderno';
 }
 function pedir(tipo, params){
@@ -801,6 +850,7 @@ function irA(v){
   if(v==='panel'){ if(!serieVelas) montar(); }
   if(v==='onchain' && !oc.cadenas) traerOnchain();
   if(v==='lab' && !lab.lista) { lab.lista = true; labIniciar(); }
+  if(v==='noticias') traerNoticias();
 }
 Array.prototype.forEach.call(document.querySelectorAll('.rail button[data-v]'), function(b){
   b.onclick = function(){ irA(b.dataset.v); };
@@ -1284,6 +1334,107 @@ document.getElementById('asisCapital').addEventListener('input', function(e){
   pintarRiesgo(+e.target.value);
 });
 
+/* ==================== noticias en vivo ==================== */
+var ntn = { datos:null, filtro:'todas', cargando:false };
+var NTN_CLASE = { buena:'ok', mala:'bad', neutra:'warn' };
+
+function haceTxt(ms){
+  var m = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if(m < 1) return 'recién';
+  if(m < 60) return 'hace ' + m + ' min';
+  var h = Math.floor(m / 60), d = Math.floor(m / 1440);
+  if(d >= 1) return 'hace ' + d + (d === 1 ? ' día' : ' días');
+  return 'hace ' + h + ' h' + (m % 60 ? (' ' + (m % 60) + ' min') : '');
+}
+
+function traerNoticias(forzar){
+  if(LOCAL || ntn.cargando) return;
+  ntn.cargando = true;
+  return pedir('noticias', forzar ? { refrescar:'1' } : {}).then(function(r){
+    ntn.cargando = false;
+    if(r && r.datos && r.datos.noticias){ ntn.datos = r.datos; }
+    else if(r && r.datos && r.datos.actualizado){ ntn.datos = r.datos; }
+    pintarNoticias();
+  }).catch(function(){ ntn.cargando = false;
+    if(!ntn.datos) document.getElementById('ntnList').innerHTML =
+      '<div class="note">No llegaron noticias: revisá la conexión y tocá Actualizar ahora.</div>';
+  });
+}
+
+function pintarNoticias(){
+  var caja = document.getElementById('ntnList');
+  if(!ntn.datos) return;
+  var todo = ntn.datos.noticias || [];
+  var lista = todo.filter(function(n){
+    if(ntn.filtro === 'todas') return true;
+    if(ntn.filtro === 'sin') return !n.sentimiento;
+    return n.sentimiento === ntn.filtro;
+  });
+  document.getElementById('ntnEdad').textContent =
+    'Última actualización ' + (ntn.datos.actualizado ? haceTxt(ntn.datos.actualizado) : '—');
+  var f = ntn.datos.fuentes || {};
+  var d = ntn.datos.descartes || {};
+  var resumen = ntn.datos.recibidas
+    ? '<b>' + ntn.datos.recibidas + '</b> publicadas por los medios → <b>' + todo.length +
+      '</b> quedaron. Se descartaron: ' + (d.viejas || 0) + ' viejas (más de 48 h), ' +
+      (d.no_cripto || 0) + ' que no hablaban de cripto, ' + (d.repetidas || 0) +
+      ' repetidas y ' + (d.spam || 0) + ' de publicidad. '
+    : '';
+  document.getElementById('ntnFuentes').innerHTML = resumen + (Object.keys(f).length
+    ? Object.keys(f).map(function(k){
+        var v = f[k], mal = String(v).indexOf('error') >= 0;
+        return '<b style="color:' + (mal ? 'var(--dn)' : 'var(--md)') + '">' + k + '</b> ' + v;
+      }).join(' · ')
+    : 'Sin respuesta de las fuentes todavía.');
+  if(!lista.length){
+    caja.innerHTML = '<div class="note">' + (todo.length
+      ? 'No hay noticias en este filtro en este momento.'
+      : (ntn.datos.actualizado
+          ? 'Las fuentes están respondiendo pero todavía no hay noticias guardadas (<48 h). Volvé en un rato.'
+          : 'Todavía no hay noticias guardadas. Si está sin internet, el panel las trae cuando vuelva; tocá Actualizar ahora.')) + '</div>';
+    return;
+  }
+  caja.innerHTML = lista.map(function(n){
+    var p = n.precio || null;
+    var clasePill = NTN_CLASE[n.sentimiento] || '';
+    var etiquetaSent = n.sentimiento ? n.sentimiento.toUpperCase() : 'SIN CLASIFICAR';
+    var moneda = n.moneda ? n.moneda.split(',')[0].toUpperCase() : null;
+    var mvto = '';
+    if(p && p.estado && p.estado !== 'midiendo'){
+      var sube = /subida/.test(p.estado), exacta = p.movimiento_pct !== undefined;
+      var prop = p.estado === 'no_medido' ? (p.moneda + ': no se pudo medir — ' + (p.por_que || ''))
+        : (p.moneda + (exacta ? ' ' + ((p.movimiento_pct >= 0 ? '+' : '') + p.movimiento_pct.toFixed(2) + ' %') : '')
+           + ' en la hora siguiente: ' + p.estado);
+      mvto = '<span class="mvto ' + (sube ? 'g' : (/caída/.test(p.estado) ? 'r' : '')) + '" title="'
+        + prop + '">' + p.moneda + (exacta ? ' ' + ((p.movimiento_pct >= 0 ? '+' : '') + p.movimiento_pct.toFixed(2) + ' %') : '')
+        + ' · ' + (p.estado === 'no_medido' ? 'sin medir' : p.estado) + '</span>';
+    } else if(p && p.estado === 'midiendo'){
+      mvto = '<span class="mvto">midiendo el precio…</span>';
+    }
+    return '<div class="ntn" data-url="' + n.enlace.replace(/"/g,'&quot;') + '">'
+      + '<div class="meta"><span>' + haceTxt(n.cuando) + '</span><span>·</span>'
+      + '<span>' + (n.fuente || '—') + '</span>'
+      + (moneda ? '<span class="pill" style="border-color:var(--bd2)">' + moneda + '</span>' : '')
+      + '<span class="pill ' + clasePill + '" style="margin-left:auto">' + etiquetaSent + '</span></div>'
+      + '<div class="titular">' + n.titulo.replace(/</g,'&lt;') + '</div>'
+      + '<div class="resum">' + n.resumen.replace(/</g,'&lt;') + '</div>'
+      + (mvto ? '<div>' + mvto + '</div>' : '')
+      + '<div class="fuenteAbajo">' + n.fuente + ' · toca para abrir la noticia original en su página</div>'
+      + '</div>';
+  }).join('');
+  Array.prototype.forEach.call(caja.children, function(el){
+    el.onclick = function(){ window.open(el.getAttribute('data-url'), '_blank', 'noopener'); };
+  });
+}
+document.getElementById('ntnRefrescar').onclick = function(){ traerNoticias(true); };
+document.querySelectorAll('#ntnFiltro button').forEach(function(b){
+  b.onclick = function(){
+    ntn.filtro = b.dataset.f;
+    document.querySelectorAll('#ntnFiltro button').forEach(function(x){ x.classList.toggle('on', x === b); });
+    pintarNoticias();
+  };
+});
+
 /* ==================== carga ==================== */
 function elegir(pair, sym){
   if(!pair){ avisar('Para '+sym+' no hay par directo en Binance público. Probá otro.'); return; }
@@ -1479,6 +1630,7 @@ function pintarAyuda(){
     ['Abrir', 'Doble clic en <b>Abrir panel.bat</b>. Se levanta el servidor y se solo en el navegador.'],
     ['Vistas', 'Teclas <b>1</b> a <b>7</b>, o la columna de la izquierda. <b>/</b> busca, <b>R</b> actualiza, <b>T</b> cambia el tema, <b>F</b> pantalla completa.'],
     ['Laboratorio', 'Vista 6. Movés stop, objetivo y reglas; la curva se recalcula sobre 33.599 velas reales. El botón compara las 5 estrategias de una.'],
+    ['Noticias', 'Vista 8. Las últimas noticias cripto reales en vivo, con hora, moneda, una línea en español de qué va, y qué hizo el precio en la hora siguiente.'],
     ['On-chain', 'Vista 5. Capital bloqueado por red, protocolos, stablecoins, comisiones de Bitcoin y exchanges.'],
     ['Buscar', 'Escribí BTC, ETH, SOL… y toca el resultado para cargarlo en el gráfico.'],
     ['Escenarios', 'El abanico del gráfico es real: baraja variaciones reales de las últimas 400 velas.'],
@@ -1918,7 +2070,7 @@ document.addEventListener('keydown', function(e){
     if(e.key==='Escape') e.target.blur();
     return;
   }
-  var mapa = {'1':'panel','2':'grafico','3':'bot','4':'cuaderno','5':'onchain','6':'lab','7':'ajustes'};
+  var mapa = {'1':'panel','2':'grafico','3':'bot','4':'cuaderno','5':'onchain','6':'lab','7':'ajustes','8':'noticias'};
   if(mapa[e.key]){ irA(mapa[e.key]); return; }
   if(e.key==='/'){ e.preventDefault(); document.getElementById('buscar').focus(); }
   if(e.key==='r' || e.key==='R') recargar();
@@ -1947,6 +2099,7 @@ setInterval(function(){
   traerVelas(); traerChispas(); traerMundo(); traerBot(); traerAsistente();
   if(document.getElementById('v-grafico').classList.contains('on')) traerExtra();
   if(document.getElementById('v-onchain').classList.contains('on')) traerOnchain();
+  if(document.getElementById('v-noticias').classList.contains('on')) traerNoticias();
 }, 90000);
 window.addEventListener('resize', function(){
   pintarDispersin(); pintarProfundidad(); renderVentana();
