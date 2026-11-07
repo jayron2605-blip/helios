@@ -207,6 +207,44 @@ ex4.registrar_cierre(50.0)    # una ganancia no debe sumar a la perdida del dia
 check("X3 ganancia no suma perdida", ex4._estado_dia()["perdida_usd"] >= 30,
       f"{ex4._estado_dia()['perdida_usd']:.2f}")
 
+# RC) registrar_cierre cableado en Broker.cerrar(): el papel vivo acumula la perdida
+# del dia; el backtest historico (sin contador) no toca el freno de hoy.
+print("\n== cierre cableado al freno del dia ==")
+import time as _time_rc
+_tmp_rc = tempfile.mkdtemp(prefix="helios_rc_")
+_contador_real_rc = exchange.RUTA_CONTADOR
+exchange.RUTA_CONTADOR = os.path.join(_tmp_rc, "contador.json")
+with open(exchange.RUTA_CONTADOR, "w", encoding="utf-8") as _f_rc:
+    json.dump({"dia": _time_rc.strftime("%Y-%m-%d"), "operaciones": 0, "perdida_usd": 0.0}, _f_rc)
+_ex_rc = exchange.Exchange({"api_key": "k", "api_secret": "s", "solo_simulacro": False,
+                            "mercados_permitidos": ["BTCUSDT"], "maximo_por_operacion_usd": 1e9,
+                            "maximo_operaciones_dia": 99, "tope_perdida_diaria_usd": 1e9})
+_cfg_rc = Configuracion(capital=1000.0, riesgo_por_operacion=0.02, stop_loss=0.015, take_profit=0.03)
+_b_rc = Broker(_cfg_rc, contador=_ex_rc)
+_b_rc.abrir("BTCUSDT", base, 100.0, 0.6)
+_b_rc.actualizar("BTCUSDT", base + 3_600_000, 100.0, 100.5, 97.0, 98.0)  # toca el stop
+check("RC1 el cierre en papel registra la perdida del dia",
+      _b_rc.posicion is None and _ex_rc._estado_dia()["perdida_usd"] > 0,
+      f"perdida_dia={_ex_rc._estado_dia()['perdida_usd']:.2f}")
+check("RC1b el pnl registrado coincide con el de la operacion",
+      abs(_ex_rc._estado_dia()["perdida_usd"] - (-_b_rc.operaciones[0].pnl_neto)) < 0.01,
+      f"{_ex_rc._estado_dia()['perdida_usd']:.2f} vs {-_b_rc.operaciones[0].pnl_neto:.2f}")
+_antes_rc = _ex_rc._estado_dia()["perdida_usd"]
+_b_rc2 = Broker(_cfg_rc)   # sin contador: backtest historico, no es la plata de hoy
+_b_rc2.abrir("BTCUSDT", base, 100.0, 0.6)
+_b_rc2.actualizar("BTCUSDT", base + 3_600_000, 100.0, 100.5, 97.0, 98.0)
+check("RC2 un Broker sin contador no escribe el freno del dia",
+      _b_rc2.posicion is None and _ex_rc._estado_dia()["perdida_usd"] == _antes_rc,
+      f"{_ex_rc._estado_dia()['perdida_usd']:.2f}")
+# una ganancia en papel no suma perdida
+_b_rc3 = Broker(_cfg_rc, contador=_ex_rc)
+_b_rc3.abrir("BTCUSDT", base, 100.0, 0.6)
+_b_rc3.actualizar("BTCUSDT", base + 3_600_000, 102.0, 103.5, 100.2, 103.1)  # take profit
+check("RC3 cerrar en ganancia no suma perdida del dia",
+      _ex_rc._estado_dia()["perdida_usd"] == _antes_rc,
+      f"{_ex_rc._estado_dia()['perdida_usd']:.2f}")
+exchange.RUTA_CONTADOR = _contador_real_rc
+
 # V) el asistente tiene que aguantar tanto 300 velas como 33.000 sin romperse
 import asistente as _asistente
 

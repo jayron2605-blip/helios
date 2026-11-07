@@ -49,7 +49,7 @@ class Operacion:
 class Broker:
     """Simula la cuenta. Si despues se conecta el cliente real, cambia solo el envio de orden."""
 
-    def __init__(self, cfg: Configuracion, registro="trades.csv", raiz=None):
+    def __init__(self, cfg: Configuracion, registro="trades.csv", raiz=None, contador=None):
         self.cfg = cfg
         self.efectivo = cfg.capital
         self.posicion = None
@@ -58,6 +58,10 @@ class Broker:
         self.registro = registro
         self.raiz = raiz
         self.errores = []
+        # contador del dia (un Exchange). Si se pasa, cada cierre en papel/prueba
+        # registra su resultado para que el freno de perdida diaria sirva de algo.
+        # El backtest historico no lo pasa: sus operaciones no son las de hoy.
+        self.contador = contador
 
     # ---------- decision ----------
     def precio_entrada(self, precio_ref, comprar=True):
@@ -110,6 +114,8 @@ class Broker:
         p.capital_final = self.efectivo
         self.operaciones.append(p)
         self.posicion = None
+        if self.contador is not None:
+            self.contador.registrar_cierre(p.pnl_neto)
         return p
 
     # ---------- avance ----------
