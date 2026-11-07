@@ -97,6 +97,9 @@ input{font-family:inherit}
 .card h3 svg{width:13px;height:13px;color:var(--ft)}
 .note{font-size:var(--f2);color:var(--ft);line-height:1.5;margin-bottom:var(--sp3)}
 .note b{color:var(--md);font-weight:600}
+.fe{display:block;font-family:var(--mono);font-size:10px;color:var(--ft);margin-top:6px;letter-spacing:.02em}
+.fe.m{opacity:.6}
+h3 .fe{display:inline-block;margin-top:0;margin-left:8px;font-weight:400}
 
 .stat{position:relative;overflow:hidden}
 .stat .lb{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ft);margin-bottom:5px}
@@ -494,20 +497,20 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
         <div class="row split3">
           <div class="card">
-            <h3>Lecturas del mercado</h3>
+            <h3>Lecturas del mercado<span class="fe" data-fe="velas"></span></h3>
             <div class="note">Cuatro preguntas aburridas sobre las velas de arriba.</div>
             <div id="lecturas"></div>
             <div class="gauge"><div class="dots" id="dots"></div><div class="txt" id="veredicto">—</div></div>
           </div>
           <div class="card">
-            <h3>Profundidad y flujo</h3>
+            <h3>Profundidad y flujo<span class="fe" data-fe="libro,extra"></span></h3>
             <div class="note">Curva acumulada de ofertas reales. Verde comprando, rojo vendiendo.</div>
             <canvas id="prof" height="150"></canvas>
             <div class="book" id="libro" style="margin-top:8px;max-height:150px;overflow:auto"></div>
             <div class="note" style="margin-top:7px" id="libroNota"></div>
           </div>
           <div class="card">
-            <h3>Calor de mercado</h3>
+            <h3>Calor de mercado<span class="fe" data-fe="mercados"></span></h3>
             <div class="note" id="calorSub">Variación real de 24 h.</div>
             <div class="heat" id="heat"></div>
             <div class="note" style="margin-top:9px">Dispersión: variación contra posición en su propio rango.</div>
@@ -520,6 +523,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <h3 style="margin:0">Seguimiento</h3>
             <button class="btn" id="btnSoloFavs" style="margin:0" title="Mostrar sólo las monedas que marcaste con la estrella">☆ Sólo favoritos</button>
             <span class="note" id="favsCuenta" style="margin:0"></span>
+            <span class="fe" data-fe="mercados,chispas" style="margin:0"></span>
           </div>
           <div class="note">Últimas 7 horas, 24 horas y 7 días. Tocá una fila para cargarla en el gráfico; tocá la ☆ para guardarla en tus favoritos (queda en tu PC, no sale a internet). La lista está virtualizada: sólo se dibujan las filas que ves.</div>
           <div class="vlist" id="cajaLista"><table><thead><tr>
@@ -529,7 +533,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
 
         <div class="card" style="margin-bottom:12px">
-          <h3>Comparador de monedas</h3>
+          <h3>Comparador de monedas<span class="fe" data-fe="mercados,chispas"></span></h3>
           <div class="note">Elegí hasta tres monedas y miralas lado a lado con los mismos datos reales. Sirve para decidir entre dos o tres candidatas sin saltar de pantalla. Si un dato no está, se muestra un guion: no se inventa.</div>
           <div class="cmpSel">
             <select id="cmpA" title="Primera moneda"></select>
@@ -566,6 +570,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <div id="chartBig" style="height:440px"></div>
           </div>
           <div id="chartRsi" style="height:110px;margin-top:6px"></div>
+          <span class="fe" data-fe="velas,extra"></span>
           <div class="legend">
             <span><i style="background:#f0b90b"></i>EMA 20</span>
             <span><i style="background:#00d1ff"></i>EMA 50</span>
@@ -587,7 +592,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
       <!-- ================= BOT ================= -->
       <section class="view" id="v-bot"><div class="wrap">
         <div class="card" style="margin-bottom:12px">
-          <h3>Estado del bot <span class="pill" id="botModo" style="margin-left:8px">—</span></h3>
+          <h3>Estado del bot <span class="pill" id="botModo" style="margin-left:8px">—</span><span class="fe" data-fe="cerebro"></span></h3>
           <div class="note" id="botSub">Sin datos del bot todavía.</div>
           <div class="row c4" id="botFrenos"></div>
           <div class="note" style="margin-top:10px" id="botAvisos"></div>
@@ -597,26 +602,28 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <div class="note">El modelo mira las últimas 24 velas de cada mercado y dice si ve más probable subir o bajar.</div>
             <table><thead><tr><th>Mercado</th><th>Precio</th><th>Prob. subir</th><th>Decisión</th><th>Posición</th></tr></thead><tbody id="botSenales"></tbody></table>
           </div>
-          <div class="card"><h3>Prueba walk-forward</h3>
+          <div class="card"><h3>Prueba walk-forward<span class="fe" data-fe="puntaje"></span></h3>
             <div class="note">Entrenado sólo con datos anteriores a cada mes de prueba. Comisión del 0,1 % por lado descontada.</div>
             <div id="botPuntaje"></div>
+            <button class="btn" onclick="bajarScorecard()">Descargar scorecard (CSV)</button>
           </div>
         </div>
         <div class="row split">
-          <div class="card"><h3>Las ideas que se probaron para ver si había ventaja</h3>
-            <div class="note">Nueve formas de operar, los mismos datos, la misma comisión. La vara es <b>comprar y no tocar nada</b>. Si ninguna gana, el bot se queda apagado.</div>
+          <div class="card"><h3>Las ideas que se probaron para ver si había ventaja<span class="fe" data-fe="ventaja"></span></h3>
+            <div class="note">Trece formas de operar, los mismos datos, la misma comisión. La vara es <b>comprar y sostener</b>, medida en el mismo tramo. Solo aprueba la que le gana en la mayoría de los mercados y no queda en rojo.</div>
             <div class="scrolly"><table><thead><tr>
               <th>Idea</th><th>Resultado</th><th>$6.000 →</th><th>Caída media</th><th>Gana en</th><th>¿Aprueba?</th>
             </tr></thead><tbody id="ventajaFilas"></tbody></table></div>
             <div class="note" style="margin-top:9px" id="ventajaVeredicto"></div>
+            <button class="btn" onclick="bajarVentaja()">Descargar ventaja (CSV)</button>
           </div>
-          <div class="card"><h3>Registro de decisiones</h3>
+          <div class="card"><h3>Registro de decisiones<span class="fe" data-fe="decisiones"></span></h3>
             <div class="note">Cada día se anota qué dijo el programa. Y 24 horas después vuelve y escribe <b>qué pasó de verdad</b>. Eso es lo único que se puede auditar.</div>
             <div class="scrolly" style="max-height:260px"><table><thead><tr>
               <th>Fecha</th><th>Mercado</th><th>Precio</th><th>Prob.</th><th>Qué dijo</th><th>Qué pasó</th>
             </tr></thead><tbody id="decFilas"></tbody></table></div>
             <div class="note" style="margin-top:9px" id="decResumen"></div>
-            <button class="btn" onclick="bajarDecisiones()">Descargar decisiones (Excel)</button>
+            <button class="btn" onclick="bajarDecisiones()">Descargar decisiones (CSV)</button>
           </div>
         </div>
         <div class="foot" id="botExplica"></div>
@@ -650,6 +657,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <button data-t="miedo">Miedo y codicia 90 días</button>
           </div>
           <div class="note" id="ocNota"></div>
+          <span class="fe" data-fe="onchain,miedo_hist"></span>
           <div id="ocCuerpo"></div>
         </div>
         <div class="foot">
@@ -662,7 +670,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
       <!-- ================= LABORATORIO ================= -->
       <section class="view" id="v-lab"><div class="wrap">
         <div class="card" style="margin-bottom:12px">
-          <h3>Laboratorio de estrategias</h3>
+          <h3>Laboratorio de estrategias<span class="fe" data-fe="historial"></span></h3>
           <div class="note">Movés un control y la curva se recalcula al instante sobre <b id="labVelas">33.599 velas reales</b> de este mercado, desde 2023.
             La comisión y el deslizamiento se descuentan siempre, y la línea gris es <b>comprar y no tocar nada</b>: si la azul no la supera, la estrategia no sirve.</div>
           <div class="lab">
@@ -682,6 +690,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
               <div><label>Comisión por lado <span class="val" id="vCom"></span></label><input type="range" id="rCom" min="0" max="0.3" step="0.01" value="0.1"></div>
               <div><label>Capital inicial <span class="val" id="vCap"></span></label><input type="range" id="rCap" min="100" max="20000" step="100" value="1000"></div>
               <div style="margin-top:4px"><button class="btn" id="labComparar" style="width:100%;margin:0">Comparar las 5 estrategias</button></div>
+              <div style="margin-top:4px"><button class="btn" id="labBajar" style="width:100%;margin:0">Descargar laboratorio (CSV)</button></div>
             </div>
             <div>
               <div id="labCurva"></div>
@@ -810,6 +819,7 @@ function pedir(tipo, params){
     return r.json();
   }).then(function(j){
     latencias[tipo] = Math.round(performance.now() - t0);
+    fuentes[tipo] = Date.now();
     if(LOCAL) return { estado:'ok', datos:j };
     return j;
   });
@@ -819,6 +829,30 @@ function pedir(tipo, params){
 var estado = { simbolo:'BTCUSDT', nombre:'BTC', intervalo:'1h', velas:[], mercados:[], chispas:{},
                lecturas:null, marco:'completo', escenarios:null, libro:null, extra:null, mundo:null };
 var latencias = {};
+var fuentes = {};   // tipo de endpoint -> momento real en que llegó el dato
+var FUENTE_DE = {
+  mercados:'CoinGecko', chispas:'CoinGecko', mundo:'CoinGecko · alternative.me',
+  velas:'Binance', libro:'Binance', extra:'Binance Futuros', historial:'Binance (histórico local)',
+  onchain:'DefiLlama · mempool.space · CoinGecko', miedo_hist:'alternative.me',
+  noticias:'RSS · Brio', asistente:'Binance (calculado)', cerebro:'modelo local',
+  puntaje:'prueba walk-forward', ventaja:'prueba de ventaja', decisiones:'registro local',
+  cuaderno:'cuaderno local'
+};
+function txtFuente(tipo){
+  var ts = fuentes[tipo];
+  if(!ts) return '';
+  var nombre = FUENTE_DE[tipo] || tipo;
+  return nombre + ' · ' + haceTxt(ts);
+}
+function pintarFuentes(){
+  Array.prototype.forEach.call(document.querySelectorAll('[data-fe]'), function(el){
+    var tipos = el.getAttribute('data-fe').split(',');
+    var partes = tipos.map(function(t){ return txtFuente(t.trim()); }).filter(function(x){ return x; });
+    el.textContent = partes.length ? partes.join('  |  ') : 'todavía sin datos';
+    el.className = 'fe' + (partes.length ? '' : ' m');
+  });
+}
+setInterval(pintarFuentes, 30000);
 var grafico, serieVelas, serieVol, serieMediana, serieEsc = [];
 var big, bigVelas, bigVol, bigE20, bigE50, bigE200, bigMed, bigEsc = [], rsiG, rsiSerie;
 var MAX_CACHE_LOCAL = 600, HORIZONTE = 24, N_ESC = 40;
@@ -1337,6 +1371,7 @@ function pintarMarcos(){
 
 /* ==================== bot / puntaje ==================== */
 function pintarBot(c, s){
+  ultScorecard = s || null;
   var modo = document.getElementById('botModo');
   if(c && c.modo){
     modo.textContent = c.modo;
@@ -1799,6 +1834,7 @@ function ok(e){
   var total = Object.keys(latencias).reduce(function(s,k){ return s+latencias[k]; },0);
   document.getElementById('stLat').textContent = Object.keys(latencias).length + ' FUENTES · ' + total + ' ms';
   document.getElementById('stFuentes').textContent = 'Binance · Binance Futuros · CoinGecko · alternative.me';
+  pintarFuentes();
 }
 function avisar(t){ var a=document.getElementById('aviso'); a.textContent=t; a.style.display='block'; a.style.borderLeftColor='var(--dn)'; }
 function avisarOk(t){ var a=document.getElementById('aviso'); a.textContent=t; a.style.display='block'; a.style.borderLeftColor='var(--up)'; }
@@ -1806,7 +1842,7 @@ function avisarOk(t){ var a=document.getElementById('aviso'); a.textContent=t; a
 /* ==================== ayuda ==================== */
 function pintarAyuda(){
   document.getElementById('ayuda').innerHTML = [
-    ['Abrir', 'Doble clic en <b>Abrir panel.bat</b>. Se levanta el servidor y se solo en el navegador.'],
+    ['Abrir', 'Doble clic en <b>Abrir panel.bat</b>. Se levanta el servidor y se abre solo en el navegador.'],
     ['Vistas', 'Teclas <b>1</b> a <b>8</b>, o la columna de la izquierda. <b>/</b> busca, <b>R</b> actualiza, <b>T</b> cambia el tema, <b>F</b> pantalla completa.'],
     ['Favoritos', 'En la lista de Seguimiento, tocá la ☆ de una moneda para guardarla. Queda en tu PC. El botón <b>Sólo favoritos</b> filtra la lista para ver nada más que esas.'],
     ['Comparador', 'Panel, abajo de la lista: elegí hasta tres monedas y miralas lado a lado con los mismos datos reales.'],
@@ -2079,11 +2115,14 @@ Array.prototype.forEach.call(document.querySelectorAll('#ocTabs button'), functi
 
 /* ==================== ventaja y decisiones ==================== */
 var ultDecisiones = null;
+var ultScorecard = null;
+var ultVentaja = null;
 
 function traerVentaja(){
   return pedir('ventaja','').then(function(r){ if(r && r.datos) pintarVentaja(r.datos); }).catch(function(){});
 }
 function pintarVentaja(v){
+  ultVentaja = v || null;
   var base = null;
   (v.estrategias || []).forEach(function(e){ if(e.estrategia.indexOf('S0') === 0) base = e; });
   document.getElementById('ventajaFilas').innerHTML = (v.estrategias || []).map(function(e){
@@ -2148,6 +2187,47 @@ function bajarDecisiones(){
   descargar(csv, 'decisiones.csv');
 }
 
+function csvCelda(c){ c = (c===null||c===undefined) ? '' : String(c); return /[",\n]/.test(c) ? '"'+c.replace(/"/g,'""')+'"' : c; }
+function csvDe(cab, filas){ return cab.map(csvCelda).join(',')+'\n'+filas.map(function(f){ return f.map(csvCelda).join(','); }).join('\n'); }
+
+function bajarScorecard(){
+  if(!ultScorecard || !ultScorecard.detalle){ avisar('Todavía no hay scorecard cargado.'); return; }
+  var s = ultScorecard;
+  var cab = ['mercado','operaciones','aciertos_pct','retorno_bot_pct','comprar_y_sostener_pct','ventaja_pts'];
+  var filas = Object.keys(s.detalle).map(function(k){
+    var r = s.detalle[k];
+    return [k, r.operaciones||0, ((r.tasa_acierto||0)*100).toFixed(1), ((r.retorno||0)*100).toFixed(1),
+            ((r.comprar_y_sostener||0)*100).toFixed(1), (((r.retorno||0)-(r.comprar_y_sostener||0))*100).toFixed(1)];
+  });
+  descargar(csvDe(cab, filas), 'scorecard.csv');
+}
+
+function bajarVentaja(){
+  if(!ultVentaja || !ultVentaja.estrategias){ avisar('Todavía no hay prueba de ventaja cargada.'); return; }
+  var cab = ['estrategia','retorno_promedio_pct','desde_1000_total','caida_media_pct','gana_en','aprueba'];
+  var filas = ultVentaja.estrategias.map(function(e){
+    return [e.estrategia, (e.retorno_promedio*100).toFixed(1), e.desde_1000_total||'',
+            ((e.caida_media||0)*100).toFixed(1),
+            (e.le_gana_al_benchmark_en===null||e.le_gana_al_benchmark_en===undefined?'':e.le_gana_al_benchmark_en+'/6'),
+            (e.estrategia.indexOf('S0')===0?'':(e.aprueba?'si':'no'))];
+  });
+  descargar(csvDe(cab, filas), 'ventaja.csv');
+}
+
+function bajarLaboratorio(){
+  if(!lab.datos){ avisar('Primero cargá el historial en el Laboratorio.'); return; }
+  var cfg = labCfg();
+  var nombres = { momentum:'Momentum', cruce:'Cruce de medias', rsi:'RSI', contra:'Contra la multitud', nada:'No comprar nada' };
+  var cab = ['estrategia','mercado','velas','operaciones','aciertos_pct','retorno_pct','comprar_y_sostener_pct','ventaja_pts','caida_max_pct','comisiones_usd','gana_a_comprar_y_sostener'];
+  var filas = Object.keys(nombres).map(function(k){
+    var r = labBacktest(lab.datos, Object.assign({}, cfg, { tipo:k }));
+    return [nombres[k], lab.simbolo, r.velas, r.operaciones, (r.acierto*100).toFixed(1),
+            (r.retorno*100).toFixed(1), (r.bhRetorno*100).toFixed(1), ((r.retorno-r.bhRetorno)*100).toFixed(1),
+            (r.dd*100).toFixed(1), r.comisiones.toFixed(2), (r.retorno>r.bhRetorno?'si':'no')];
+  });
+  descargar(csvDe(cab, filas), 'laboratorio_'+lab.simbolo+'.csv');
+}
+
 /* ==================== laboratorio ==================== */
 var lab = { datos:null, simbolo:'BTCUSDT', cargando:false, grafico:null, serieBot:null, serieBh:null, lista:null };
 var LAB_DESLICE = 0.0005;
@@ -2162,6 +2242,7 @@ function labIniciar(){
     document.getElementById(id).addEventListener('input', labAlCabio);
   });
   document.getElementById('labComparar').onclick = labCompararTodas;
+  document.getElementById('labBajar').onclick = bajarLaboratorio;
   labAlCabio(); labCargar();
   simIniciar();
 }

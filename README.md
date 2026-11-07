@@ -17,17 +17,22 @@ gráfico usa una librería por CDN).
 | `Abrir panel.bat` | Levanta el servidor local y abre el terminal en el navegador |
 | `Entrenar.bat` | Baja el histórico de velas y entrena el modelo con walk-forward |
 | `Bot en papel.bat` | Cada 15 minutos mira el mercado, decide y anota |
-| `Probar el motor.bat` | Corre las 90 pruebas del motor, de los frenos, del candado y de las noticias |
+| `Probar el motor.bat` | Corre las 94 pruebas del motor, de los frenos, del candado y de las noticias |
 
 Teclas dentro del panel: `1`-`8` cambian de vista, `/` busca, `R` actualiza, `T` tema, `F` pantalla completa.
 
-Los `.bat` llaman a `py -3.12`. Si tu Python no está registrado así (en esta PC es 3.14 y `py` no
-está en el PATH), todo se puede correr a mano desde la carpeta del proyecto, con el intérprete
-que tengas (acá: `C:\Users\alina\AppData\Local\Programs\Python\Python314\python.exe`):
+Los `.bat` ya no piden una versión fija: cada uno llama a `_python.bat`, que busca un Python que
+sirva de verdad (primero `py -3.12`, después el launcher de Python, después cualquier
+`Python3*` instalado en `%LOCALAPPDATA%`, y al final `python`/`python3`). En esta PC encuentra
+3.14 solo. El `python` suelto de Windows suele ser un acceso roto a la Microsoft Store, por eso
+se prueba al final y sólo si responde. Si no hay ninguno, el `.bat` avisa y no inventa una versión.
+
+Igual todo se puede correr a mano desde la carpeta del proyecto, con el intérprete que tengas
+(acá: `C:\Users\alina\AppData\Local\Programs\Python\Python314\python.exe`):
 
 ```
 python servidor.py          # el panel en http://127.0.0.1:8765/
-python bot/pruebas.py       # las 90 pruebas
+python bot/pruebas.py       # las 94 pruebas
 python bot/datos.py         # baja o actualiza las velas locales
 python bot/ventaja.py       # la búsqueda de ventaja (S0 a S12)
 python bot/cerebro.py 24    # una decisión en papel y la registra
@@ -48,7 +53,7 @@ bot/exchange.py   firmado HMAC de Binance + 6 frenos + candado de modo prueba fi
 bot/cerebro.py    circuito vivo: decide, registra y avisa; se apaga solo si no hay ventaja
 bot/noticias.py   noticias en vivo con RSS, sin clave, conectadas con el precio
 bot/avisos.py     avisos al teléfono por Telegram, sólo cuando cambia algo importante
-bot/pruebas.py    90 pruebas del motor, de los frenos, del candado y de las noticias
+bot/pruebas.py    94 pruebas del motor, de los frenos, del candado y de las noticias
 bot/que_se_puede.py  test de qué es predecible y qué no
 ```
 
