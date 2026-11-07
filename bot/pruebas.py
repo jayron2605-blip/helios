@@ -175,5 +175,34 @@ except Exception as e:
 check("T el modo del exchange es PRUEBA FIJA", exchange.Exchange.modo == "PRUEBA FIJA")
 check("U puede_operar_de_verdad es falso", exchange.Exchange.puede_operar_de_verdad is False)
 
+# V) el asistente tiene que aguantar tanto 300 velas como 33.000 sin romperse
+import asistente as _asistente
+
+
+def _velas_falsas(n):
+    base, out = 100.0, []
+    for i in range(n):
+        base *= 1 + (0.001 if i % 3 else -0.0008)
+        out.append({"t": 1700000000000 + i * 3600000, "o": base * 0.999, "h": base * 1.004,
+                    "l": base * 0.996, "c": base, "v": 1000 + i})
+    return out
+
+
+_original = (_asistente.velas, _asistente.velas_publicas, _asistente.fotos_del_mercado)
+try:
+    _asistente.fotos_del_mercado = lambda: {"amplitud": None, "bajando": None, "subiendo": None,
+                                            "mediana": None, "miedo": None, "miedo_texto": None}
+    for cantidad in (300, 1000, 30000):
+        _asistente.velas = lambda s, n=cantidad: _velas_falsas(n)
+        _asistente.velas_publicas = lambda s, limite=1000: []
+        try:
+            r = _asistente.analizar("BTCUSDT", 1000)
+            ok_df = ("estado" in r and r.get("riesgo", {}).get("stop_pct") is not None)
+        except Exception as e:
+            ok_df = False
+        check("V el asistente aguanta %d velas" % cantidad, bool(ok_df))
+finally:
+    _asistente.velas, _asistente.velas_publicas, _asistente.fotos_del_mercado = _original
+
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)

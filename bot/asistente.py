@@ -151,7 +151,7 @@ def analizar(simbolo="BTCUSDT", capital=CAPITAL_POR_DEFECTO, riesgo=RIESGO_POR_D
     cambio7d = (precio / v[-169]["c"] - 1) * 100 if len(v) > 169 else None
     rango24 = (max(x["h"] for x in v[-24:]) - min(x["l"] for x in v[-24:])) / precio * 100
     caidas = []
-    for i in range(24, min(len(v), 24 * 90)):
+    for i in range(24, max(24, min(len(v) - 24, 24 * 90))):
         caidas.append((v[-i]["c"] / v[-i - 24]["c"] - 1) * 100)
     peor24 = min(caidas) if caidas else None
 
