@@ -142,6 +142,20 @@ def arma_tabla():
     return d
 
 
+def leer_tabla():
+    """Lee la tabla guardada; si no se puede, la regenera desde los CSV locales.
+
+    El pickle depende de la version de pandas que lo escribio. Este compartido lo
+    usan dos PCs y si cada una tiene un pandas distinto, el archivo de una es
+    ilegible en la otra. Es un cache derivado de los CSV, no un dato unico:
+    regenerarlo no pierde nada.
+    """
+    try:
+        return pd.read_pickle(os.path.join(DATOS, "tabla.pkl"))
+    except Exception:
+        return arma_tabla()
+
+
 if __name__ == "__main__":
     os.makedirs(DATOS, exist_ok=True)
     total = 0

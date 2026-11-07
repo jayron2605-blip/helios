@@ -10,14 +10,14 @@ from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostin
 from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from datos import FEATURES, SIMBOLOS
+from datos import FEATURES, SIMBOLOS, leer_tabla
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 H = 24
 
 
 def base():
-    d = pd.read_pickle(os.path.join(RAIZ, "datos", "tabla.pkl")).sort_values(["simbolo", "t"]).reset_index(drop=True)
+    d = leer_tabla().sort_values(["simbolo", "t"]).reset_index(drop=True)
     d["futuro"] = d.groupby("simbolo")["close"].shift(-H)
     d["y"] = (np.log(d["futuro"].clip(lower=1e-12)) - np.log(d["close"].clip(lower=1e-12)) > 0).astype(int)
     # agitacion futura: rango real de las proximas H velas, normalizado por el precio

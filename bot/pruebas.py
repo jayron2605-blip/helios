@@ -489,5 +489,58 @@ check("BR17b la clave tampoco se comparte", "bot/noticias.json" in _ignore_br)
 _noticias.RUTA_CLAVES, _noticias.RUTA_BRIO = _claves_real, _brio_real
 _noticias.ESTADO.pop("_brio", None)
 
+# VA) las estrategias nuevas de ventaja: pesos acotados y sin mirar el futuro
+print("\n== estrategias nuevas ==")
+import numpy as _np
+import pandas as _pd
+import ventaja as _ventaja
+
+
+def _sub_va(close, **cols):
+    base = {"close": _np.asarray(close, dtype=float)}
+    for k, v in cols.items():
+        base[k] = _np.asarray(v, dtype=float)
+    return _pd.DataFrame(base)
+
+
+_c_va = [100.0] * 10 + [96.0] * 10 + [100.0] * 10 + [104.0] * 10
+_sub_grid = _sub_va(_c_va)
+_w_grid = _ventaja.pesos_grid(_sub_grid)
+check("VA1 la rejilla mantiene la exposicion entre 0 y 1",
+      bool((_w_grid >= 0).all() and (_w_grid <= 1.0).all()),
+      f"min={_w_grid.min():.2f} max={_w_grid.max():.2f}")
+check("VA2 la rejilla compra al caer y vende al subir",
+      _w_grid[12] > _w_grid[2] and _w_grid[32] < _w_grid[22],
+      f"cae {_w_grid[2]:.2f}->{_w_grid[12]:.2f} | sube {_w_grid[22]:.2f}->{_w_grid[32]:.2f}")
+# causalidad: mover el futuro no puede cambiar lo decidido antes
+_c_futuro = list(_c_va)
+for i in range(20, len(_c_futuro)):
+    _c_futuro[i] *= 3.0
+_w_futuro = _ventaja.pesos_grid(_sub_va(_c_futuro))
+check("VA3 la rejilla no mira el futuro", bool((_w_grid[:20] == _w_futuro[:20]).all()))
+
+_n = 60
+_sub_rot = _sub_va([100.0] * _n, r24=[0.01] * _n, med_otras_r24=[0.02] * _n)
+check("VA4 rotacion se queda afuera si va peor que sus pares",
+      bool((_ventaja.pesos_rotacion(_sub_rot) == 0).all()))
+_sub_rot2 = _sub_va([100.0] * _n, r24=[0.03] * _n, med_otras_r24=[0.01] * _n)
+check("VA4b rotacion entra si va mejor que sus pares",
+      bool((_ventaja.pesos_rotacion(_sub_rot2)[7:] == 1).all()))
+
+_sub_ms = _sub_va([100.0] * _n, r24=[0.01] * _n, r168=[-0.01] * _n, r720=[0.01] * _n)
+check("VA5 multiescala no entra si una escala discrepa",
+      bool((_ventaja.pesos_multiescala(_sub_ms) == 0).all()))
+_sub_ms2 = _sub_va([100.0] * _n, r24=[0.01] * _n, r168=[0.01] * _n, r720=[0.01] * _n)
+check("VA5b multiescala entra si las tres acuerdan",
+      bool((_ventaja.pesos_multiescala(_sub_ms2)[24:] == 1).all()))
+
+_sub_dca = _sub_va([100.0] * (_n * 4), v_pred=[0.03] * (_n * 4))
+_w_dca = _ventaja.pesos_dca(_sub_dca)
+check("VA6 el DCA nunca vende y llega a lo sumo a 1",
+      bool((_np.diff(_w_dca) >= -1e-12).all() and _w_dca.max() <= 1.0),
+      f"final={_w_dca[-1]:.2f}")
+check("VA6b el DCA compra su primer aporte en el primer rebalanceo",
+      abs(_w_dca[0] - 0.05) < 1e-9, f"w0={_w_dca[0]:.3f}")
+
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)

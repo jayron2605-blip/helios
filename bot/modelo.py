@@ -12,7 +12,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from joblib import dump
 
 from ejecutor import Broker, Configuracion
-from datos import SIMBOLOS, FEATURES
+from datos import SIMBOLOS, FEATURES, leer_tabla
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 DATOS = os.path.join(RAIZ, "datos")
@@ -23,7 +23,7 @@ CALIENTE_MESES = 12
 
 
 def carga_tabla(horizonte):
-    d = pd.read_pickle(os.path.join(DATOS, "tabla.pkl")).sort_values(["simbolo", "t"]).reset_index(drop=True)
+    d = leer_tabla().sort_values(["simbolo", "t"]).reset_index(drop=True)
     d["futuro"] = d.groupby("simbolo")["close"].shift(-horizonte)
     d["etiqueta_h"] = (np.log(d["futuro"].clip(lower=1e-12))
                        - np.log(d["close"].clip(lower=1e-12)))

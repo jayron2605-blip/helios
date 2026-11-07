@@ -1,4 +1,4 @@
-"""Busqueda de ventaja: seis estrategias, los mismos datos, los mismos costos.
+"""Busqueda de ventaja: trece estrategias, los mismos datos, los mismos costos.
 
 La pregunta no es "¿adivino la direccion?". La evidencia hasta aqui dice que no.
 La pregunta que si puede dar plata es: **¿se puede saber cuando viene riesgo alto y
@@ -15,9 +15,20 @@ Ideas probadas:
   S3  direccion solo en bandas extremas       (entrar solo con prob > 0.60)
   S4  exposicion apuntada a agitacion         (bajar el tamano cuando viene riesgo alto)
   S5  S4 encima de momentum suave             (idem, pero con sesgo de tendencia)
+  S6  S4 sin apalancar, rebalanceo diario     (la prueba justa de la idea)
+  S7  S6 semanal                              (menos comisiones)
+  S8  S7 con tope 0,8                         (proteccion, no ventaja)
+  S9  rejilla de precios (grid)               (compra escalones al caer, vende al subir)
+  S10 rotacion cross-seccional                (solo la moneda mas fuerte que sus pares)
+  S11 confirmacion dia+semana+mes             (entrar solo si las tres escalas acuerdan)
+  S12 DCA semanal segun agitacion             (compras periodicas, nunca vende)
 
-Criterio de aprobacion: ganarle a comprar-y-sostener en al menos 4 de los 6 mercados
-Y no quedar por debajo de 0 % en promedio. Si no cumple, se apaga y queda escrito.
+Todas, incluida la vara S0, se miden en el MISMO tramo (el que el walk-forward
+alcanza a evaluar). Versiones anteriores median S0 en la historia completa y las
+estrategias solo en el tramo de prueba: comparaban periodos distintos.
+
+Criterio de aprobacion: ganarle a comprar-y-sostener en mas de la mitad de los mercados
+(4 de 6) Y no quedar por debajo de 0 % en promedio. Si no cumple, se apaga y queda escrito.
 """
 import json, os, sys, time
 import numpy as np
@@ -25,7 +36,7 @@ import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from datos import FEATURES, SIMBOLOS
+from datos import FEATURES, SIMBOLOS, leer_tabla
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 SALIDA = os.path.join(RAIZ, "resultados")
@@ -40,7 +51,7 @@ DIAS = 24                 # velas de 1h en un dia
 
 
 def cargar():
-    d = pd.read_pickle(os.path.join(RAIZ, "datos", "tabla.pkl"))
+    d = leer_tabla()
     d = d.sort_values(["simbolo", "t"]).reset_index(drop=True)
     log = np.log(d["close"].clip(lower=1e-12))
     d["r1"] = log.groupby(d["simbolo"]).diff()
@@ -227,6 +238,91 @@ def pesos_vol_con_momentum(sub):
     return w
 
 
+# ---------- mecanismos NUEVOS (no repiten S1-S8) ----------
+def pesos_grid(sub, paso=0.02, base=0.5, delta=0.10, cap=1.0):
+    """S9: rejilla de precios. Compra un escalon cada vez que el precio cae un `paso`
+    por debajo del ultimo precio operado, y vende un escalon cada vez que sube un
+    `paso` por encima. No predice direccion: cobra la oscilacion.
+
+    Idea de rejilla como la del grid bot MIT de jordantete/grid_trading_bot,
+    reescrita aqui como pesos de exposicion (no se copia codigo de ese repo).
+    Solo usa el cierre de la vela t: la orden se ejecuta en t+1, sin mirar el futuro.
+    """
+    c = sub["close"].to_numpy(dtype=float)
+    out = np.zeros(len(c))
+    ancla = c[0]
+    w = base
+    escala = np.log1p(paso)
+    for i in range(len(c)):
+        if c[i] <= 0 or ancla <= 0:
+            out[i] = w
+            continue
+        escalones = int(np.floor(np.log(c[i] / ancla) / escala + 0.5))
+        if escalones:
+            # cada escalon abajo suma un compra; cada escalon arriba resta una venta.
+            # Se acumula: volver al precio ancla no deshace lo operado.
+            w = float(min(cap, max(0.0, w - escalones * delta)))
+            ancla = c[i]
+        out[i] = w
+    return out
+
+
+def pesos_rotacion(sub, cada=DIAS * 7):
+    """S10: quedarse solo con la moneda que va mas fuerte que sus pares.
+
+    Usa la fuerza de 24 h contra la mediana de las OTRAS cinco (ya viene en la
+    tabla como med_otras_r24). Si esta moneda no le gana al resto, no se tiene.
+    Rebalanceo semanal para no pagar comisiones por cada hora.
+    """
+    rel = (sub["r24"] - sub["med_otras_r24"]).to_numpy(dtype=float)
+    out = np.zeros(len(rel))
+    actual = 0.0
+    for i in range(len(rel)):
+        if i % cada == 0:
+            actual = 1.0 if (np.isfinite(rel[i]) and rel[i] > 0) else 0.0
+        out[i] = actual
+    return out
+
+
+def pesos_multiescala(sub, cada=DIAS):
+    """S11: entrar solo cuando dia, semana y mes apuntan al mismo lado.
+
+    r24 (dia), r168 (semana) y r720 (mes) tienen que ser los tres positivos.
+    Como el motor es solo largo, si los tres son negativos se queda afuera (0).
+    """
+    a = sub["r24"].to_numpy(dtype=float)
+    b = sub["r168"].to_numpy(dtype=float)
+    c = sub["r720"].to_numpy(dtype=float)
+    out = np.zeros(len(a))
+    actual = 0.0
+    for i in range(len(a)):
+        if i % cada == 0:
+            ok = np.isfinite(a[i]) and np.isfinite(b[i]) and np.isfinite(c[i])
+            actual = 1.0 if (ok and a[i] > 0 and b[i] > 0 and c[i] > 0) else 0.0
+        out[i] = actual
+    return out
+
+
+def pesos_dca(sub, cada=DIAS * 7, aporte=0.05, objetivo=OBJETIVO_VOL):
+    """S12: compras periodicas (DCA), mas grandes cuando viene poca agitacion.
+
+    Nunca vende: va sumando un aporte semanal hasta llegar a estar del todo
+    adentro. El aporte se escala por la agitacion prevista: chico si viene
+    riesgo alto, grande si viene calmado. Mecanismo de entrada distinto a S1-S8.
+    """
+    v = sub["v_pred"].to_numpy(dtype=float)
+    out = np.zeros(len(v))
+    w = 0.0
+    for i in range(len(v)):
+        if i % cada == 0 and w < 1.0:
+            factor = 1.0
+            if np.isfinite(v[i]) and v[i] > 0:
+                factor = float(min(2.0, max(0.25, objetivo / v[i])))
+            w = min(1.0, w + aporte * factor)
+        out[i] = w
+    return out
+
+
 def correr():
     os.makedirs(SALIDA, exist_ok=True)
     d = cargar()
@@ -257,6 +353,10 @@ def correr():
         "S6 agitacion, sin apalancar, diario": lambda s: pesos_por_vol_cap(s),
         "S7 agitacion, sin apalancar, semanal": lambda s: pesos_por_vol_cap(s, cada=DIAS * 7, banda=0.20),
         "S8 agitacion, tope 0.8, semanal": lambda s: pesos_por_vol_cap(s, cap=0.8, cada=DIAS * 7, banda=0.20),
+        "S9 rejilla de precios (grid)": lambda s: pesos_grid(s),
+        "S10 rotacion: solo la mas fuerte que sus pares": lambda s: pesos_rotacion(s),
+        "S11 confirmacion dia+semana+mes": lambda s: pesos_multiescala(s),
+        "S12 DCA semanal segun agitacion": lambda s: pesos_dca(s),
     }
 
     tabla, detalle = [], {}
@@ -264,7 +364,11 @@ def correr():
         fila = {"estrategia": nombre, "mercados": {}}
         for sim in SIMBOLOS:
             sub = d[d["simbolo"] == sim].sort_values("t")
-            sub = sub[sub["v_pred"].notna() | (nombre == "S0 comprar y sostener")]
+            # Todas, incluida la vara S0, corren en el MISMO tramo: el que el
+            # walk-forward alcanza a evaluar. Antes S0 usaba la historia completa
+            # y las estrategias solo el tramo de prueba: la vara quedaba inflada
+            # (o desinflada) por un periodo que las otras ni veian.
+            sub = sub[sub["v_pred"].notna()]
             if len(sub) < 3000:
                 continue
             c = sub["close"].to_numpy(dtype=float)
@@ -289,13 +393,14 @@ def correr():
         gana = sum(1 for sim, v in fila["mercados"].items()
                    if v["retorno"] > base["mercados"].get(sim, {}).get("retorno", 0))
         fila["le_gana_al_benchmark_en"] = gana
-        fila["aprueba"] = bool(gana >= 4 and (fila["retorno_promedio"] or 0) > 0)
+        fila["aprueba"] = bool(gana * 2 > len(SIMBOLOS) and (fila["retorno_promedio"] or 0) > 0)
 
     print("\n=== resultado ===")
-    print(f"{'estrategia':38s} {'promedio':>9s} {'$6.000 →':>10s} {'gana en':>8s} {'aprueba':>8s}")
+    print(f"{'estrategia':44s} {'promedio':>9s} {'$6.000 →':>10s} {'gana en':>8s} {'aprueba':>8s}")
     for fila in tabla:
-        print(f"{fila['estrategia']:38s} {fila['retorno_promedio']*100:8.1f}% "
-              f"{fila['desde_1000_total']:10,d} {str(fila['le_gana_al_benchmark_en']) + '/6':>8s} "
+        print(f"{fila['estrategia']:44s} {fila['retorno_promedio']*100:8.1f}% "
+              f"{fila['desde_1000_total']:10,d} "
+              f"{str(fila['le_gana_al_benchmark_en']) + '/' + str(len(SIMBOLOS)):>8s} "
               f"{('SI' if fila['aprueba'] else 'no') if fila['estrategia'] != 'S0 comprar y sostener' else '—':>8s}")
 
     for fila in tabla:
@@ -308,21 +413,43 @@ def correr():
 
     mejor_dd = max((f for f in tabla if f["estrategia"] != "S0 comprar y sostener"),
                    key=lambda f: -f["caida_media"])
+    aprobadas = [f for f in tabla if f.get("aprueba")]
+    if aprobadas:
+        mejor = max(aprobadas, key=lambda f: f["retorno_promedio"])
+        rets = sorted(v["retorno"] for v in mejor["mercados"].values())
+        n = len(rets)
+        mediana = rets[n // 2] if n % 2 else (rets[n // 2 - 1] + rets[n // 2]) / 2
+        mejor_sim = max(mejor["mercados"], key=lambda s: mejor["mercados"][s]["retorno"])
+        peor_sim = min(mejor["mercados"], key=lambda s: mejor["mercados"][s]["retorno"])
+        frase = (
+            "La prueba aprobó %s: en el mismo tramo para todas, rindió %+.1f %% de promedio "
+            "contra %+.1f %% de comprar-y-sostener, le gana en %d de %d mercados y baja la caída "
+            "máxima de %.1f %% a %.1f %% (la mejora en %d de %d). Para no engañarse con el promedio: "
+            "la mediana por mercado es %+.1f %%, el mejor mercado (%s) rindió %+.1f %% y el peor "
+            "(%s) %+.1f %%. Es una regla simple de tendencia, no una garantía: el bot sigue en papel "
+            "y SOLO_PRUEBA en True hasta que el dueño apruebe lo que sigue."
+            % (mejor["estrategia"], mejor["retorno_promedio"] * 100, base["retorno_promedio"] * 100,
+               mejor["le_gana_al_benchmark_en"], len(mejor["mercados"]),
+               base["caida_media"] * 100, mejor["caida_media"] * 100,
+               mejor["baja_la_caida_en"], len(mejor["mercados"]),
+               mediana * 100, mejor_sim, mejor["mercados"][mejor_sim]["retorno"] * 100,
+               peor_sim, mejor["mercados"][peor_sim]["retorno"] * 100))
+    else:
+        frase = (
+            "Ninguna estrategia le gana a comprar-y-sostener en la mayoría de los mercados con "
+            "retorno positivo, así que el bot se queda apagado. Lo único que sí mejoró en todos "
+            "los mercados fue bajar la exposición cuando viene agitación alta: %s baja la caída "
+            "máxima de %.1f %% a %.1f %% en %d de %d mercados, con un retorno promedio de %+.1f %% "
+            "contra %+.1f %% de la vara. Eso es protección, no ventaja: sirve para no quedar afuera "
+            "en el peor día, no para ganar más."
+            % (mejor_dd["estrategia"], base["caida_media"] * 100, mejor_dd["caida_media"] * 100,
+               mejor_dd["baja_la_caida_en"], len(mejor_dd["mercados"]),
+               mejor_dd["retorno_promedio"] * 100, base["retorno_promedio"] * 100))
     salida = {
         "veredicto": {
-            "gana_alguno_al_quieto": bool([f for f in tabla if f.get("aprueba")]),
-            "aprobadas": [f["estrategia"] for f in tabla if f.get("aprueba")],
-            "frase": (
-                "Ninguna estrategia le gana a comprar-y-sostener en la mayoria de los mercados, "
-                "asi que el bot se queda apagado. Lo unico que si mejoro en TODOS los mercados "
-                "fue bajar la exposicion cuando viene agitacion alta: %s baja la caida maxima de "
-                "%.1f %% a %.1f %% en %d de %d mercados, y a cambio pierde %s puntos de ganancia "
-                "en este tramo alcista. Eso es proteccion, no ventaja: sirve para no quedar "
-                "afuera en el peor dia, no para ganar mas."
-                % (mejor_dd["estrategia"], base["caida_media"] * 100,
-                   mejor_dd["caida_media"] * 100, mejor_dd["baja_la_caida_en"],
-                   len(mejor_dd["mercados"]),
-                   f"{(base['retorno_promedio'] - mejor_dd['retorno_promedio']) * 100:,.0f}")),
+            "gana_alguno_al_quieto": bool(aprobadas),
+            "aprobadas": [f["estrategia"] for f in aprobadas],
+            "frase": frase,
         },
 
         "momento": int(time.time() * 1000),
@@ -333,11 +460,13 @@ def correr():
         "tope_de_exposicion": CAP,
         "velas": int(len(d)),
         "filas_evaluadas": int(len(val)),
-        "ojo_tramo": ("El tramo evaluado es un mercado que subio muchisimo (comprar y sostener "
-                      "endio +296 % de promedio). En un tramo asi, cualquier estrategia que "
-                      "baje la exposicion pierde contra la vara, por definicion. Por eso se "
-                      "mira tambien la caida maxima: es lo unico que el control de riesgo "
-                      "puede mejorar sin adivinar la direccion."),
+        "ojo_tramo": ("El tramo evaluado es el mismo para todas las estrategias y para la vara: "
+                      "desde donde el walk-forward empieza a evaluar hasta el final. En este "
+                      "periodo comprar-y-sostener rindio %+.1f %% de promedio. Si el tramo es "
+                      "alcista, cualquier estrategia que baje la exposicion pierde contra la "
+                      "vara por definicion; por eso se mira tambien la caida maxima, que es lo "
+                      "unico que el control de riesgo puede mejorar sin adivinar la direccion."
+                      % (base["retorno_promedio"] * 100)),
         "agitacion_se_predice": {
             "error_modelo": round(err_modelo, 6),
             "error_sigue_igual": round(err_ingenuo, 6),
