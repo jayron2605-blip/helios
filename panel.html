@@ -301,6 +301,22 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
 .compara{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:10px}
 @media(max-width:1100px){.lab{grid-template-columns:1fr}.labmetric{grid-template-columns:repeat(2,1fr)}}
 
+/* ---------- parte C: favoritos, comparador y simulador ---------- */
+.favTh{width:26px}
+td.fav{cursor:pointer;color:var(--ft);text-align:center;width:26px;user-select:none}
+td.fav.on{color:#f0b90b}
+td.fav:hover{color:#f0b90b}
+#btnSoloFavs.on{color:#f0b90b;border-color:#f0b90b}
+.cmpSel{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.cmpSel select{flex:1;min-width:160px;background:var(--card2);border:1px solid var(--bd);color:var(--tx);
+  border-radius:var(--r1);padding:6px 8px;font-size:12px}
+.simCtrl{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0;align-items:flex-end}
+.simCtrl label{display:block;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ft);margin-bottom:4px}
+.simCtrl select,.simCtrl input{background:var(--card2);border:1px solid var(--bd);color:var(--tx);
+  border-radius:var(--r1);padding:6px 8px;font-size:12px}
+.simCtrl select{min-width:160px}
+.simCtrl input[type=number]{width:120px}
+
 /* ---------- on-chain ---------- */
 .tabs{display:flex;gap:3px;border-bottom:1px solid var(--bd);margin-bottom:12px;flex-wrap:wrap}
 .tabs button{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ft);
@@ -500,12 +516,27 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
 
         <div class="card" style="margin-bottom:12px">
-          <h3>Seguimiento</h3>
-          <div class="note">Últimas 7 horas, 24 horas y 7 días. Toca una fila para cargarla en el gráfico. La lista está virtualizada: sólo se dibujan las filas que ves.</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <h3 style="margin:0">Seguimiento</h3>
+            <button class="btn" id="btnSoloFavs" style="margin:0" title="Mostrar sólo las monedas que marcaste con la estrella">☆ Sólo favoritos</button>
+            <span class="note" id="favsCuenta" style="margin:0"></span>
+          </div>
+          <div class="note">Últimas 7 horas, 24 horas y 7 días. Tocá una fila para cargarla en el gráfico; tocá la ☆ para guardarla en tus favoritos (queda en tu PC, no sale a internet). La lista está virtualizada: sólo se dibujan las filas que ves.</div>
           <div class="vlist" id="cajaLista"><table><thead><tr>
-            <th>#</th><th>Mercado</th><th>Precio</th><th>1 h</th><th>24 h</th><th>7 d</th>
+            <th class="favTh">★</th><th>#</th><th>Mercado</th><th>Precio</th><th>1 h</th><th>24 h</th><th>7 d</th>
             <th>Últimas 7 h</th><th>Capital</th><th>Volumen 24 h</th>
           </tr></thead><tbody id="lista"></tbody></table></div>
+        </div>
+
+        <div class="card" style="margin-bottom:12px">
+          <h3>Comparador de monedas</h3>
+          <div class="note">Elegí hasta tres monedas y miralas lado a lado con los mismos datos reales. Sirve para decidir entre dos o tres candidatas sin saltar de pantalla. Si un dato no está, se muestra un guion: no se inventa.</div>
+          <div class="cmpSel">
+            <select id="cmpA" title="Primera moneda"></select>
+            <select id="cmpB" title="Segunda moneda"></select>
+            <select id="cmpC" title="Tercera moneda (opcional)"></select>
+          </div>
+          <div id="cmpTabla"><div class="note">Cargando mercados…</div></div>
         </div>
 
         <div class="foot">
@@ -659,6 +690,18 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
               <div id="labTabla"></div>
             </div>
           </div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <h3>¿Qué hubiera pasado si…?</h3>
+          <div class="note">Elegí una moneda, una fecha y un monto, y mirá qué hubiera pasado con tres decisiones simples: comprar todo ese día y no tocar, comprar de a poco cada semana (DCA), o no comprar nada. Usa las velas reales de 1 hora que ya están en tu PC y descuenta comisión y deslizamiento en cada compra. No es una predicción: es historia, y cambiar la fecha cambia el resultado.</div>
+          <div class="simCtrl">
+            <div><label>Moneda</label><select id="simSimbolo"></select></div>
+            <div><label>Desde</label><input type="date" id="simFecha"></div>
+            <div><label>Capital</label><input type="number" id="simCapital" min="10" max="1000000" step="10" value="1000"></div>
+            <div><button class="btn" id="simCalcular" style="margin:0">Calcular</button></div>
+          </div>
+          <div class="veredicto" id="simVeredicto">Elegí una moneda y una fecha, y dale Calcular.</div>
+          <div id="simTabla"></div>
         </div>
         <div class="foot">
           <b>Qué te da esta pantalla:</b> la posibilidad de ver con tus propios números por qué casi cualquier regla simple, con comisión real,
@@ -1011,10 +1054,26 @@ function pintarSparks(raiz){
   });
 }
 
-function pintarLista(){
-  listaVista = mercadosActivos().slice(0,250);
-  renderVentana();
+/* ==================== favoritos ==================== */
+var FAVS = [];
+try{ var gfav = JSON.parse(localStorage.getItem('helios.favs')||'[]');
+     if(Array.isArray(gfav)) FAVS = gfav.filter(function(x){ return typeof x==='string'; }); }catch(e){}
+var soloFavs = false;
+function esFav(sym){ return FAVS.indexOf(sym)>=0; }
+function salvarFavs(){ try{ localStorage.setItem('helios.favs', JSON.stringify(FAVS)); }catch(e){} }
+function toggleFav(sym){ var i=FAVS.indexOf(sym); if(i>=0) FAVS.splice(i,1); else FAVS.push(sym);
+  salvarFavs(); pintarCuentaFavs(); aplicarFiltroLista(); }
+function pintarCuentaFavs(){ var el=document.getElementById('favsCuenta');
+  if(el) el.textContent = FAVS.length ? (FAVS.length+' favorito'+(FAVS.length>1?'s':'')+' en tu PC') : 'todavía no guardaste favoritos'; }
+function listaFiltrada(){
+  var q=(document.getElementById('buscar').value||'').trim().toUpperCase();
+  var ms=mercadosActivos();
+  if(soloFavs) ms=ms.filter(function(m){ return esFav(m.sym); });
+  if(q) ms=ms.filter(function(m){ return m.sym.indexOf(q)===0 || (m.nombre||'').toUpperCase().indexOf(q)>=0; });
+  return ms.slice(0,250);
 }
+function aplicarFiltroLista(){ listaVista=listaFiltrada(); renderVentana(); }
+function pintarLista(){ aplicarFiltroLista(); }
 
 function pintarDispersin(){
   var cv = document.getElementById('disp');
@@ -1582,6 +1641,7 @@ function traerMercados(){
     estado.coin = estado.mercados.filter(function(m){return m.sym===estado.nombre})[0] || estado.mercados[0];
     if(estado.coin){ estado.nombre = estado.coin.sym; estado.simbolo = estado.coin.pair || estado.simbolo; }
     pintarKpis(); pintarHero(); pintarHeat(); pintarDispersin(); pintarLista();
+    cmpLlenar(); cmpPintar();
     ok(r.estado);
   });
 }
@@ -1593,7 +1653,7 @@ function traerChispas(){
         h: num(c.price_change_percentage_1h_in_currency), d7: num(c.price_change_percentage_7d_in_currency),
         vol: c.total_volume, spark: (c.sparkline_in_7d && c.sparkline_in_7d.price) ? c.sparkline_in_7d.price.filter(function(_,i){return i%8===0}) : null };
     });
-    pintarLista(); pintarCinta();
+    pintarLista(); pintarCinta(); cmpPintar();
   }).catch(function(){});
 }
 function traerMundo(){
@@ -1747,7 +1807,10 @@ function avisarOk(t){ var a=document.getElementById('aviso'); a.textContent=t; a
 function pintarAyuda(){
   document.getElementById('ayuda').innerHTML = [
     ['Abrir', 'Doble clic en <b>Abrir panel.bat</b>. Se levanta el servidor y se solo en el navegador.'],
-    ['Vistas', 'Teclas <b>1</b> a <b>7</b>, o la columna de la izquierda. <b>/</b> busca, <b>R</b> actualiza, <b>T</b> cambia el tema, <b>F</b> pantalla completa.'],
+    ['Vistas', 'Teclas <b>1</b> a <b>8</b>, o la columna de la izquierda. <b>/</b> busca, <b>R</b> actualiza, <b>T</b> cambia el tema, <b>F</b> pantalla completa.'],
+    ['Favoritos', 'En la lista de Seguimiento, tocá la ☆ de una moneda para guardarla. Queda en tu PC. El botón <b>Sólo favoritos</b> filtra la lista para ver nada más que esas.'],
+    ['Comparador', 'Panel, abajo de la lista: elegí hasta tres monedas y miralas lado a lado con los mismos datos reales.'],
+    ['Simulador', 'Laboratorio (vista 6), tarjeta <b>¿Qué hubiera pasado si…?</b>: moneda, fecha y capital, y compara comprar-y-sostener, DCA semanal y no comprar nada sobre velas reales.'],
     ['Laboratorio', 'Vista 6. Movés stop, objetivo y reglas; la curva se recalcula sobre 33.599 velas reales. El botón compara las 5 estrategias de una.'],
     ['Noticias', 'Vista 8. Las últimas noticias cripto reales en vivo, con hora, moneda, una línea en español de qué va, y qué hizo el precio en la hora siguiente.'],
     ['On-chain', 'Vista 5. Capital bloqueado por red, protocolos, stablecoins, comisiones de Bitcoin y exchanges.'],
@@ -1789,7 +1852,7 @@ function aplicarTema(){
   document.body.dataset.tema = PREF.tema;
   document.getElementById('lblTema').textContent = PREF.tema==='claro' ? 'OSCURO' : 'CLARO';
   var p = paleta();
-  [grafico, big, rsiG].forEach(function(g){
+  [grafico, big, rsiG, lab.grafico].forEach(function(g){
     if(!g) return;
     g.applyOptions({ layout:{ background:{type:'solid',color:p.fondo}, textColor:p.texto },
       grid:{ vertLines:{color:p.grilla}, horzLines:{color:p.grilla} },
@@ -1826,6 +1889,7 @@ var listaVista = [], altoFila = 25;
 function filaHtml(m, i){
   var ch = estado.chispas[m.sym]||{};
   return '<tr data-p="'+(m.pair||'')+'" data-s="'+m.sym+'" class="'+(m.pair===estado.simbolo?'sel':'')+'">'
+    + '<td class="fav'+(esFav(m.sym)?' on':'')+'" data-fav="'+m.sym+'" title="Guardar en favoritos">'+(esFav(m.sym)?'★':'☆')+'</td>'
     + '<td class="m">'+(i+1)+'</td>'
     + '<td class="txt"><b style="color:var(--tx)">'+m.sym+'</b> <span class="m" style="font-family:var(--sans);font-size:10px">'+(m.nombre||'').slice(0,16)+'</span></td>'
     + '<td>'+fmt(m.price)+'</td>'
@@ -1838,19 +1902,20 @@ function filaHtml(m, i){
 function renderVentana(){
   var cont = document.getElementById('cajaLista'), caja = document.getElementById('lista');
   if(!cont || !caja) return;
-  if(!listaVista.length){ caja.innerHTML = '<tr><td colspan="9" class="m">nada coincide</td></tr>'; return; }
+  if(!listaVista.length){ caja.innerHTML = '<tr><td colspan="10" class="m">nada coincide</td></tr>'; return; }
   var alto = cont.clientHeight || 420;
   var visibles = Math.ceil(alto/altoFila)+12;
   var i0 = Math.max(0, Math.min(Math.floor(cont.scrollTop/altoFila)-6, Math.max(0, listaVista.length-visibles)));
   var i1 = Math.min(listaVista.length, i0+visibles);
   var arriba = i0*altoFila, abajo = (listaVista.length-i1)*altoFila;
-  caja.innerHTML = (arriba>0 ? '<tr style="height:'+arriba+'px"><td colspan="9" style="border:0;padding:0"></td></tr>' : '')
+  caja.innerHTML = (arriba>0 ? '<tr style="height:'+arriba+'px"><td colspan="10" style="border:0;padding:0"></td></tr>' : '')
     + listaVista.slice(i0,i1).map(function(m,i){ return filaHtml(m, i0+i); }).join('')
-    + (abajo>0 ? '<tr style="height:'+abajo+'px"><td colspan="9" style="border:0;padding:0"></td></tr>' : '');
+    + (abajo>0 ? '<tr style="height:'+abajo+'px"><td colspan="10" style="border:0;padding:0"></td></tr>' : '');
   pintarSparks(caja);
 }
 document.getElementById('cajaLista').addEventListener('scroll', renderVentana);
 document.getElementById('lista').addEventListener('click', function(e){
+  var fav = e.target.closest('td.fav'); if(fav){ toggleFav(fav.dataset.fav); return; }
   var tr = e.target.closest('tr'); if(!tr || !tr.dataset.s) return;
   elegir(tr.dataset.p, tr.dataset.s);
   document.getElementById('buscar').value = '';
@@ -2098,6 +2163,7 @@ function labIniciar(){
   });
   document.getElementById('labComparar').onclick = labCompararTodas;
   labAlCabio(); labCargar();
+  simIniciar();
 }
 function labAlCabio(){
   document.getElementById('vMirar').textContent = document.getElementById('rMirar').value + ' velas';
@@ -2305,6 +2371,124 @@ function labCompararTodas(){
     + '<b>La columna "Aciertos" es la que importa</b>: está contada sobre el resultado neto, después de comisiones.</div>';
 }
 
+/* ==================== comparador de monedas ==================== */
+var cmp = { a:'BTC', b:'ETH', c:'SOL' };
+function cmpDato(sym){ return estado.mercados.filter(function(m){ return m.sym===sym; })[0] || null; }
+function cmpLlenar(){
+  var ms = mercadosActivos();
+  ['cmpA','cmpB','cmpC'].forEach(function(id, idx){
+    var sel = document.getElementById(id); if(!sel) return;
+    var actual = [cmp.a,cmp.b,cmp.c][idx];
+    sel.innerHTML = '<option value="">— ninguna —</option>' + ms.map(function(m){
+      return '<option value="'+m.sym+'">'+escHtml(m.sym)+' · '+escHtml((m.nombre||'').slice(0,18))+'</option>';
+    }).join('');
+    sel.value = actual;
+    sel.onchange = function(){ var v=sel.value; if(idx===0)cmp.a=v; else if(idx===1)cmp.b=v; else cmp.c=v; cmpPintar(); };
+  });
+}
+function cmpPintar(){
+  var caja = document.getElementById('cmpTabla'); if(!caja) return;
+  var syms = [cmp.a,cmp.b,cmp.c].filter(function(s){ return s; });
+  if(!syms.length){ caja.innerHTML = '<div class="note">Elegí al menos una moneda arriba.</div>'; return; }
+  var cols = syms.map(function(s){ return { sym:s, m:cmpDato(s), ch:estado.chispas[s]||{} }; });
+  function celda(v, tipo){
+    if(v===null||v===undefined||isNaN(v)) return '<span class="m">—</span>';
+    if(tipo==='pct') return '<span class="'+cls(v)+'">'+pct(v,2)+'</span>';
+    if(tipo==='cap') return fmtCap(v);
+    return fmt(v);
+  }
+  var head = '<tr><th>Medida</th>'+cols.map(function(c){ return '<th>'+escHtml(c.sym)+'</th>'; }).join('')+'</tr>';
+  var filas = [
+    ['Precio', function(c){ return c.m?c.m.price:null; }, 'precio'],
+    ['1 h', function(c){ return num(c.ch.h); }, 'pct'],
+    ['24 h', function(c){ return c.m?c.m.cambio:null; }, 'pct'],
+    ['7 d', function(c){ return num(c.ch.d7); }, 'pct'],
+    ['Capital', function(c){ return c.m?c.m.cap:null; }, 'cap'],
+    ['Volumen 24 h', function(c){ return c.m?(c.ch.vol||c.m.vol):null; }, 'cap'],
+    ['Máximo 24 h', function(c){ return c.m?c.m.hi:null; }, 'precio'],
+    ['Mínimo 24 h', function(c){ return c.m?c.m.lo:null; }, 'precio']
+  ];
+  var body = filas.map(function(f){
+    return '<tr><td class="txt" style="color:var(--tx)">'+f[0]+'</td>'+cols.map(function(c){ return '<td>'+celda(f[1](c), f[2])+'</td>'; }).join('')+'</tr>';
+  }).join('');
+  caja.innerHTML = '<table class="compara"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>'
+    + '<div class="note" style="margin-top:8px">Precio, capital, volumen y rango son de CoinGecko; el 1 h y el 7 d salen de la misma lectura que la lista de seguimiento. No es una recomendación: es la misma foto para las tres, con los números rojos a la vista.</div>';
+}
+
+/* ==================== simulador "qué hubiera pasado si" ==================== */
+var sim = { simbolo:'BTCUSDT', cargando:false };
+var SIM_COM = 0.001, SIM_DES = 0.0005, SIM_SEMANA = 168;
+function simIniciar(){
+  var sel = document.getElementById('simSimbolo'); if(!sel) return;
+  var pares = mercadosActivos().filter(function(m){ return m.pair; }).slice(0,60);
+  sel.innerHTML = pares.map(function(m){ return '<option value="'+m.pair+'">'+escHtml(m.sym)+' / USDT</option>'; }).join('');
+  sel.value = sim.simbolo;
+  sel.onchange = function(){ sim.simbolo = sel.value; };
+  var f = document.getElementById('simFecha');
+  if(f && !f.value) f.value = new Date(Date.now()-365*86400000).toISOString().slice(0,10);
+  document.getElementById('simCalcular').onclick = simCalcular;
+}
+function simCalcular(){
+  if(sim.cargando) return;
+  var v = document.getElementById('simVeredicto');
+  var capital = +document.getElementById('simCapital').value;
+  var fecha = document.getElementById('simFecha').value;
+  document.getElementById('simTabla').innerHTML = '';
+  if(!(capital>0)){ v.className='veredicto mal'; v.textContent='Poné un capital mayor que cero.'; return; }
+  if(!fecha){ v.className='veredicto mal'; v.textContent='Elegí una fecha de inicio.'; return; }
+  var objetivo = new Date(fecha+'T00:00:00Z').getTime();
+  if(isNaN(objetivo)){ v.className='veredicto mal'; v.textContent='La fecha no es válida.'; return; }
+  sim.cargando = true; v.className='veredicto'; v.textContent='Bajando el historial de '+sim.simbolo+'…';
+  pedir('historial',{simbolo:sim.simbolo, intervalo:'1h'}).then(function(r){
+    sim.cargando = false;
+    if(!r.datos || !r.datos.close || r.datos.close.length<200){
+      v.className='veredicto mal';
+      v.innerHTML='No tengo el histórico local de '+escHtml(sim.simbolo)+'. Corré <b>Entrenar.bat</b> para bajarlo, o elegí otra moneda.';
+      return;
+    }
+    simContar(r.datos, objetivo, capital);
+  }).catch(function(e){ sim.cargando=false; v.className='veredicto mal'; v.textContent='Falló: '+escHtml(e.message); });
+}
+function simContar(d, objetivo, capital){
+  var c=d.close, t=d.t, n=c.length, v=document.getElementById('simVeredicto');
+  var start=0; while(start<n && t[start]<objetivo) start++;
+  if(start>=n-1){ v.className='veredicto mal'; v.textContent='La fecha es posterior al último dato que tengo. Elegí una fecha anterior.'; return; }
+  var end=n-1, p0=c[start], pf=c[end], costo=SIM_COM+SIM_DES;
+  var aviso = start===0 ? ' La fecha elegida es anterior al primer dato: arranco en la primera vela disponible.' : '';
+  var bhU=capital*(1-costo)/p0, bhFinal=bhU*pf, bhPico=0, bhDD=0;
+  for(var i=start;i<=end;i++){ var bv=bhU*c[i]; bhPico=Math.max(bhPico,bv); if(bhPico>0) bhDD=Math.max(bhDD,(bhPico-bv)/bhPico); }
+  var nCompras=Math.floor((end-start)/SIM_SEMANA)+1, aporte=capital/nCompras;
+  var u=0, inv=0, prox=start, dPico=0, dDD=0, dCom=0;
+  for(var j=start;j<=end;j++){
+    if(j===prox){ u+=aporte*(1-costo)/c[j]; inv+=aporte; dCom+=aporte*SIM_COM; prox+=SIM_SEMANA; }
+    var dv=u*c[j]+(capital-inv); dPico=Math.max(dPico,dv); if(dPico>0) dDD=Math.max(dDD,(dPico-dv)/dPico);
+  }
+  var dFinal=u*pf+(capital-inv);
+  var f0=new Date(t[start]).toISOString().slice(0,10), f1=new Date(t[end]).toISOString().slice(0,10);
+  var dias=Math.round((t[end]-t[start])/86400000);
+  function fila(nombre, final, dd, com){
+    var r=final/capital-1;
+    return '<tr><td class="txt" style="color:var(--tx);font-weight:600">'+nombre+'</td>'
+      +'<td>'+dol(final)+'</td>'
+      +'<td class="'+cls(r)+'">'+(r>=0?'+':'')+(r*100).toFixed(1)+' %</td>'
+      +'<td class="r">'+(dd*100).toFixed(1)+' %</td>'
+      +'<td>'+dol(com)+'</td></tr>';
+  }
+  document.getElementById('simTabla').innerHTML =
+    '<table class="compara"><thead><tr><th>Decisión</th><th>Valor final</th><th>Retorno</th><th>Caída máx</th><th>Comisiones</th></tr></thead><tbody>'
+    + fila('Comprar y sostener', bhFinal, bhDD, capital*SIM_COM)
+    + fila('DCA semanal ('+nCompras+' compras)', dFinal, dDD, dCom)
+    + fila('No comprar nada', capital, 0, 0)
+    + '</tbody></table>';
+  var mejor = bhFinal>=dFinal && bhFinal>=capital ? 'comprar y sostener' : (dFinal>=capital ? 'el DCA semanal' : 'no comprar nada');
+  v.className='veredicto';
+  v.innerHTML='<b>De '+f0+' a '+f1+' ('+dias+' días, '+(end-start+1).toLocaleString('es-AR')+' velas reales de '+escHtml(sim.simbolo)+'):</b> '
+    +'con '+dol(capital)+', comprar todo al inicio termina en <b class="'+cls(bhFinal/capital-1)+'">'+dol(bhFinal)+'</b>; '
+    +'comprar de a poco cada semana, en <b class="'+cls(dFinal/capital-1)+'">'+dol(dFinal)+'</b>; '
+    +'y no comprar nada, en <b>'+dol(capital)+'</b>. En este tramo la mejor fue <b>'+mejor+'</b>.'+aviso
+    +' Esto es historia sobre velas reales, no una predicción: otra fecha u otra moneda dan otro resultado. Comisión (0,1 %) y deslizamiento (0,05 %) descontados en cada compra; comprar-y-sostener y DCA siguen adentro al final, por eso no pagan venta.';
+}
+
 /* ==================== arranque ==================== */
 setInterval(function(){ document.getElementById('reloj').textContent = hora(Date.now()); }, 1000);
 document.addEventListener('keydown', function(e){
@@ -2319,14 +2503,14 @@ document.addEventListener('keydown', function(e){
   if(e.key==='t' || e.key==='T') document.getElementById('btnTema').click();
   if(e.key==='f' || e.key==='F') document.getElementById('btnPantalla').click();
 });
-document.getElementById('buscar').addEventListener('input', function(e){
-  var q = e.target.value.trim().toUpperCase();
-  if(!q){ pintarLista(); return; }
-  listaVista = mercadosActivos().filter(function(m){
-    return m.sym.indexOf(q)===0 || (m.nombre||'').toUpperCase().indexOf(q)>=0;
-  }).slice(0,250);
-  renderVentana();
-});
+document.getElementById('buscar').addEventListener('input', aplicarFiltroLista);
+document.getElementById('btnSoloFavs').onclick = function(){
+  soloFavs = !soloFavs;
+  this.classList.toggle('on', soloFavs);
+  this.textContent = (soloFavs?'★':'☆') + ' Sólo favoritos';
+  aplicarFiltroLista();
+};
+pintarCuentaFavs();
 
 montar();
 pintarMarcos();
