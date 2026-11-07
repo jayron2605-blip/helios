@@ -1,0 +1,16 @@
+# Los .bat se guardan byte por byte: cmd.exe rompe el archivo si pierde el CR
+*.bat  -text
+*.cmd  -text
+
+# Todo lo demas vive con salto de linea unix en el repositorio
+*.py    text eol=lf
+*.html  text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.csv   text eol=lf
+*.gitignore text eol=lf
+
+# Binarios que no hay que intentar diferenciar
+*.joblib binary
+*.pkl    binary
+*.png    binary
