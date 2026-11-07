@@ -1,0 +1,30 @@
+# Datos crudos: 79 MB de velas descargadas, se regeneran con Entrenar.bat
+bot/datos/
+
+# Productos del entrenamiento (modelos, curvas, trades simulados): 13 MB
+bot/resultados/
+
+# Copias de seguridad locales
+_respaldo*/
+
+# Estado y salidas de ejecución
+*.log
+__pycache__/
+*.pyc
+bot/estado_cerebro.json
+bot/avisos_estado.json
+bot/avisos_pendientes.txt
+bot/contador_dia.json
+
+# El cuaderno es la contabilidad de tus decisiones: tuya, no del repo
+cuaderno.csv
+
+# CREDENCIALES — nunca van al repositorio
+bot/claves.json
+bot/telegram.json
+*.env
+.env*
+
+# Plantillas con placeholders: esas sí pueden ir
+!bot/claves.EJEMPLO.json
+!bot/telegram.EJEMPLO.json

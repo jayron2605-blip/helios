@@ -1,0 +1,13 @@
+{
+  "api_key": "PEGA_AQUI_TU_CLAVE",
+  "api_secret": "PEGA_AQUI_TU_SECRETO",
+  "entorno": "pruebas",
+  "solo_simulacro": true,
+  "maximo_por_operacion_usd": 50,
+  "maximo_operaciones_dia": 10,
+  "tope_perdida_diaria_usd": 30,
+  "mercados_permitidos": [
+    "BTCUSDT",
+    "ETHUSDT"
+  ]
+}
