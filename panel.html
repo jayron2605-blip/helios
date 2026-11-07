@@ -359,6 +359,8 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
 .ntn{background:var(--card);border:1px solid var(--bd);border-radius:var(--r2);padding:12px 14px;cursor:pointer;
   transition:.14s;display:flex;flex-direction:column;gap:7px}
 .ntn:hover{border-color:var(--cy)}
+.ntn.sinEnlace{cursor:default}
+.ntn.sinEnlace:hover{border-color:var(--bd)}
 .ntn .meta{font-size:10px;color:var(--ft);display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:var(--mono)}
 .ntn .titular{font-size:13px;font-weight:600;line-height:1.45;color:var(--tx);color:var(--tx)}
 body[data-tema="claro"] .ntn .titular{color:var(--tx)}
@@ -680,15 +682,24 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             </div>
             <div style="flex:1"></div>
             <span class="chip" id="ntnEdad">—</span>
-            <button class="btn" id="ntnRefrescar" style="margin:0">Actualizar ahora</button>
+            <button class="btn" id="ntnRefrescar" style="margin:0"
+              title="Este botón NO llama a Brio. Sólo vuelve a leer lo que Brio ya mandó y guardó, y busca por RSS.">Actualizar ahora</button>
           </div>
+          <div class="note" id="ntnBrio"></div>
           <div class="note" id="ntnFuentes">Mirando qué fuentes están vivas…</div>
           <div class="ntnList" id="ntnList"></div>
         </div>
         <div class="foot">
-          <b>De dónde salen:</b> RSS públicos y gratuitos de CoinDesk, Cointelegraph y Decrypt
-          (y CryptoPanic además si cargás tu clave gratuita en <b>bot/noticias.json</b>; el molde está en
-          <b>bot/noticias.EJEMPLO.json</b>). <b>La conexión con el precio</b> se mide con velas horarias
+          <b>De dónde salen:</b> de dos lugares que se complementan y viven en la misma lista.
+          <b>Brio</b> revisa internet cada hora y <b>empuja</b> las noticias importantes a esta app
+          (<b>POST /api/noticias/recibir</b>, con clave secreta). La dirección es <b>sólo Brio → app</b>:
+          la app nunca le pide nada a Brio, porque Brio no es un servidor y no está prendido las 24 horas.
+          Por eso el botón <b>Actualizar ahora no llama a Brio</b>: sólo muestra lo último que Brio ya
+          mandó y guardó, o hace que la app busque sola por los <b>RSS públicos y gratuitos</b> de
+          CoinDesk, Cointelegraph y Decrypt (y CryptoPanic además si cargás tu clave gratuita en
+          <b>bot/noticias.json</b>; el molde está en <b>bot/noticias.EJEMPLO.json</b>).
+          Si Brio no mandó nada, la lista se llena con los RSS y nunca queda vacía.
+          <b>La conexión con el precio</b> se mide con velas horarias
           cerradas de Binance: es el movimiento real de la hora siguiente a la noticia, no una opinión.
           <b>Reglas:</b> sin duplicados ni spam, nada más viejo de 48 horas, actualización cada 10 minutos
           como máximo, y si una fuente falla o un dato no se puede medir todavía, aquí mismo se lo dice.
@@ -1385,6 +1396,20 @@ document.getElementById('asisCapital').addEventListener('input', function(e){
 var ntn = { datos:null, filtro:'todas', cargando:false };
 var NTN_CLASE = { buena:'ok', mala:'bad', neutra:'warn' };
 
+/* Las noticias vienen de afuera (RSS y Brio). Todo texto que se pinta se escapa
+   y todo enlace que se abre se valida: un javascript: acá sería código corriendo
+   en la máquina del dueño. */
+function escHtml(v){
+  return String(v === undefined || v === null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function urlVisible(u){
+  var t = String(u || '').trim();
+  if(!/^https?:\/\//i.test(t) || /[\s"'<>\\]/.test(t) || t.length > 600) return '';
+  return t;
+}
+
 function haceTxt(ms){
   var m = Math.max(0, Math.round((Date.now() - ms) / 60000));
   if(m < 1) return 'recién';
@@ -1395,8 +1420,18 @@ function haceTxt(ms){
 }
 
 function traerNoticias(forzar){
-  if(LOCAL || ntn.cargando) return;
+  if(LOCAL){
+    document.getElementById('ntnBrio').textContent = '';
+    document.getElementById('ntnList').innerHTML =
+      '<div class="note">Las noticias necesitan el servidor local. Abrí <b>Abrir panel.bat</b> y entrá desde '
+      + 'http://127.0.0.1:8765/ — abierto como archivo suelto, esta vista no puede leer ni los RSS '
+      + 'ni lo que Brio ya mandó.</div>';
+    return;
+  }
+  if(ntn.cargando) return;
   ntn.cargando = true;
+  /* Este pedido es GET /api/noticias: lee lo guardado y, si toca, busca por RSS.
+     Nunca llama a Brio. Brio es el que empuja, a su hora, por POST. */
   return pedir('noticias', forzar ? { refrescar:'1' } : {}).then(function(r){
     ntn.cargando = false;
     if(r && r.datos && r.datos.noticias){ ntn.datos = r.datos; }
@@ -1406,6 +1441,30 @@ function traerNoticias(forzar){
     if(!ntn.datos) document.getElementById('ntnList').innerHTML =
       '<div class="note">No llegaron noticias: revisá la conexión y tocá Actualizar ahora.</div>';
   });
+}
+
+function pintarBrio(){
+  var caja = document.getElementById('ntnBrio');
+  var b = (ntn.datos && ntn.datos.brio) || null;
+  if(!b){ caja.textContent = ''; return; }
+  if(!b.configurado){
+    caja.innerHTML = '<b>Brio todavía no está conectado.</b> Para conectarlo, pegá una clave secreta en '
+      + '<b>bot/noticias.json</b> (campo <b>brio_token</b>; el molde está en <b>bot/noticias.EJEMPLO.json</b>) '
+      + 'y darle a Brio la URL de la puerta y esa clave por el canal seguro. Mientras tanto la lista se llena con los RSS.';
+    return;
+  }
+  if(!b.actualizado){
+    caja.innerHTML = '<b>Brio está conectado pero todavía no mandó nada.</b> Revisa internet cada hora y '
+      + 'empuja las noticias importantes él solo. No hay novedades: no se inventa ninguna noticia de ejemplo.';
+    return;
+  }
+  if(b.silencio){
+    caja.innerHTML = '<b>Sin noticias nuevas importantes.</b> Brio mandó por última vez ' + escHtml(haceTxt(b.actualizado))
+      + ' (más de 2 horas). La lista queda como estaba, con ' + b.guardadas + ' noticias guardadas de Brio.';
+    return;
+  }
+  caja.innerHTML = '<b>Actualizado ' + escHtml(haceTxt(b.actualizado)) + ' por Brio</b> · '
+    + b.guardadas + ' noticias guardadas. Brio manda cada hora; este panel no le pide nada.';
 }
 
 function pintarNoticias(){
@@ -1418,26 +1477,29 @@ function pintarNoticias(){
     return n.sentimiento === ntn.filtro;
   });
   document.getElementById('ntnEdad').textContent =
-    'Última actualización ' + (ntn.datos.actualizado ? haceTxt(ntn.datos.actualizado) : '—');
+    'Última lectura ' + (ntn.datos.actualizado ? haceTxt(ntn.datos.actualizado) : '—');
+  pintarBrio();
   var f = ntn.datos.fuentes || {};
   var d = ntn.datos.descartes || {};
+  var deBrio = todo.filter(function(n){ return n.origen === 'Brio'; }).length;
   var resumen = ntn.datos.recibidas
     ? '<b>' + ntn.datos.recibidas + '</b> publicadas por los medios → <b>' + todo.length +
-      '</b> quedaron. Se descartaron: ' + (d.viejas || 0) + ' viejas (más de 48 h), ' +
+      '</b> quedaron (<b>' + deBrio + '</b> de Brio, ' + (todo.length - deBrio) +
+      ' de los RSS). Se descartaron: ' + (d.viejas || 0) + ' viejas (más de 48 h), ' +
       (d.no_cripto || 0) + ' que no hablaban de cripto, ' + (d.repetidas || 0) +
       ' repetidas y ' + (d.spam || 0) + ' de publicidad. '
     : '';
   document.getElementById('ntnFuentes').innerHTML = resumen + (Object.keys(f).length
     ? Object.keys(f).map(function(k){
         var v = f[k], mal = String(v).indexOf('error') >= 0;
-        return '<b style="color:' + (mal ? 'var(--dn)' : 'var(--md)') + '">' + k + '</b> ' + v;
+        return '<b style="color:' + (mal ? 'var(--dn)' : 'var(--md)') + '">' + escHtml(k) + '</b> ' + escHtml(v);
       }).join(' · ')
     : 'Sin respuesta de las fuentes todavía.');
   if(!lista.length){
     caja.innerHTML = '<div class="note">' + (todo.length
       ? 'No hay noticias en este filtro en este momento.'
       : (ntn.datos.actualizado
-          ? 'Las fuentes están respondiendo pero todavía no hay noticias guardadas (<48 h). Volvé en un rato.'
+          ? 'Las fuentes están respondiendo pero todavía no hay noticias guardadas (&lt;48 h). Volvé en un rato.'
           : 'Todavía no hay noticias guardadas. Si está sin internet, el panel las trae cuando vuelva; tocá Actualizar ahora.')) + '</div>';
     return;
   }
@@ -1446,31 +1508,39 @@ function pintarNoticias(){
     var clasePill = NTN_CLASE[n.sentimiento] || '';
     var etiquetaSent = n.sentimiento ? n.sentimiento.toUpperCase() : 'SIN CLASIFICAR';
     var moneda = n.moneda ? n.moneda.split(',')[0].toUpperCase() : null;
+    var enlace = urlVisible(n.enlace);
     var mvto = '';
     if(p && p.estado && p.estado !== 'midiendo'){
       var sube = /subida/.test(p.estado), exacta = p.movimiento_pct !== undefined;
+      var cifra = exacta ? ' ' + ((p.movimiento_pct >= 0 ? '+' : '') + p.movimiento_pct.toFixed(2) + ' %') : '';
       var prop = p.estado === 'no_medido' ? (p.moneda + ': no se pudo medir — ' + (p.por_que || ''))
-        : (p.moneda + (exacta ? ' ' + ((p.movimiento_pct >= 0 ? '+' : '') + p.movimiento_pct.toFixed(2) + ' %') : '')
-           + ' en la hora siguiente: ' + p.estado);
+        : (p.moneda + cifra + ' en la hora siguiente: ' + p.estado);
       mvto = '<span class="mvto ' + (sube ? 'g' : (/caída/.test(p.estado) ? 'r' : '')) + '" title="'
-        + prop + '">' + p.moneda + (exacta ? ' ' + ((p.movimiento_pct >= 0 ? '+' : '') + p.movimiento_pct.toFixed(2) + ' %') : '')
-        + ' · ' + (p.estado === 'no_medido' ? 'sin medir' : p.estado) + '</span>';
+        + escHtml(prop) + '">' + escHtml(p.moneda) + escHtml(cifra)
+        + ' · ' + escHtml(p.estado === 'no_medido' ? 'sin medir' : p.estado) + '</span>';
     } else if(p && p.estado === 'midiendo'){
       mvto = '<span class="mvto">midiendo el precio…</span>';
     }
-    return '<div class="ntn" data-url="' + n.enlace.replace(/"/g,'&quot;') + '">'
-      + '<div class="meta"><span>' + haceTxt(n.cuando) + '</span><span>·</span>'
-      + '<span>' + (n.fuente || '—') + '</span>'
-      + (moneda ? '<span class="pill" style="border-color:var(--bd2)">' + moneda + '</span>' : '')
-      + '<span class="pill ' + clasePill + '" style="margin-left:auto">' + etiquetaSent + '</span></div>'
-      + '<div class="titular">' + n.titulo.replace(/</g,'&lt;') + '</div>'
-      + '<div class="resum">' + n.resumen.replace(/</g,'&lt;') + '</div>'
+    var esBrio = n.origen === 'Brio';
+    return '<div class="ntn' + (enlace ? '' : ' sinEnlace') + '"'
+      + (enlace ? ' data-url="' + escHtml(enlace) + '"' : '')
+      + (n.titulo_original ? ' title="' + escHtml(n.titulo_original) + '"' : '') + '>'
+      + '<div class="meta"><span>' + escHtml(haceTxt(n.cuando)) + '</span><span>·</span>'
+      + '<span>' + escHtml(n.fuente || '—') + '</span>'
+      + (esBrio ? '<span class="pill ok">BRIO' + (n.importancia === 'alta' ? ' · ALTA' : '') + '</span>' : '')
+      + (moneda ? '<span class="pill" style="border-color:var(--bd2)">' + escHtml(moneda) + '</span>' : '')
+      + '<span class="pill ' + clasePill + '" style="margin-left:auto">' + escHtml(etiquetaSent) + '</span></div>'
+      + '<div class="titular">' + escHtml(n.titulo) + '</div>'
+      + '<div class="resum">' + escHtml(n.resumen) + '</div>'
       + (mvto ? '<div>' + mvto + '</div>' : '')
-      + '<div class="fuenteAbajo">' + n.fuente + ' · toca para abrir la noticia original en su página</div>'
-      + '</div>';
+      + '<div class="fuenteAbajo">' + escHtml(n.fuente) + ' · '
+      + (enlace ? 'toca para abrir la noticia original en su página' : 'sin enlace seguro: no se puede abrir')
+      + '</div></div>';
   }).join('');
   Array.prototype.forEach.call(caja.children, function(el){
-    el.onclick = function(){ window.open(el.getAttribute('data-url'), '_blank', 'noopener'); };
+    var u = el.getAttribute('data-url');
+    if(!u) return;
+    el.onclick = function(){ window.open(u, '_blank', 'noopener,noreferrer'); };
   });
 }
 document.getElementById('ntnRefrescar').onclick = function(){ traerNoticias(true); };

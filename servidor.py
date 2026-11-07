@@ -3,6 +3,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PUERTO = 8765
 RUTA_CUADERNO = "cuaderno.csv"
+MAX_CUERPO_BRIO = 512 * 1024   # tope del POST de noticias: un lote de 50 noticias sobra
 
 # Para poder usar los modulos del bot (asistente, noticias) como biblioteca
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot")))
@@ -392,7 +393,10 @@ class Atencion(BaseHTTPRequestHandler):
         return self._json({"estado": "no_existe"}, 404)
 
     def do_POST(self):
-        if urllib.parse.urlparse(self.path).path != "/api/cuaderno":
+        camino = urllib.parse.urlparse(self.path).path
+        if camino == "/api/noticias/recibir":
+            return self._recibir_brio()
+        if camino != "/api/cuaderno":
             return self._json({"estado": "no_existe"}, 404)
         largo = int(self.headers.get("Content-Length") or 0)
         try:
@@ -404,6 +408,39 @@ class Atencion(BaseHTTPRequestHandler):
             return self._json({"estado": "cuerpo_invalido"}, 400)
         anotar(fila)
         return self._json({"estado": "anotado"})
+
+    def _recibir_brio(self):
+        """Puerta de entrada de Brio. Direccion Brio -> App: aca solo se recibe.
+
+        Sin clave, con clave equivocada o sin clave configurada en bot/noticias.json
+        responde 401 y no guarda nada. El boton "Actualizar noticias" del panel
+        nunca pasa por aca: ese boton lee lo guardado o busca por RSS.
+        """
+        import noticias
+        cabecera = self.headers.get("Authorization") or ""
+        token = cabecera[7:].strip() if cabecera[:7].lower() == "bearer " else ""
+        if not noticias.token_brio_valido(token):
+            return self._json({"ok": False, "estado": "no_autorizado",
+                               "detalle": "Falta la clave o no coincide. No se guardó nada."}, 401)
+        try:
+            largo = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            largo = -1
+        if largo < 0 or largo > MAX_CUERPO_BRIO:
+            return self._json({"ok": False, "estado": "cuerpo_grande",
+                               "detalle": f"El máximo es {MAX_CUERPO_BRIO} bytes."}, 413)
+        try:
+            cuerpo = json.loads(self.rfile.read(largo).decode("utf-8"))
+        except Exception:
+            return self._json({"ok": False, "estado": "cuerpo_invalido"}, 400)
+        recibidas, nuevas, errores = noticias.recibir_brio(cuerpo)
+        if not recibidas and errores:
+            return self._json({"ok": False, "estado": "nada_valido",
+                               "recibidas": 0, "nuevas": 0, "errores": errores}, 400)
+        salida = {"ok": True, "recibidas": recibidas, "nuevas": nuevas}
+        if errores:
+            salida["errores"] = errores
+        return self._json(salida)
 
 
 def calentar_noticias():

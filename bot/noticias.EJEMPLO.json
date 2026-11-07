@@ -1,3 +1,4 @@
 {
-  "cryptopanic_token": "PEGA_AQUI_TU_CLAVE_DE_CRYPTOPANIC"
+  "cryptopanic_token": "PEGA_AQUI_TU_CLAVE_DE_CRYPTOPANIC",
+  "brio_token": "PEGA_AQUI_LA_CLAVE_SECRETA_QUE_LE_VAS_A_DAR_A_BRIO"
 }

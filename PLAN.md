@@ -6,7 +6,8 @@ leyendo el código, no es creencia.
 
 **Re-verificado el 2026-11-07 a las 15:30 por el agente nuevo**, leyendo el repo completo
 y corriendo las pruebas en otra máquina (Windows 11, Python 3.14, scikit-learn 1.9.1).
-Resultado: **TODO OK, 49 pruebas** (47 nombres únicos; la prueba V corre en 3 tamaños).
+Resultado: **TODO OK, 81 pruebas** (49 del motor y de las noticias RSS + 32 nuevas de la
+puerta de Brio; la prueba V corre en 3 tamaños).
 Los números "24" y "39" que aparecían en el README estaban desactualizados.
 Lo que este agente corrigió o confirmó está marcado en la sección 8.
 
@@ -55,7 +56,7 @@ Se corrigió leyendo el repo, no recordando. Estado real, verificado archivo por
 | 8 | README con los números reales | **hecho ahora** |
 
 Después de cada cambio corro `py -3.12 bot/pruebas.py`. Si no sale TODO OK, no sigue nada.
-Hoy: **49 pruebas, TODO OK** (contadas en la salida real, no en el documento).
+Hoy: **81 pruebas, TODO OK** (contadas en la salida real, no en el documento).
 
 ### La parte C, en limpio (lo que está y lo que no)
 
@@ -176,7 +177,10 @@ y en qué orden, siguiendo el prompt unido.
 
 ### 8.1 Lo que verifiqué antes de tocar nada
 
-- **Pruebas: 49, TODO OK.** No 39. Corridas con Python 3.14 y scikit-learn 1.9.1.
+- **Pruebas: 81, TODO OK.** No 39. Corridas con Python 3.14 y scikit-learn 1.9.1.
+  Las 32 nuevas (BR1–BR17b) cubren la puerta de Brio, incluido un POST real contra un
+  servidor local efímero: 401 sin clave, 401 con clave mala, 200 con la buena, 400 con
+  lote inválido, 413 con cuerpo gigante, y el cuaderno y el 404 de siempre intactos.
 - **Los tres "YA ARREGLADO":** dos confirmados (`comprar_y_sostener` usa `barras[-1][4]`;
   `comprar_mercado`/`vender_mercado` pasan el monto real a `revisar_frenos`). El tercero
   está **a medias**: `registrar_cierre()` existe pero nadie lo llama fuera de los tests.
@@ -204,28 +208,53 @@ y en qué orden, siguiendo el prompt unido.
 | 1 | Leer todo + correr pruebas | **hecho** (49, TODO OK) |
 | 2 | Este plan y corregir contradicciones | **hecho** |
 | 3 | Verificar los "YA ARREGLADO" | **hecho** (uno resultó a medias) |
-| 4 | Instalar `ta` + `ccxt` y Grid MIT | siguiente |
-| 5 | `POST /api/noticias/recibir` + unir B1 y B2 | después |
-| 6 | Ventaja NUEVA, distinta a S1–S8 | después |
+| 4 | Instalar `ta` + `ccxt` y Grid MIT | `ta` y `ccxt` instalados; Grid pendiente (va con S9) |
+| 5 | `POST /api/noticias/recibir` + unir B1 y B2 | **hecho y probado** (ver 8.4) |
+| 6 | Ventaja NUEVA, distinta a S1–S8 | siguiente |
 | 7 | Comparador, simulador y favoritos | después |
 | 8 | README con números reales + resumen | al cierre |
 
-### 8.4 Cómo voy a unir B1 (RSS) y B2 (Brio) sin que se peleen
+### 8.4 Cómo quedaron unidas B1 (RSS) y B2 (Brio) — hecho y probado
 
 El problema real: `noticias.traer()` **reconstruye la lista entera** desde RSS en cada
-refresco (`noticias.py:446`). Si las noticias de Brio se inyectaran solo en memoria o en el
-caché, se borrarían solas a los 10 minutos.
+refresco. Si las noticias de Brio se inyectaran solo en memoria o en el caché, se borrarían
+solas a los 10 minutos.
 
-Solución: Brio se guarda en su propio archivo persistente (`bot/noticias_brio.json`,
-gitignoreado). En cada `traer()` esas noticias se vuelven a leer y se mezclan con las crudas
-del RSS **antes** de `procesar()`, así pasan por el mismo filtro de edad, spam y duplicados,
-y reciben la misma medición de precio de la hora siguiente. Brio trae título en español,
-resumen y sentimiento ya hechos: `procesar()` los respeta en vez de volver a deducirlos del
-título en inglés. Dedup por URL además del parecido de título que ya existe.
+Solución aplicada: Brio se guarda en su propio archivo persistente (`bot/noticias_brio.json`,
+gitignoreado, escritura atómica). En cada `traer()` esas noticias se vuelven a leer y se mezclan
+con las crudas del RSS **antes** de `procesar()`, así pasan por el mismo filtro de edad, spam y
+duplicados, y reciben la misma medición de precio de la hora siguiente. Brio va primero en la
+lista: si el RSS trae la misma noticia, gana la que ya vino leída y traducida. `procesar()`
+respeta el título en español, el resumen y el sentimiento de Brio en vez de volver a deducirlos
+del título en inglés, y no le aplica el filtro de vocabulario en inglés de los RSS. Dedup por
+URL además del parecido de título que ya existe. De paso se corrigió que la medición de precio
+ya hecha se perdiera en cada refresco: ahora se conserva entre reconstrucciones.
+
+**La puerta:** `POST /api/noticias/recibir`, con `Authorization: Bearer <clave>`. Sin clave,
+con clave equivocada o sin clave configurada responde **401 y no guarda nada**. Cuerpo máximo
+512 KB (413), lote máximo 50 noticias, enlaces solo http(s) (un `javascript:` se rechaza),
+sentimiento solo buena/mala/neutra, importancia solo alta/media, hora obligatoria (sin hora no
+se inventa fecha). Responde `{"ok": true, "recibidas": N, "nuevas": M}`.
+
+**URL que el dueño le tiene que dar a Brio:**
+
+- En esta PC, hoy: `http://127.0.0.1:8765/api/noticias/recibir`
+- Para Brio de verdad (está en internet): **todavía no existe una URL pública.** El servidor
+  escucha solo en `127.0.0.1` a propósito. Hace falta que el dueño apruebe un túnel o publicar
+  el servidor (ver 8.2 y 8.7). Hasta entonces la puerta está construida y probada en local.
+
+**Probado de verdad, no de palabra:** se corrió el `curl` exacto del prompt contra el servidor
+local → `200 {"ok": true, "recibidas": 1, "nuevas": 1}`; sin clave y con clave mala → `401`;
+la noticia apareció arriba de `GET /api/noticias` mezclada con 52 de los RSS (95 crudas → 53);
+se vio en el navegador con su etiqueta BRIO, su título en español y su moneda; un título con
+`<img onerror=...>` se pintó como texto plano sin ejecutar nada; después **se borró la prueba**
+y la lista quedó limpia. El botón "Actualizar ahora" del panel dice en su tooltip y en el pie
+de la vista que **no llama a Brio**: sólo lee lo guardado o busca por RSS.
 
 La clave de Brio va en `bot/noticias.json` (ya gitignoreado), campo `brio_token`, con su
-molde en `noticias.EJEMPLO.json`. Sin clave configurada la puerta responde 401 y no guarda
-nada; el RSS sigue funcionando igual.
+molde en `noticias.EJEMPLO.json`. El agente ya creó una clave aleatoria ahí; no se escribió en
+el código, ni en el repo, ni en el chat. Sin clave configurada la puerta responde 401 y no
+guarda nada; el RSS sigue funcionando igual.
 
 ### 8.5 Ideas NUEVAS para buscar ventaja (no repiten S1–S8)
 
@@ -264,7 +293,9 @@ escribe igual en el README y en `ventaja.py`. El bot sigue apagado mientras tant
 
 1. **URL pública para Brio.** Decidir entre túnel temporal o esperar a publicar. Sin eso,
    la puerta funciona pero Brio no puede llamarla.
-2. **Clave secreta de Brio.** La crea el dueño, la pega en `bot/noticias.json` y se la da a
-   Brio por canal seguro. No va en el código, ni en el repo, ni en el chat.
+2. **Clave secreta de Brio.** Ya hay una creada en `bot/noticias.json` (campo `brio_token`).
+   El dueño la copia de ese archivo y se la da a Brio por canal seguro, junto con la URL
+   pública cuando exista. No va en el código, ni en el repo, ni en el chat. Si prefiere otra,
+   la reemplaza en ese mismo archivo y la puerta la toma al instante.
 3. **Telegram y CryptoPanic** siguen siendo opcionales, como en la sección 6.
 4. **Dinero real: no.** `SOLO_PRUEBA` queda en True todo este trabajo.

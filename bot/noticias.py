@@ -13,18 +13,23 @@ Reglas del modulo (son de producto, no de gusto):
   - Se sacan duplicados, spam y viejas (+48 h). El servidor pide como mucho cada
     10 minutos, y deja guardadas las ultimas en bot/noticias_cache.json para que
     si se corta internet se sigan viendo.
+  - Brio EMPUJA noticias a la app (POST /api/noticias/recibir). La direccion es
+    solo Brio -> App: la app nunca le pide nada a Brio. Viven en su propio archivo
+    bot/noticias_brio.json y se mezclan con las del RSS en la misma lista guardada.
 """
-import hashlib, json, os, re, time
+import hashlib, hmac, json, os, re, time
 import datetime as dt
 import email.utils as eutils
 import difflib
 import threading
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 RUTA_CLAVES = os.path.join(RAIZ, "noticias.json")
 RUTA_CACHE = os.path.join(RAIZ, "noticias_cache.json")
+RUTA_BRIO = os.path.join(RAIZ, "noticias_brio.json")
 
 FUENTES_RSS = {
     "CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/",
@@ -38,6 +43,15 @@ MAX_EDAD_SEG = 48 * 3600     # nada mas viejo de 48 horas
 MAX_POR_FUENTE = 25
 MAX_TOTAL = 80
 VENTANA_MEDIDA_MIN = 130     # hora del titulo 5 min + hora siguiente cerrada de verdad
+
+# Brio manda noticias a la app (direccion Brio -> App, nunca al reves).
+# Se guardan aparte porque traer() reconstruye la lista desde RSS en cada refresco:
+# si vivieran solo en memoria o en el cache, se borrarian solas a los 10 minutos.
+MAX_BRIO = 200               # cuantas guarda en disco como maximo
+MAX_LOTE_BRIO = 50           # cuantas acepta en un solo POST
+BRIO_SILENCIO_SEG = 2 * 3600  # mas de 2 h sin recibir => "Sin noticias nuevas importantes"
+SENTIMIENTOS_BRIO = ("buena", "mala", "neutra")
+IMPORTANCIAS_BRIO = ("alta", "media")
 IGNORAR_SPAM = re.compile(r"giveaway|promo code|referral|sign ?up|subscribe|casino|"
                           r"bet now|free spins|sweepstake|play now|earn rewards",
                           re.IGNORECASE)
@@ -273,8 +287,13 @@ def es_de_cripto(texto):
 
 
 def procesar(ahora_ms, crudas, contador=None):
-    """Toma las noticias crudas: corta spam, viejas y duplicados; clasifica; ordena."""
-    limpiadas, vistas = [], []
+    """Toma las noticias crudas: corta spam, viejas y duplicados; clasifica; ordena.
+
+    Las de Brio llegan ya leidas: se respeta su titulo en espanol, su resumen y su
+    sentimiento en vez de volver a adivinarlos desde el titulo en ingles. Van
+    primero en la lista, asi que si el RSS trae la misma noticia gana la de Brio.
+    """
+    limpiadas, vistas, enlaces = [], [], set()
     for n in crudas:
         titulo = (n.get("titulo") or "").strip()
         cuando = n.get("cuando")
@@ -284,40 +303,59 @@ def procesar(ahora_ms, crudas, contador=None):
             if contador is not None:
                 contador["viejas"] = contador.get("viejas", 0) + 1
             continue
-        texto_previo = (n.get("texto_fuente") or "")[:220]
+        de_brio = n.get("origen") == "Brio"
         if IGNORAR_SPAM.search(_normaliza(titulo)):
             if contador is not None:
                 contador["spam"] = contador.get("spam", 0) + 1
             continue
-        if not es_de_cripto(titulo + " " + texto_previo):
+        # Brio ya filtro por importancia y escribe en espanol: el vocabulario en
+        # ingles de los RSS tiraria abajo noticias suyas que si sirven.
+        if not de_brio and not es_de_cripto(titulo + " " + (n.get("texto_fuente") or "")[:220]):
             if contador is not None:
                 contador["no_cripto"] = contador.get("no_cripto", 0) + 1
             continue
-        if any(_parecido(v, titulo) >= 0.72 for v in vistas):
+        enlace = (n.get("enlace") or "").strip()
+        if (enlace and enlace in enlaces) or any(_parecido(v, titulo) >= 0.72 for v in vistas):
             if contador is not None:
                 contador["repetidas"] = contador.get("repetidas", 0) + 1
             continue
         vistas.append(titulo)
+        if enlace:
+            enlaces.add(enlace)
         texto = n.get("texto_fuente") or ""
-        linea, clase_tema, motivo_tema = tema_una_linea(titulo)
-        if clase_tema:
-            clase, motivo = clase_tema, motivo_tema
+        if de_brio:
+            clase = n.get("sentimiento_brio")
+            motivo = n.get("por_que_brio") or "Brio la marcó como importante para el mercado."
+            linea = n.get("resumen_brio")
+            sin_linea = not linea
         else:
-            clase, motivo = clasificar(titulo)
+            linea, clase_tema, motivo_tema = tema_una_linea(titulo)
+            if clase_tema:
+                clase, motivo = clase_tema, motivo_tema
+            else:
+                clase, motivo = clasificar(titulo)
+            sin_linea = linea is None
         monedas_cripto = (n.get("monedas") or "").strip() or None
-        limpiadas.append({
-            "id": _id(n.get("enlace") or titulo),
+        fila = {
+            "id": _id(enlace or titulo),
             "titulo": titulo,
             "fuente": n.get("fuente"),
-            "enlace": n.get("enlace"),
+            "enlace": enlace or None,
             "cuando": int(cuando),
             "moneda": monedas_cripto or detectar_moneda(titulo + " " + texto[:200]),
-            "resumen": linea or "No pude intuir de qué va: abrí la noticia para leerla.",
-            "sin_resumen": linea is None,
+            "resumen": linea or ("Brio no mandó resumen: abrí la noticia original para leerla."
+                                 if de_brio else
+                                 "No pude intuir de qué va: abrí la noticia para leerla."),
+            "sin_resumen": sin_linea,
             "sentimiento": clase if clase in ("buena", "mala", "neutra") else None,
             "por_que": motivo,
+            "origen": "Brio" if de_brio else "RSS",
             "precio": None,
-        })
+        }
+        if de_brio:
+            fila["titulo_original"] = n.get("titulo_original")
+            fila["importancia"] = n.get("importancia_brio")
+        limpiadas.append(fila)
     return sorted(limpiadas, key=lambda x: x["cuando"], reverse=True)[:MAX_TOTAL]
 
 
@@ -410,6 +448,198 @@ def _cargar_config():
         return {}
 
 
+# ---------- Brio empuja noticias a la app (Brio -> App, nunca al reves) ----------
+def _clave_brio():
+    return str((_cargar_config() or {}).get("brio_token") or "").strip()
+
+
+def brio_configurado():
+    """True si el dueno ya pego su clave en bot/noticias.json."""
+    return bool(_clave_brio())
+
+
+def token_brio_valido(token):
+    """Sin clave configurada no entra nada: la puerta queda cerrada, no abierta."""
+    esperado = _clave_brio()
+    if not esperado or not token:
+        return False
+    return hmac.compare_digest(esperado.encode("utf-8"), str(token).encode("utf-8"))
+
+
+def url_segura(texto):
+    """Solo http(s) y sin caracteres que rompan el HTML. None si no sirve.
+
+    El panel abre este enlace con window.open(): un javascript: o un data: aca
+    seria codigo ejecutandose en la maquina del dueno.
+    """
+    if not isinstance(texto, str):
+        return None
+    t = texto.strip()
+    if not t or len(t) > 600 or re.search(r"[\s\"'<>\\]", t):
+        return None
+    partes = urllib.parse.urlsplit(t)
+    if partes.scheme not in ("http", "https") or not partes.netloc:
+        return None
+    return t
+
+
+def _a_ms(valor):
+    """Hora ISO8601, RFC2822 o epoch -> milisegundos. None si no se entiende: no se inventa."""
+    if isinstance(valor, bool):
+        return None
+    if isinstance(valor, (int, float)):
+        if valor > 1e12:
+            return int(valor)
+        if valor > 1e9:
+            return int(valor * 1000)
+        return None
+    if not isinstance(valor, str) or not valor.strip():
+        return None
+    texto = valor.strip()
+    try:
+        momento = dt.datetime.fromisoformat(texto.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            return int(eutils.parsedate_to_datetime(texto).timestamp() * 1000)
+        except Exception:
+            return None
+    if momento.tzinfo is None:
+        momento = momento.replace(tzinfo=dt.timezone.utc)
+    return int(momento.timestamp() * 1000)
+
+
+def _texto_corto(valor, tope):
+    return valor.strip()[:tope] if isinstance(valor, str) else ""
+
+
+def validar_lote(payload):
+    """(crudas, errores) de lo que mando Brio. Lo que no se puede leer se rechaza con motivo."""
+    if not isinstance(payload, dict):
+        return [], ["el cuerpo tiene que ser un objeto JSON"]
+    lista = payload.get("noticias")
+    if not isinstance(lista, list):
+        return [], ["falta la lista 'noticias']"]
+    if len(lista) > MAX_LOTE_BRIO:
+        return [], [f"el lote trae {len(lista)} noticias y el maximo es {MAX_LOTE_BRIO}"]
+    crudas, errores = [], []
+    for i, p in enumerate(lista):
+        donde = f"noticias[{i}]"
+        if not isinstance(p, dict):
+            errores.append(donde + ": no es un objeto")
+            continue
+        enlace = url_segura(p.get("url"))
+        if not enlace:
+            errores.append(donde + ": 'url' falta o no es http(s)")
+            continue
+        cuando = _a_ms(p.get("hora_publicacion"))
+        if cuando is None:
+            errores.append(donde + ": 'hora_publicacion' no se entiende")
+            continue
+        original = _texto_corto(p.get("titulo"), 300)
+        espanol = _texto_corto(p.get("titulo_es"), 300)
+        if not (original or espanol):
+            errores.append(donde + ": falta 'titulo' o 'titulo_es'")
+            continue
+        sentimiento = _texto_corto(p.get("sentimiento"), 20).lower()
+        if sentimiento and sentimiento not in SENTIMIENTOS_BRIO:
+            errores.append(donde + ": 'sentimiento' tiene que ser buena, mala o neutra")
+            continue
+        importancia = _texto_corto(p.get("importancia"), 20).lower()
+        if importancia and importancia not in IMPORTANCIAS_BRIO:
+            errores.append(donde + ": 'importancia' tiene que ser alta o media")
+            continue
+        monedas = p.get("monedas")
+        if monedas is not None and not isinstance(monedas, list):
+            errores.append(donde + ": 'monedas' tiene que ser una lista")
+            continue
+        codigos = ",".join(_texto_corto(c, 12).upper() for c in (monedas or [])
+                           if isinstance(c, str) and c.strip())[:200]
+        crudas.append({
+            "origen": "Brio",
+            "titulo": espanol or original,
+            "titulo_original": original or None,
+            "fuente": _texto_corto(p.get("fuente"), 60) or "Brio",
+            "enlace": enlace,
+            "id_brio": _texto_corto(p.get("id"), 600) or enlace,
+            "cuando": cuando,
+            "texto_fuente": "",
+            "monedas": codigos,
+            "resumen_brio": (_texto_corto(p.get("resumen"), 400)
+                             or _texto_corto(p.get("por_que_importante"), 400) or None),
+            "sentimiento_brio": sentimiento or None,
+            "por_que_brio": _texto_corto(p.get("por_que_importante"), 300) or None,
+            "importancia_brio": importancia or None,
+        })
+    return crudas, errores
+
+
+def _cargar_brio():
+    try:
+        with open(RUTA_BRIO, encoding="utf-8") as f:
+            datos = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {"actualizado": 0, "noticias": []}
+    if not isinstance(datos, dict):
+        return {"actualizado": 0, "noticias": []}
+    noticias = [n for n in (datos.get("noticias") or []) if isinstance(n, dict)]
+    return {"actualizado": int(datos.get("actualizado") or 0), "noticias": noticias}
+
+
+def _salvar_brio(datos):
+    """Atomico: si se corta la luz a mitad de escritura no queda el archivo roto."""
+    temporal = RUTA_BRIO + ".tmp"
+    with open(temporal, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False)
+    os.replace(temporal, RUTA_BRIO)
+
+
+def recibir_brio(payload, ahora_ms=None):
+    """Guarda lo que empujo Brio. Devuelve (recibidas, nuevas, errores).
+
+    Se guarda aparte del cache de RSS porque traer() reconstruye esa lista entera
+    en cada refresco: ahi las de Brio se borrarian solas a los 10 minutos.
+    """
+    crudas, errores = validar_lote(payload)
+    ahora_ms = int(time.time() * 1000) if ahora_ms is None else int(ahora_ms)
+    with _SEGURIDAD:
+        datos = _cargar_brio()
+        viejas = datos["noticias"]
+        conocidas = set()
+        for n in viejas:
+            conocidas.add(n.get("enlace"))
+            conocidas.add(n.get("id_brio"))
+        nuevas = []
+        for n in crudas:
+            if n["enlace"] in conocidas or n["id_brio"] in conocidas:
+                continue
+            conocidas.add(n["enlace"])
+            conocidas.add(n["id_brio"])
+            nuevas.append(n)
+        if nuevas:
+            juntas = nuevas + viejas
+            juntas.sort(key=lambda x: x.get("cuando") or 0, reverse=True)
+            datos = {"actualizado": ahora_ms, "noticias": juntas[:MAX_BRIO]}
+            _salvar_brio(datos)
+        ESTADO["_brio"] = datos
+    return len(crudas), len(nuevas), errores
+
+
+def estado_brio(ahora_ms=None):
+    """Lo que el panel necesita para decir si Brio mando algo y cuando."""
+    ahora_ms = int(time.time() * 1000) if ahora_ms is None else int(ahora_ms)
+    with _SEGURIDAD:
+        datos = ESTADO.get("_brio")
+        if datos is None:
+            datos = _cargar_brio()
+            ESTADO["_brio"] = datos
+    ultimo = datos.get("actualizado") or 0
+    guardadas = len(datos.get("noticias") or [])
+    return {"configurado": brio_configurado(),
+            "actualizado": ultimo,
+            "guardadas": guardadas,
+            "silencio": bool(ultimo) and (ahora_ms - ultimo) > BRIO_SILENCIO_SEG * 1000}
+
+
 # ---------- para el servidor (/api/noticias) ----------
 def traer(force=False):
     """Trae lo mejor que tenga. Internet cada 10 minutos como maximo (o con force=True).
@@ -441,9 +671,22 @@ def traer(force=False):
                 h.join(timeout=15)
             contador = {}
             with _SEGURIDAD:
+                brio = _cargar_brio()
+                ESTADO["_brio"] = brio
+                # Brio primero: si el RSS trae la misma noticia, gana la que ya
+                # vino leida y traducida en vez de la que hay que adivinar.
+                crudas = list(brio["noticias"]) + crudas
+                fuentes["Brio"] = (f"ok ({len(brio['noticias'])} guardadas)" if brio["noticias"]
+                                   else ("esperando el primer envío" if brio_configurado()
+                                         else "sin clave configurada"))
+                anteriores = {n["id"]: n.get("precio") for n in ESTADO.get("noticias", [])}
                 ESTADO["_crudas"] = crudas
                 ESTADO["fuentes"] = fuentes
                 ESTADO["noticias"] = procesar(ahora_ms, crudas, contador)
+                for n in ESTADO["noticias"]:
+                    previo = anteriores.get(n["id"])
+                    if previo and previo.get("estado") not in (None, "midiendo"):
+                        n["precio"] = previo
                 ESTADO["descartes"] = contador
                 ESTADO["actualizado"] = ahora_ms
             _salvar_cache()
@@ -451,11 +694,13 @@ def traer(force=False):
             CARGA.release()
     medir_precios(ahora_ms)
     _salvar_cache()
+    brio = estado_brio(ahora_ms)
     with _SEGURIDAD:
         return {"actualizado": ESTADO.get("actualizado", 0),
                 "fuentes": dict(ESTADO.get("fuentes", {})),
                 "recibidas": len(ESTADO.get("_crudas", [])),
                 "descartes": dict(ESTADO.get("descartes", {})),
+                "brio": brio,
                 "noticias": ESTADO.get("noticias", [])[:MAX_TOTAL]}
 
 

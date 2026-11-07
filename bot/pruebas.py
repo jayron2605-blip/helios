@@ -312,5 +312,182 @@ check("Z10 se queda aunque no se pueda clasificar", len(c10) == 1 and c10[0]["se
 check("Z11 el molde de claves de noticias vive junto a los otros dos",
       os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "noticias.EJEMPLO.json")))
 
+# BR) Brio empuja noticias a la app. Todo sin red y en carpeta temporal:
+# no se toca ni el noticias.json real ni el noticias_brio.json del proyecto.
+print("\n== noticias de Brio ==")
+_dir_brio = tempfile.mkdtemp(prefix="helios_brio_")
+_claves_real, _brio_real = _noticias.RUTA_CLAVES, _noticias.RUTA_BRIO
+_noticias.RUTA_CLAVES = os.path.join(_dir_brio, "noticias.json")
+_noticias.RUTA_BRIO = os.path.join(_dir_brio, "noticias_brio.json")
+_noticias.ESTADO.pop("_brio", None)
+
+check("BR1 sin clave configurada la puerta queda cerrada",
+      _noticias.token_brio_valido("cualquiera") is False and _noticias.brio_configurado() is False)
+
+_clave_prueba = os.urandom(12).hex()
+with open(_noticias.RUTA_CLAVES, "w", encoding="utf-8") as _f:
+    json.dump({"brio_token": _clave_prueba}, _f)
+check("BR2 la clave correcta entra y la equivocada no",
+      _noticias.token_brio_valido(_clave_prueba) is True
+      and _noticias.token_brio_valido(_clave_prueba + "x") is False
+      and _noticias.token_brio_valido("") is False
+      and _noticias.token_brio_valido(None) is False)
+
+check("BR3 solo pasan enlaces http(s)",
+      _noticias.url_segura("https://ejemplo.com/prueba") == "https://ejemplo.com/prueba"
+      and _noticias.url_segura("javascript:alert(1)") is None
+      and _noticias.url_segura("data:text/html,<b>x</b>") is None
+      and _noticias.url_segura("file:///C:/claves.json") is None
+      and _noticias.url_segura('https://x.com/"onmouseover="alert(1)') is None)
+
+# el lote exacto del prompt, con la hora corrida a "hace 10 minutos" para que
+# la prueba no dependa del reloj ni tire la noticia por vieja o por futura
+_hace = ahora - 10 * 60 * 1000
+_iso = __import__("datetime").datetime.fromtimestamp(_hace / 1000, __import__("datetime").timezone.utc).isoformat()
+LOTE_BRIO = {"origen": "Brio", "fecha_envio": _iso, "noticias": [{
+    "id": "https://ejemplo.com/prueba", "titulo": "Original English headline",
+    "titulo_es": "Noticia de prueba", "resumen": "Esto es solo una prueba.",
+    "url": "https://ejemplo.com/prueba", "fuente": "Prueba", "hora_publicacion": _iso,
+    "monedas": ["BTC"], "importancia": "alta", "sentimiento": "neutra",
+    "por_que_importante": "Probar que la puerta funciona."}]}
+_crudas_br, _err_br = _noticias.validar_lote(LOTE_BRIO)
+check("BR4 el lote del prompt se acepta entero", len(_crudas_br) == 1 and not _err_br, str(_err_br))
+check("BR4b se guarda el titulo en espanol y el original aparte",
+      _crudas_br[0]["titulo"] == "Noticia de prueba"
+      and _crudas_br[0]["titulo_original"] == "Original English headline"
+      and _crudas_br[0]["origen"] == "Brio")
+
+_malo = json.loads(json.dumps(LOTE_BRIO))
+_malo["noticias"][0]["sentimiento"] = "maso"
+check("BR5 sentimiento inventado se rechaza", _noticias.validar_lote(_malo)[0] == []
+      and len(_noticias.validar_lote(_malo)[1]) == 1)
+_sin_hora = json.loads(json.dumps(LOTE_BRIO))
+del _sin_hora["noticias"][0]["hora_publicacion"]
+check("BR6 sin hora no se inventa una fecha", _noticias.validar_lote(_sin_hora)[0] == []
+      and len(_noticias.validar_lote(_sin_hora)[1]) == 1)
+check("BR6b la hora ISO con zona horaria se entiende",
+      _noticias._a_ms("2026-11-07T13:20:00-06:00")
+      == int(__import__("datetime").datetime(2026, 11, 7, 19, 20,
+              tzinfo=__import__("datetime").timezone.utc).timestamp() * 1000),
+      str(_noticias._a_ms("2026-11-07T13:20:00-06:00")))
+check("BR6c una hora que no se entiende devuelve None", _noticias._a_ms("ayer a la tarde") is None)
+_grande = {"noticias": [dict(LOTE_BRIO["noticias"][0]) for _ in range(_noticias.MAX_LOTE_BRIO + 1)]}
+check("BR7 un lote pasado de tamaño se rechaza", _noticias.validar_lote(_grande)[0] == []
+      and len(_noticias.validar_lote(_grande)[1]) == 1)
+check("BR7b el cuerpo que no es objeto se rechaza", _noticias.validar_lote([1, 2])[0] == []
+      and _noticias.validar_lote("hola")[0] == [])
+
+_rec, _nue, _err = _noticias.recibir_brio(LOTE_BRIO, ahora_ms=ahora)
+check("BR8 la primera vez guarda una", (_rec, _nue, _err) == (1, 1, []), f"{_rec}/{_nue}/{_err}")
+check("BR8b queda escrita en disco", os.path.exists(_noticias.RUTA_BRIO))
+_rec2, _nue2, _ = _noticias.recibir_brio(LOTE_BRIO, ahora_ms=ahora)
+check("BR9 el mismo id o url no se duplica", (_rec2, _nue2) == (1, 0), f"{_rec2}/{_nue2}")
+_distinta = json.loads(json.dumps(LOTE_BRIO))
+_distinta["noticias"][0]["url"] = "https://ejemplo.com/otra"
+_distinta["noticias"][0]["id"] = "https://ejemplo.com/otra"
+check("BR9b una url distinta si entra", _noticias.recibir_brio(_distinta, ahora_ms=ahora)[1] == 1)
+
+# B1 + B2 en la misma lista: el RSS trae la misma noticia en ingles y gana Brio
+_rss_mismo = [{"fuente": "CoinDesk", "titulo": "Original English headline",
+               "enlace": "https://ejemplo.com/prueba", "cuando": _hace, "texto_fuente": ""}]
+_juntas = _noticias.procesar(ahora, _crudas_br + _rss_mismo)
+check("BR10 Brio y RSS comparten lista y no se duplican",
+      len(_juntas) == 1 and _juntas[0]["origen"] == "Brio"
+      and _juntas[0]["titulo"] == "Noticia de prueba", f"{len(_juntas)} quedaron")
+check("BR10b se respeta el sentimiento que mando Brio",
+      _juntas[0]["sentimiento"] == "neutra" and _juntas[0]["resumen"] == "Esto es solo una prueba."
+      and _juntas[0]["moneda"] == "BTC" and _juntas[0]["importancia"] == "alta")
+# el vocabulario en ingles de los RSS no puede tirar abajo un titulo en espanol
+_solo_es = _noticias.procesar(ahora, [{"origen": "Brio", "titulo": "La Reserva Federal recorta la tasa",
+      "fuente": "Brio", "enlace": "https://ejemplo.com/fed", "cuando": _hace, "texto_fuente": "",
+      "resumen_brio": "Importa para todo el mercado.", "sentimiento_brio": "buena",
+      "monedas": "", "importancia_brio": "alta"}])
+check("BR11 un titulo en espanol de Brio no lo tira el filtro en ingles", len(_solo_es) == 1,
+      f"{len(_solo_es)} quedaron")
+check("BR11b sin resumen no se inventa ninguno",
+      _noticias.procesar(ahora, [{"origen": "Brio", "titulo": "Bitcoin sube",
+          "fuente": "Brio", "enlace": "https://ejemplo.com/sin", "cuando": _hace,
+          "texto_fuente": "", "monedas": ""}])[0]["sin_resumen"] is True)
+
+_noticias.ESTADO["_brio"] = {"actualizado": ahora - 3 * 3600 * 1000, "noticias": []}
+check("BR12 mas de 2 horas sin recibir se marca como silencio",
+      _noticias.estado_brio(ahora)["silencio"] is True)
+_noticias.ESTADO["_brio"] = {"actualizado": ahora - 30 * 60 * 1000, "noticias": []}
+check("BR12b hace media hora no es silencio", _noticias.estado_brio(ahora)["silencio"] is False)
+
+# la puerta POST de verdad, en un puerto local y efimero: sin salir a internet
+_raiz_repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _raiz_repo not in sys.path:
+    sys.path.insert(0, _raiz_repo)
+import servidor as _servidor
+from http.server import ThreadingHTTPServer as _THS
+import urllib.request as _ur, urllib.error as _ue
+
+_puerta = _THS(("127.0.0.1", 0), _servidor.Atencion)
+_hilo_puerta = __import__("threading").Thread(target=_puerta.serve_forever, daemon=True)
+_hilo_puerta.start()
+_url_puerta = f"http://127.0.0.1:{_puerta.server_address[1]}/api/noticias/recibir"
+
+
+def _post_brio(token, cuerpo):
+    req = _ur.Request(_url_puerta, data=json.dumps(cuerpo).encode("utf-8"),
+                      headers={"Content-Type": "application/json",
+                               **({"Authorization": "Bearer " + token} if token else {})})
+    try:
+        with _ur.urlopen(req, timeout=10) as r:
+            return r.status, json.loads(r.read().decode("utf-8"))
+    except _ue.HTTPError as e:
+        return e.code, json.loads(e.read().decode("utf-8"))
+
+
+_antes_401 = len(_noticias._cargar_brio()["noticias"])
+_codigo_sin, _cuerpo_sin = _post_brio(None, LOTE_BRIO)
+check("BR13 sin clave responde 401", _codigo_sin == 401 and _cuerpo_sin.get("ok") is False,
+      str(_codigo_sin))
+_codigo_mal, _ = _post_brio("clave-equivocada", LOTE_BRIO)
+check("BR13b con clave equivocada responde 401", _codigo_mal == 401, str(_codigo_mal))
+check("BR13c los dos 401 no guardaron nada",
+      len(_noticias._cargar_brio()["noticias"]) == _antes_401, f"{_antes_401} guardadas")
+_codigo_ok, _cuerpo_ok = _post_brio(_clave_prueba, LOTE_BRIO)
+check("BR14 con la clave correcta responde 200 y ok true",
+      _codigo_ok == 200 and _cuerpo_ok.get("ok") is True and _cuerpo_ok.get("recibidas") == 1,
+      f"{_codigo_ok} {_cuerpo_ok}")
+check("BR14b responde rapido con recibidas y nuevas", set(_cuerpo_ok) >= {"ok", "recibidas", "nuevas"})
+_codigo_vacio, _cuerpo_vacio = _post_brio(_clave_prueba, {"noticias": [{"titulo": "sin url"}]})
+check("BR15 un lote sin nada valido responde 400 con el motivo",
+      _codigo_vacio == 400 and _cuerpo_vacio.get("errores"), str(_codigo_vacio))
+# el POST viejo del cuaderno no se rompio al abrir la puerta nueva
+_cuaderno_real = _servidor.RUTA_CUADERNO
+_servidor.RUTA_CUADERNO = os.path.join(_dir_brio, "cuaderno.csv")
+_req_cu = _ur.Request(_url_puerta.replace("/api/noticias/recibir", "/api/cuaderno"),
+                      data=json.dumps({"mercado": "BTCUSDT", "veredicto": "prueba"}).encode("utf-8"),
+                      headers={"Content-Type": "application/json"})
+with _ur.urlopen(_req_cu, timeout=10) as _r_cu:
+    _resp_cu = json.loads(_r_cu.read().decode("utf-8"))
+check("BR15b el cuaderno sigue anotando", _resp_cu.get("estado") == "anotado"
+      and os.path.exists(_servidor.RUTA_CUADERNO), str(_resp_cu))
+_servidor.RUTA_CUADERNO = _cuaderno_real
+_req_404 = _ur.Request(_url_puerta.replace("/recibir", "/inventada"), data=b"{}",
+                       headers={"Content-Type": "application/json"})
+try:
+    _ur.urlopen(_req_404, timeout=10)
+    _codigo_404 = 200
+except _ue.HTTPError as _e404:
+    _codigo_404 = _e404.code
+check("BR15c cualquier otro POST sigue dando 404", _codigo_404 == 404, str(_codigo_404))
+_puerta.shutdown()
+_puerta.server_close()
+
+_molde_br = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                      "noticias.EJEMPLO.json"), encoding="utf-8"))
+check("BR16 el molde de claves trae brio_token", "brio_token" in _molde_br, str(list(_molde_br)))
+_ignore_br = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               ".gitignore"), encoding="utf-8").read()
+check("BR17 lo que manda Brio no se comparte", "bot/noticias_brio.json" in _ignore_br)
+check("BR17b la clave tampoco se comparte", "bot/noticias.json" in _ignore_br)
+
+_noticias.RUTA_CLAVES, _noticias.RUTA_BRIO = _claves_real, _brio_real
+_noticias.ESTADO.pop("_brio", None)
+
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)

@@ -36,3 +36,7 @@ bot/telegram.json
 bot/noticias.json
 bot/noticias_cache.json
 noticias.json
+
+# Lo que empuja Brio: es contenido externo y puede pesar; se regenera solo
+bot/noticias_brio.json
+bot/noticias_brio.json.tmp
