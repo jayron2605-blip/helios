@@ -5,9 +5,9 @@ la cuenta. Mientras ese archivo no exista, o mientras exista el archivo
 APAGADO, el bot NO manda ordenes: calcula, anota y muestra que hubiera hecho.
 
 Los frenos se chequean aca, del lado del programa, antes de firmar nada:
-  - tamano maximo por operacion
+  - tamano maximo por operacion (el monto se calcula con el precio real de la orden)
   - cantidad maxima de operaciones por dia
-  - tope de perdida diaria
+  - tope de perdida diaria (se actualiza con registrar_cierre() por cada operacion cerrada)
   - lista de mercados permitidos
   - interruptor de parada en el disco
 """
@@ -138,6 +138,12 @@ class Exchange:
     def saldo(self):
         return self._get("/api/v3/account", {}, firmado=True)
 
+    def precio_actual(self, simbolo):
+        """Precio del ultimo trato, publico, sin clave. Sirve para saber el monto real de una orden."""
+        with urllib.request.urlopen(
+                PRODUCCION + f"/api/v3/ticker/price?symbol={simbolo}", timeout=15) as r:
+            return float(json.loads(r.read())["price"])
+
     # ---------- frenos ----------
     def _estado_dia(self):
         hoy = time.strftime("%Y-%m-%d")
@@ -174,11 +180,36 @@ class Exchange:
             raise Freno(f"Se toco el tope de perdida diaria ({c['perdida_usd']:.2f} USD). Se paro.")
         return c
 
+    def _monto(self, simbolo, cantidad, precio=None):
+        """Monto real de la orden, en USD. Sin precio confiable no hay orden: freno por seguridad."""
+        if precio is not None:
+            return cantidad * float(precio)
+        p = self.precio_actual(simbolo)
+        if not p:
+            raise Freno("No se pudo leer el precio del mercado: sin ese dato no se firma una orden.")
+        return cantidad * p
+
+    def registrar_cierre(self, pnl_usd):
+        """Anota una operacion cerrada. Si perdio plata, suma al contador del dia.
+
+        El freno de perdida diaria solo sirve de algo si la perdida se escribe.
+        Devuelve el estado del dia (por si el executor quiere registrar el freno que salto).
+        """
+        c = self._estado_dia()
+        perdida = -float(pnl_usd) if pnl_usd else 0.0
+        if perdida > 0:
+            c["perdida_usd"] = round(c.get("perdida_usd", 0.0) + perdida, 2)
+        self._salvar_dia(c)
+        self._anotar("cierre", f"pnl={pnl_usd:.2f} perdida_dia={c['perdida_usd']:.2f}"
+                     if pnl_usd else "cierre sin pnl")
+        return c
+
     # ---------- escritura ----------
-    def comprar_mercado(self, simbolo, cantidad):
+    def comprar_mercado(self, simbolo, cantidad, precio=None):
         if SOLO_PRUEBA:
             raise ModoSoloPrueba("Helios está en modo prueba fijo: no manda órdenes reales, nunca.")
-        c = self.revisar_frenos(simbolo, 0)
+        monto = self._monto(simbolo, cantidad, precio)
+        c = self.revisar_frenos(simbolo, monto)
         orden = self._post("/api/v3/order", {
             "symbol": simbolo, "side": "BUY", "type": "MARKET", "quantity": f"{cantidad:.8f}"})
         c["operaciones"] += 1
@@ -186,10 +217,11 @@ class Exchange:
         self._anotar("orden", json.dumps(orden)[:300])
         return orden
 
-    def vender_mercado(self, simbolo, cantidad):
+    def vender_mercado(self, simbolo, cantidad, precio=None):
         if SOLO_PRUEBA:
             raise ModoSoloPrueba("Helios está en modo prueba fijo: no manda órdenes reales, nunca.")
-        c = self.revisar_frenos(simbolo, 0)
+        monto = self._monto(simbolo, cantidad, precio)
+        c = self.revisar_frenos(simbolo, monto)
         orden = self._post("/api/v3/order", {
             "symbol": simbolo, "side": "SELL", "type": "MARKET", "quantity": f"{cantidad:.8f}"})
         c["operaciones"] += 1

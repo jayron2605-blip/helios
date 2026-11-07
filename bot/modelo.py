@@ -106,7 +106,8 @@ def comprar_y_sostener(barras, cfg):
     if len(barras) < 2:
         return 0.0
     o0 = barras[0][1]
-    c1 = barras[-1][2]
+    # barras = (t, open, high, low, close): el cierre es el indice 4, no el maximo (indice 2)
+    c1 = barras[-1][4]
     bruto = c1 / o0 - 1
     return bruto - 2 * cfg.comision - 2 * cfg.deslizamiento
 

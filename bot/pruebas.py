@@ -175,6 +175,38 @@ except Exception as e:
 check("T el modo del exchange es PRUEBA FIJA", exchange.Exchange.modo == "PRUEBA FIJA")
 check("U puede_operar_de_verdad es falso", exchange.Exchange.puede_operar_de_verdad is False)
 
+# W) monto real de la orden contra el freno de tamano: antes se pasaba monto 0 y no frenaba nunca
+try:
+    monto = ex._monto("BTCUSDT", 1000, 0.09)   # 1000 BTC-ficticio a 0.09 USD = 90 USD
+    check("W monto real de la orden", abs(monto - 90.0) < 1e-9, f"{monto:.4f}")
+except Exception as e:
+    check("W monto real de la orden", False, type(e).__name__)
+try:
+    ex.revisar_frenos("BTCUSDT", ex._monto("BTCUSDT", 1000, 0.09))
+    check("W2 freno de tamano con monto real", False)
+except exchange.Freno as e:
+    check("W2 freno de tamano con monto real", True, str(e)[:48])
+
+# X) la perdida del dia se registra con cada cierre y el tope la corta
+cfg_freno2 = dict(cfg_freno, solo_simulacro=False, maximo_operaciones_dia=99,
+                  tope_perdida_diaria_usd=30)
+ex4 = exchange.Exchange(cfg_freno2)
+c = {"dia": __import__("time").strftime("%Y-%m-%d"), "operaciones": 0, "perdida_usd": 0.0}
+with open(exchange.RUTA_CONTADOR, "w", encoding="utf-8") as f:
+    json.dump(c, f)
+ex4.registrar_cierre(-20.0)   # primera perdida: 20 USD del dia
+ex4.registrar_cierre(-15.0)   # segunda perdida: 35 USD del dia
+check("X perdida del dia acumulada", ex4._estado_dia()["perdida_usd"] >= 30,
+      f"{ex4._estado_dia()['perdida_usd']:.2f}")
+try:
+    ex4.revisar_frenos("BTCUSDT", 10)
+    check("X2 tope de perdida corta despues de cerrar mal", False)
+except exchange.Freno as e:
+    check("X2 tope de perdida corta despues de cerrar mal", True, str(e)[:48])
+ex4.registrar_cierre(50.0)    # una ganancia no debe sumar a la perdida del dia
+check("X3 ganancia no suma perdida", ex4._estado_dia()["perdida_usd"] >= 30,
+      f"{ex4._estado_dia()['perdida_usd']:.2f}")
+
 # V) el asistente tiene que aguantar tanto 300 velas como 33.000 sin romperse
 import asistente as _asistente
 
@@ -203,6 +235,16 @@ try:
         check("V el asistente aguanta %d velas" % cantidad, bool(ok_df))
 finally:
     _asistente.velas, _asistente.velas_publicas, _asistente.fotos_del_mercado = _original
+
+# Y) comprar-y-sostener se mide con el cierre de la ultima vela, no con su maximo
+from modelo import comprar_y_sostener as _sy
+
+_cfg_bh = Configuracion(comision=0.001, deslizamiento=0.0005)
+_bh_barras = [(base, 100.0, 100.0, 99.0, 99.0),      # alto de la primera vela: irrelevante
+              (base + 3_600_000, 100.0, 130.0, 99.0, 101.0)]
+esperando = 101.0 / 100.0 - 1 - 2 * _cfg_bh.comision - 2 * _cfg_bh.deslizamiento
+check("Y comprar-y-sostener usa el cierre", abs(_sy(_bh_barras, _cfg_bh) - esperando) < 1e-9,
+      "" )
 
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)
