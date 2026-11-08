@@ -93,6 +93,11 @@ las funciones son los mismos. Detalle en `AUDITORIA-UI.md`.
 - **En teléfono:** menú de abajo con icono y texto corto, botones de 44px,
   tablas que se mueven de lado con el dedo, buscador y formularios a 16px
   (sin zoom al tocar), gráficos completos a 360px y 390px.
+- **Rediseño v2 (2026-11-08, misma rama):** tarjetas muy redondas (22–28px),
+  botones pastilla (Comprar verde, Vender rojo, Guardar/Calcular azul),
+  números grandes (estado 44px, saldo 32px, precio 34px), y en teléfono solo
+  5 botones abajo (Panel, Gráfico, Bot, Cartera, Más) con las otras 5 vistas
+  en una hoja "Más". Detalle vista por vista en `AUDITORIA-UI.md`.
 - Estado del bot con punto de color **y** palabra (apagado, encendido, peligro).
 
 ### Cartera manual: qué hace y qué no

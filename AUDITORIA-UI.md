@@ -65,6 +65,59 @@ del CSS de `panel.html`.
   No es un error del panel: con internet en la PC del dueño los datos cargan
   como antes. Los gráficos con datos reales no se pudieron ver acá.
 
+## Rediseño v2 (2026-11-08) — qué cambió de verdad respecto a v1
+
+La v1 solo cambió colores y espacios. La v2 es un rediseño completo, vista
+por vista, siguiendo la referencia de teléfono que mandó la dueña (TradeAI /
+AUREON / TradeAI Pro: azul marino oscuro, tarjetas muy redondas, botones
+pastilla, números grandes). Sistema compartido nuevo al inicio del CSS
+(`--bg:#070b16`, `--card:#121a2e`, `--r1:14px`, `--r2:22px`, `--r3:28px`,
+`--pill:999px`, botones pastilla de 48px, sombras suaves). Trabajo hecho por
+10 agentes en paralelo (uno por vista + menú), coordinados y unidos uno por
+uno con commit, pruebas y captura después de cada vista. Solo `panel.html`.
+
+| Vista | Qué cambió en v2 |
+|---|---|
+| Base | Tokens redondos compartidos; botones pastilla 48px (`.btn-verde` verde con texto oscuro, `.btn-rojo` rojo, primario azul con degradado); entradas 16px de radio; "Para qué sirve" como tarjeta redonda suave; asistente sin borde violeta duro; números grandes (estado 38px, KPIs 26px, precio 30px). |
+| Panel | Estado 44px; "Pondría" y "El bot" como tarjetas redondas propias; los dos marcos como tarjetas separadas con anillo verde/azul al activar; KPIs 28px con etiqueta legible; precio del gráfico 34px; leyenda en pastillas; gauge y puntos más grandes; calor con celdas de 48px; comparador y seguimiento en cajas redondas; pie como tarjeta suave. Arreglo: "Para qué sirve" ahora se llena al arrancar en Panel (antes quedaba en "—" porque `irA` no se llamaba). |
+| Gráfico | Tarjeta 28px; gráfico y RSI en cajas redondas con borde; precio 34px; intervalos 44px en teléfono con el activo en azul sólido y texto blanco; capas en pastillas que envuelven; leyenda EMA con colores legibles en claro y oscuro; cinta en contenedor redondo; estadísticas con números grandes. Corregido: los números de estadísticas salían todos violetas (la utilidad `.v` pisaba a `.g`/`.r`); ahora verde/rojo correctos. |
+| El bot | Pastilla de estado con punto: APAGADO gris (antes amarillo), encendido verde, peligro rojo; números de papel 28px; frenos con valor grande y legible; PARAR rojo y Reanudar en pastilla a ancho completo en teléfono; tablas en contenedores redondos 22px con scroll lateral; botones CSV a ancho completo. |
+| Cuaderno | Tarjeta redonda; botones pastilla a ancho completo en teléfono ("Anotar esta lectura" azul); tabla en caja redonda de 16px (desliza de lado). |
+| On-chain | KPIs en 2 columnas en teléfono (22px, 30px en computadora); tarjetas 28px; pestañas en pastillas de 48px; medidor de miedo/codicia en caja redonda con número de 28px; celdas de calor con aire. |
+| Laboratorio | Tarjetas 28px; títulos blancos 15px; selectores de 48px; deslizadores con pista redonda y pulgar azul de 24px con anillo blanco; valor en pastilla ("24 velas"); "Comparar las 5 estrategias" azul pastilla a ancho completo; métricas 20px; curva en caja redonda 22px; simulador a ancho completo en teléfono. |
+| Ajustes | Títulos blancos 16px con punto de color; nota inicial en banner suave redondo; filas con aire (etiqueta 13px en negrita + punto, texto a la izquierda). |
+| Noticias | Cabecera 28px y título 28px; filtros en pastillas que envuelven (Todas activa en cian); "Actualizar ahora" a ancho completo en teléfono; tarjetas de noticia con más aire (titular 15,5px); movimiento en pastilla verde/roja con fondo suave; pie como tarjeta redonda. |
+| Cartera | Saldo 32px en tarjeta 28px; pastilla PLATA FALSA amarilla; "Colocar orden" verde pastilla a ancho completo; "Cerrar" rojo pastilla; tablas en cajas redondas 22px; buscador 48px y 16px; resultado del riesgo grande (19px); curva en caja redonda. |
+| Menú | **En teléfono solo 5 botones abajo: Panel, Gráfico, Bot, Cartera, Más** (70×56px a 360px, con nombre). Las otras 5 vistas (Cuaderno, On-chain, Lab, Noticias, Ajustes) van en una hoja "Más" que se abre desde abajo (radio superior 28px, icono + nombre + frase corta, botón Cerrar azul pastilla). En computadora sigue el menú lateral completo con las 9 vistas. Teclas 1–9 siguen funcionando. |
+| Tema claro | Verificado en Panel, Bot y Cartera a 360px: todo legible. Corregido: la tarjeta del asistente quedaba azul oscura en claro (degradado fijo `#1a2340`); ahora degradado claro. |
+
+## Verificación v2 con navegador (Firefox headless, 2026-11-08)
+
+- Pruebas después de cada vista y al final: `TODO OK` con **177**
+  comprobaciones. CSS con llaves balanceadas (2 bloques `<style>`),
+  sintaxis JS verificada con `node --check` después de cada unión.
+- Ancho de página medido en las 10 partes: **1440px → 1440, 390px → 390,
+  360px → 360**. Sin desborde horizontal de página en ninguna vista, ni en
+  modo claro ni en oscuro. Capturas en `~/workspace/preview-helios-v2/`
+  (`panel-360.png`, `grafico-360.png`, `bot-360.png`, `cartera-360.png`,
+  `cuaderno-360.png`, `onchain-360.png`, `lab-360.png`, `ajustes-360.png`,
+  `noticias-360.png`, `menu-360.png`, `menu-360-mas.png`, más las de 390px,
+  las claras y las de 1440px; y un `panel-<vista>.html` por cada parte).
+- Menú inferior medido a 360px: 5 botones de 70×56px, todos visibles, sin
+  corte; la hoja Más se abre y se cierra (botón, fondo y tecla Escape).
+- "Para qué sirve" en Panel: verificado llamando a `irA('panel')` a mano
+  (rellena "Es la pantalla de siempre…"). En esta máquina la carga inicial
+  sigue mostrando "—" porque el CDN bloqueado detiene el script en
+  `montar()` antes de llegar al arranque; en la PC de la dueña, con
+  internet, el script corre entero y se llena.
+- Límite del entorno: en esta máquina la librería de gráficos por CDN
+  (`LightweightCharts`) y las APIs de Binance/CoinGecko no cargaron, así que
+  las capturas muestran el estado "Cargando…" y no velas ni precios reales.
+  No es un error del panel: con internet en la PC del dueño los datos cargan
+  como antes. Los gráficos con datos reales, las tablas con datos reales y
+  los números grandes con valores reales (KPIs, saldo, P/L) se verificaron
+  con datos de prueba inyectados en la página viva, no con el servidor real.
+
 ## Lo que NO se pudo probar en teléfono real
 
 - No hay teléfono físico en esta máquina. La verificación en 360px y 390px se

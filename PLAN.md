@@ -432,6 +432,14 @@ pruebas automatizadas y verificación de navegador; una categoría no sustituye 
   peligro rojo solo para parar el bot; pastilla violeta para Brio; estado del
   bot con punto y palabra; miedo/codicia con 5 colores. Solo `panel.html`;
   sin tocar `bot/`, `servidor.py` ni ningún número. Pruebas: TODO OK, 177.
+- **F2c Rediseño v2 → HECHO EN CÓDIGO (2026-11-08, misma rama, 10 agentes
+  en paralelo, uno por vista + menú).** Tarjetas 22–28px, botones pastilla de
+  48px, números grandes, menú de teléfono con solo 5 botones + hoja Más,
+  "Para qué sirve" lleno al arrancar en Panel, tema claro verificado en
+  Panel/Bot/Cartera. Solo `panel.html`; sin tocar `bot/`, `servidor.py` ni
+  ningún número. Pruebas después de cada vista: TODO OK, 177. Capturas
+  360/390/1440px en `~/workspace/preview-helios-v2/`. Falta la prueba con
+  datos reales y toque en teléfono físico (ver F3).
 - **F3 Probar en 360px y 390px → PARCIAL.** Cartera y su navegación probadas el 2026-11-08
   en emulación móvil de Chrome con toque; no fue un teléfono físico. La mejora de
   interfaz se verificó con servidor local (200), sintaxis JS y pruebas 177 TODO OK;
