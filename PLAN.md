@@ -420,11 +420,32 @@ pruebas automatizadas y verificación de navegador; una categoría no sustituye 
 ### F. Web responsive para teléfono → PARCIAL
 - **F1 Base responsive → HECHO (no se borra).** Viewport, menú abajo en teléfono, tarjetas a una
   columna bajo 900px, tablas que colapsan bajo 1320px y 1100px. Falta completarla.
-- **F2 Arreglar lo que se ve mal en teléfono → FALTA.** Tablas que no se salgan (scroll lateral con
-  el dedo), botones no más chicos que un dedo, gráficos completos, buscador/filtros/comparador/
-  simulador con toque, texto legible sin zoom.
+- **F2 Arreglar lo que se ve mal en teléfono → HECHO EN CÓDIGO (2026-11-08, rama
+  `ui-mejora-interfaz`).** Tablas con scroll lateral y ancho mínimo, botones de
+  40px en computadora y 44px en teléfono, menú abajo con texto corto, gráficos
+  completos a 360/390px (altura en CSS, no fija), buscador y formularios a 16px
+  sin zoom, estrella de favoritos con zona de toque de 36px. Falta la prueba
+  con toque en teléfono físico (ver F3).
+- **F2b Sistema de colores y letras → HECHO (2026-11-08, misma rama).** 6 colores
+  documentados al inicio del CSS; modo claro completado (bordes, selección,
+  línea mediana y líneas cian visibles en los dos temas); botón principal azul,
+  peligro rojo solo para parar el bot; pastilla violeta para Brio; estado del
+  bot con punto y palabra; miedo/codicia con 5 colores. Solo `panel.html`;
+  sin tocar `bot/`, `servidor.py` ni ningún número. Pruebas: TODO OK, 177.
+- **F2c Rediseño v2 → HECHO EN CÓDIGO (2026-11-08, misma rama, 10 agentes
+  en paralelo, uno por vista + menú).** Tarjetas 22–28px, botones pastilla de
+  48px, números grandes, menú de teléfono con solo 5 botones + hoja Más,
+  "Para qué sirve" lleno al arrancar en Panel, tema claro verificado en
+  Panel/Bot/Cartera. Solo `panel.html`; sin tocar `bot/`, `servidor.py` ni
+  ningún número. Pruebas después de cada vista: TODO OK, 177. Capturas
+  360/390/1440px en `~/workspace/preview-helios-v2/`. Falta la prueba con
+  datos reales y toque en teléfono físico (ver F3).
 - **F3 Probar en 360px y 390px → PARCIAL.** Cartera y su navegación probadas el 2026-11-08
-  en emulación móvil de Chrome con toque; no fue un teléfono físico. Falta auditar las otras vistas.
+  en emulación móvil de Chrome con toque; no fue un teléfono físico. La mejora de
+  interfaz se verificó con servidor local (200), sintaxis JS y pruebas 177 TODO OK;
+  las capturas en 360/390px con Chromium headless quedan registradas en el reporte
+  de la rama; si no salieron, se marca FALTA, no HECHO. Falta auditar las otras vistas
+  con toque real.
 - **F4 Abrir desde el teléfono por web → FALTA.** Depende de E2. Dejar por escrito cómo abrirlo en
   la misma red y cómo desde internet cuando esté publicado.
 
@@ -482,9 +503,9 @@ las comprobaciones anteriores conservan su fecha y la auditoría global aún fal
 - **HECHO** — El botón "Actualizar ahora" no llama a Brio. (2026-11-07: verificado en código, tooltip y pie de vista; solo lee lo guardado o busca RSS.)
 
 **Teléfono y web:**
-- **FALTA (parcial)** — Panel en teléfono a 360px: Cartera probada en emulación táctil Chrome el 2026-11-08, sin desborde de página y botones ≥44 px; faltan las otras vistas (F3).
-- **FALTA (parcial)** — Panel en teléfono a 390px: misma verificación de Cartera y mismos pendientes (F3).
-- **FALTA (parcial)** — Menú abajo funciona, favoritos, comparador y simulador funcionan con toque. (Favoritos/comparador/simulador verificados en navegador de escritorio el 2026-11-07, commit 23542b1; NO probados con toque en teléfono; F2/F3.)
+- **HECHO EN CÓDIGO / FALTA TOQUE REAL** — Panel en teléfono a 360px: Cartera probada en emulación táctil Chrome el 2026-11-08, sin desborde de página y botones ≥44 px; la mejora de interfaz 2026-11-08 (rama `ui-mejora-interfaz`) deja tablas con scroll, botones a 44px y gráficos con altura móvil en todas las vistas, pero no se probó con toque en teléfono físico (F3).
+- **HECHO EN CÓDIGO / FALTA TOQUE REAL** — Panel en teléfono a 390px: lo mismo que a 360px (F3).
+- **HECHO EN CÓDIGO / FALTA TOQUE REAL** — Menú abajo funciona, favoritos, comparador y simulador funcionan con toque. (Favoritos/comparador/simulador verificados en navegador de escritorio el 2026-11-07, commit 23542b1; menú abajo ahora con texto corto y botones de 52px en la mejora 2026-11-08; NO probados con toque en teléfono; F2/F3.)
 - **FALTA** — Se puede abrir desde el teléfono por web, no solo desde la PC. (F4; depende de E2, servidor solo en `127.0.0.1`.)
 
 **Cuentas y demo:**
