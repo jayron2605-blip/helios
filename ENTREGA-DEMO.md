@@ -22,6 +22,11 @@ qué queda pendiente para después de la inversión y qué NO se debe decir al c
 - **RSS reales:** `noticias.traer(force=True)` con caché temporal: CoinDesk ok (25),
   Cointelegraph ok (30), Decrypt ok (39); títulos/enlaces reales; horas de publicación parseadas.
 - Sintaxis JS (`node --check`) y llaves CSS balanceadas tras los cambios.
+- **Simplificación de interfaz (pedido del dueño el 2026-11-08):** más aire, textos cortos,
+  opciones avanzadas plegadas y 8 tarjetas de indicadores corregidas. Re-verificado tras el
+  cambio: 177 TODO OK, las 72 comprobaciones de navegador de nuevo, las opciones plegadas
+  abren y funcionan (MACD, deslizadores del Lab, trailing de Cartera) y capturas 360/1440
+  sin desborde ni "undefined" en los indicadores.
 
 **Lo que NO es esta verificación:** no es un teléfono físico (F3 sigue pendiente, necesita al
 dueño); no es `verificar_relevo.py` (79) corrido en Windows: sus pines de `requirements.txt`

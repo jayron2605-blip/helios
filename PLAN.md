@@ -569,3 +569,13 @@ Estado por vista (verificación de esta tanda; detalle y guion en `ENTREGA-DEMO.
 
 Reglas que siguen: `SOLO_PRUEBA=True`, banner demo, LAN sí / internet no, sin secretos en Git,
 sin merge a master, commit/push sólo con autorización del dueño.
+
+**Simplificación de interfaz (2026-11-08, pedido del dueño después de ver la demo):** la app
+tenía mucho texto, todo pegado y opciones difíciles. Hecho en `panel.html`: más aire (huecos
+16px, tarjetas 22–24px de padding), "Para qué sirve" y párrafos largos acortados, opciones
+avanzadas plegadas (capas del gráfico, deslizadores del laboratorio, objetivo 2/trailing de
+Cartera) y 8 tarjetas de indicadores corregidas (subtítulos en el lugar equivocado:
+"undefined", "r" suelta, color NaN). Sin borrar vistas ni tocar lógica de números.
+Verificado: 177 TODO OK, 72 comprobaciones de navegador emulado, interacciones de las
+opciones plegadas (MACD, deslizadores, trailing) y capturas 360/1440 sin desborde.
+Falta: toque físico (F3, lo hace el dueño).

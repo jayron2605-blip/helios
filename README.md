@@ -100,6 +100,15 @@ las funciones son los mismos. Detalle en `AUDITORIA-UI.md`.
   5 botones abajo (Panel, Gráfico, Bot, Cartera, Más) con las otras 5 vistas
   en una hoja "Más". Detalle vista por vista en `AUDITORIA-UI.md`.
 - Estado del bot con punto de color **y** palabra (apagado, encendido, peligro).
+- **Simplificación para la demo (2026-11-08, rama `demo-cliente`):** pedido del dueño
+  ("mucho texto, todo pegado, opciones difíciles"). Más aire entre tarjetas (huecos 16px,
+  padding 22–24px), "Para qué sirve" y los párrafos largos acortados a una o dos líneas,
+  y las opciones avanzadas plegadas tras un botón: "Opciones del gráfico" (las 8 capas),
+  "Ajustar la regla" (los 6 deslizadores del laboratorio) y "Más opciones" (objetivo 2 y
+  trailing en Cartera). Nada se borró: todo se abre con un toque. También se corrigieron
+  8 tarjetas de indicadores que mostraban el subtítulo en el lugar equivocado (salían
+  "undefined", una "r" suelta o el color NaN). Verificado: 177 TODO OK, 72 comprobaciones
+  de navegador, y las opciones plegadas abren y funcionan (MACD, deslizadores, trailing).
 
 ### Cartera manual: qué hace y qué no
 

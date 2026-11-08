@@ -59,7 +59,7 @@ em,i{font-style:normal}
 .rail{background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;
   align-items:center;padding:10px 0;gap:4px}
 .rail .mark{width:30px;height:30px;border-radius:14px;background:linear-gradient(135deg,var(--cy),var(--vi));
-  display:flex;align-items:center;justify-content:center;font-weight:800;color:#04070a;font-size:15px;margin-bottom:12px}
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:#04070a;font-size:15px;margin-bottom:16px}
 .rail button{width:40px;height:40px;border:0;background:transparent;border-radius:14px;color:var(--ft);
   cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:.14s}
 .rail button[data-v="mas"]{display:none}
@@ -111,26 +111,35 @@ em,i{font-style:normal}
 .tape .tk .d.g{color:var(--up)}.tape .tk .d.r{color:var(--dn)}
 
 /* ---------- vistas ---------- */
-.scroll{flex:1;overflow:auto;padding:var(--sp4)}
+.scroll{flex:1;overflow:auto;padding:var(--sp5)}
 .view{display:none}.view.on{display:block}
 .wrap{max-width:1560px;margin:0 auto}
 
 /* ---------- primitivas ---------- */
-.row{display:grid;gap:var(--sp3);margin-bottom:var(--sp3)}
+.row{display:grid;gap:var(--sp4);margin-bottom:var(--sp4)}
 .c4{grid-template-columns:repeat(4,1fr)}
 .c8{grid-template-columns:repeat(8,1fr)}
 .split{grid-template-columns:2.05fr 1fr}
 .split3{grid-template-columns:1fr 1.15fr 1.05fr}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r2);padding:18px 20px;
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r2);padding:22px 24px;
   min-width:0;box-shadow:var(--sombra);transition:border-color .16s,box-shadow .16s}
 .card:hover{border-color:var(--bd2)}
 .card h3{font-size:var(--f1);letter-spacing:.13em;text-transform:uppercase;color:var(--md);
   font-weight:700;margin-bottom:var(--sp1);display:flex;align-items:center;gap:8px}
 .card h3 svg{width:13px;height:13px;color:var(--ft)}
-.note{font-size:var(--f2);color:var(--ft);line-height:1.5;margin-bottom:var(--sp3)}
+.note{font-size:var(--f2);color:var(--ft);line-height:1.6;margin-bottom:var(--sp3)}
 .note b{color:var(--md);font-weight:600}
 .fe{display:block;font-family:var(--mono);font-size:10px;color:var(--ft);margin-top:6px;letter-spacing:.02em}
 .fe.m{opacity:.6}
+/* Opciones avanzadas: plegadas por defecto, se abren con un toque. */
+.avanzadas{margin:0 0 var(--sp3);min-width:0}
+.avanzadas summary{display:inline-flex;align-items:center;min-height:40px;padding:8px 16px;border:1px solid var(--bd2);
+  border-radius:var(--pill);background:var(--card2);color:var(--md);font-size:var(--f2);font-weight:700;cursor:pointer;list-style:none}
+.avanzadas summary::-webkit-details-marker{display:none}
+.avanzadas summary::before{content:"+";margin-right:7px;font-weight:800}
+.avanzadas[open] summary::before{content:"–"}
+.avanzadas[open] summary{margin-bottom:10px;color:var(--tx)}
+@media(max-width:900px){.avanzadas summary{min-height:44px}}
 h3 .fe{display:inline-block;margin-top:0;margin-left:8px;font-weight:400}
 
 .stat{position:relative;overflow:hidden}
@@ -522,7 +531,7 @@ td.fav:hover{color:#f0b90b}
 }
 
 /* ---------- on-chain ---------- */
-.tabs{display:flex;gap:3px;border-bottom:1px solid var(--bd);margin-bottom:12px;flex-wrap:wrap}
+.tabs{display:flex;gap:3px;border-bottom:1px solid var(--bd);margin-bottom:16px;flex-wrap:wrap}
 .tabs button{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ft);
   padding:10px 14px;min-height:40px;font-size:12px;font-weight:700;cursor:pointer}
 .tabs button.on{color:var(--cy);border-bottom-color:var(--cy)}
@@ -925,7 +934,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
           </div>
         </div>
 
-        <div class="seg big" style="margin-bottom:12px">
+        <div class="seg big" style="margin-bottom:16px">
           <button id="bCompleto" class="on" onclick="marco('completo')">CÓMO LEEMOS NOSOTROS<small>mediana, rojos incluidos, los caminos que terminan mal y lo que el sistema decidió no hacer</small></button>
           <button id="bFolleto" onclick="marco('folleto')">CÓMO LO VENDEN OTROS<small>mismos datos reales, sólo lo que brilla</small></button>
         </div>
@@ -938,7 +947,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
           <div class="card">
             <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="13" y="6" width="3" height="11"/></svg>
               <span id="graficoTitulo">velas + escenarios</span></h3>
-            <div class="note" id="graficoSub">Izquierda: historia real del exchange. Derecha: caminos posibles generados con las variaciones reales de esas mismas velas.</div>
+            <div class="note" id="graficoSub">Izquierda: historia real. Derecha: caminos posibles con las variaciones reales.</div>
             <div class="tf" id="tf"></div>
             <div class="chartbox">
               <div class="overlay"><div class="px" id="ovPrecio">—</div><div class="chg" id="ovCambio">—</div><div class="tag" id="ovTag">precio actual</div></div>
@@ -954,7 +963,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
           <div class="card">
             <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>Internos del mercado</h3>
-            <div class="note">Derivados públicos del mismo exchange. No predicen: describen qué está colgado y quién está apalancado ahora.</div>
+            <div class="note">Derivados públicos del mismo exchange. No predicen: describen quién está apalancado ahora.</div>
             <div id="internos"></div>
           </div>
         </div>
@@ -982,23 +991,23 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:12px">
+        <div class="card" style="margin-bottom:16px">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <h3 style="margin:0">Seguimiento</h3>
             <button class="btn" id="btnSoloFavs" style="margin:0" title="Mostrar sólo las monedas que marcaste con la estrella">☆ Sólo favoritos</button>
             <span class="note" id="favsCuenta" style="margin:0"></span>
             <span class="fe" data-fe="mercados,chispas" style="margin:0"></span>
           </div>
-          <div class="note">Últimas 7 horas, 24 horas y 7 días. Tocá una fila para cargarla en el gráfico; tocá la ☆ para guardarla en tus favoritos (queda en tu PC, no sale a internet). La lista está virtualizada: sólo se dibujan las filas que ves.</div>
+          <div class="note">Tocá una fila para verla en el gráfico; tocá ☆ para guardarla en tus favoritos (quedan en tu PC).</div>
           <div class="vlist" id="cajaLista"><table><thead><tr>
             <th class="favTh">★</th><th>#</th><th>Mercado</th><th>Precio</th><th>1 h</th><th>24 h</th><th>7 d</th>
             <th>Últimas 7 h</th><th>Capital</th><th>Volumen 24 h</th>
           </tr></thead><tbody id="lista"></tbody></table></div>
         </div>
 
-        <div class="card" style="margin-bottom:12px">
+        <div class="card" style="margin-bottom:16px">
           <h3>Comparador de monedas<span class="fe" data-fe="mercados,chispas"></span></h3>
-          <div class="note">Elegí hasta tres monedas y miralas lado a lado con los mismos datos reales. Sirve para decidir entre dos o tres candidatas sin saltar de pantalla. Si un dato no está, se muestra un guion: no se inventa.</div>
+          <div class="note">Hasta tres monedas lado a lado, con los mismos datos reales. Si un dato falta, se muestra un guion: no se inventa.</div>
           <div class="cmpSel">
             <select id="cmpA" title="Primera moneda"></select>
             <select id="cmpB" title="Segunda moneda"></select>
@@ -1016,21 +1025,24 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
       <!-- ================= GRAFICO ================= -->
       <section class="view" id="v-grafico"><div class="wrap">
-        <div class="card" style="margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
             <div style="font-family:var(--mono);font-size:var(--f5);font-weight:600" id="gSimbolo">BTCUSDT</div>
             <div class="tf" id="tf2" style="margin:0"></div>
             <div class="grow" style="flex:1"></div>
-            <div class="seg" id="capas" style="margin:0">
-              <button class="on" data-c="ema">EMAs</button>
-              <button class="on" data-c="vol">Volumen</button>
-              <button class="on" data-c="fan">Escenarios</button>
-              <button class="on" data-c="rsi">RSI</button>
-              <button data-c="macd">MACD</button>
-              <button data-c="boll">Bollinger</button>
-              <button data-c="adx">ADX</button>
-              <button data-c="vwap">VWAP</button>
-            </div>
+            <details class="avanzadas" style="margin:0">
+              <summary>Opciones del gráfico</summary>
+              <div class="seg" id="capas" style="margin:0">
+                <button class="on" data-c="ema">EMAs</button>
+                <button class="on" data-c="vol">Volumen</button>
+                <button class="on" data-c="fan">Escenarios</button>
+                <button class="on" data-c="rsi">RSI</button>
+                <button data-c="macd">MACD</button>
+                <button data-c="boll">Bollinger</button>
+                <button data-c="adx">ADX</button>
+                <button data-c="vwap">VWAP</button>
+              </div>
+            </details>
           </div>
           <div class="chartbox">
             <div class="overlay"><div class="px" id="gPrecio">—</div><div class="chg" id="gCambio">—</div></div>
@@ -1059,7 +1071,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
         <div class="row split">
           <div class="card"><h3>Cinta de operaciones reales</h3>
-            <div class="note">Cada línea es una ejecución publicada por el exchange. Arriba: compras. Abajo: ventas.</div>
+            <div class="note">Ejecuciones reales del exchange. Arriba: compras. Abajo: ventas.</div>
             <div class="scrolly" style="max-height:280px"><table><thead><tr><th>Hora</th><th>Precio</th><th>Cantidad</th><th>Monto</th><th>Lado</th></tr></thead><tbody id="tape"></tbody></table></div>
           </div>
           <div class="card"><h3>Estadísticas del mercado</h3><div id="stats"></div></div>
@@ -1068,7 +1080,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
       <!-- ================= BOT ================= -->
       <section class="view" id="v-bot"><div class="wrap">
-        <div class="card" style="margin-bottom:12px">
+        <div class="card" style="margin-bottom:16px">
           <h3>Estado del bot <span class="pill" id="botModo" style="margin-left:8px">—</span><span class="fe" data-fe="cerebro"></span></h3>
           <div class="note" id="botSub">Sin datos del bot todavía.</div>
           <div class="row c4" id="botPapel" style="margin-top:10px"></div>
@@ -1082,7 +1094,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
         <div class="row split">
           <div class="card"><h3>Qué decide ahora mismo</h3>
-            <div class="note">Opera <b>S11</b>: entra sólo cuando el día, la semana y el mes suben a la vez. La probabilidad de subir del modelo S1 se muestra sólo como comparación; no decide la operación. Todo es en <b>papel</b>, con precios reales.</div>
+            <div class="note">Opera <b>S11</b>: entra sólo cuando día, semana y mes suben a la vez. La probabilidad del modelo es sólo comparación, no decide. Todo en <b>papel</b>, con precios reales.</div>
             <div class="scrolly"><table><thead><tr><th>Mercado</th><th>Precio</th><th>S11 día/sem/mes</th><th>Prob. S1</th><th>Decisión</th><th>Posición</th></tr></thead><tbody id="botSenales"></tbody></table></div>
           </div>
           <div class="card"><h3>Prueba walk-forward<span class="fe" data-fe="puntaje"></span></h3>
@@ -1093,7 +1105,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
         <div class="row split">
           <div class="card"><h3>Las ideas que se probaron para ver si había ventaja<span class="fe" data-fe="ventaja"></span></h3>
-            <div class="note">Trece formas de operar, los mismos datos, la misma comisión. La vara es <b>comprar y sostener</b>, medida en el mismo tramo. Solo aprueba la que le gana en la mayoría de los mercados y no queda en rojo.</div>
+            <div class="note">Trece formas de operar con los mismos datos y costos. La vara: <b>comprar y sostener</b>. Aprueba sólo la que le gana en la mayoría de los mercados y no queda en rojo.</div>
             <div class="scrolly"><table><thead><tr>
               <th>Idea</th><th>Resultado</th><th>$6.000 →</th><th>Caída media</th><th>Gana en</th><th>¿Aprueba?</th>
             </tr></thead><tbody id="ventajaFilas"></tbody></table></div>
@@ -1101,7 +1113,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <button class="btn" onclick="bajarVentaja()">Descargar ventaja (CSV)</button>
           </div>
           <div class="card"><h3>Registro de decisiones<span class="fe" data-fe="decisiones"></span></h3>
-            <div class="note">Cada día se anota qué dijo el programa. Y 24 horas después vuelve y escribe <b>qué pasó de verdad</b>. Eso es lo único que se puede auditar.</div>
+            <div class="note">Cada día se anota qué dijo el programa; 24 horas después, <b>qué pasó de verdad</b>.</div>
             <div class="scrolly" style="max-height:260px"><table><thead><tr>
               <th>Fecha</th><th>Mercado</th><th>Precio</th><th>Prob.</th><th>Qué dijo</th><th>Qué pasó</th>
             </tr></thead><tbody id="decFilas"></tbody></table></div>
@@ -1114,9 +1126,9 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
       <!-- ================= CUADERNO ================= -->
       <section class="view" id="v-cuaderno"><div class="wrap">
-        <div class="card" style="margin-bottom:12px">
+        <div class="card" style="margin-bottom:16px">
           <h3>El cuaderno</h3>
-          <div class="note">Cada lectura queda escrita en <b>cuaderno.csv</b>, al lado del programa. Es lo único que se puede auditar dentro de un mes.</div>
+          <div class="note">Cada lectura queda en <b>cuaderno.csv</b>, al lado del programa. Se abre en Excel.</div>
           <div class="cuadBtns">
           <button class="btn btn-primario" onclick="anotar(true)">Anotar esta lectura</button>
           <button class="btn" onclick="bajarCsv()">Descargar cuaderno</button>
@@ -1154,10 +1166,9 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
       <!-- ================= LABORATORIO ================= -->
       <section class="view" id="v-lab"><div class="wrap">
-        <div class="card" style="margin-bottom:12px">
+        <div class="card" style="margin-bottom:16px">
           <h3>Laboratorio de estrategias<span class="fe" data-fe="historial"></span></h3>
-          <div class="note">Movés un control y la curva se recalcula al instante sobre <b id="labVelas">33.599 velas reales</b> de este mercado, desde 2023.
-            La comisión y el deslizamiento se descuentan siempre, y la línea gris es <b>comprar y no tocar nada</b>: si la azul no la supera, la estrategia no sirve.</div>
+          <div class="note">Movés un control y la curva se recalcula sobre <b id="labVelas">33.599 velas reales</b>, con comisión descontada. La línea gris es <b>comprar y no tocar</b>: si la azul no la supera, la estrategia no sirve.</div>
           <div class="lab">
             <div class="ctrl">
               <div><label>Mercado</label><select id="labSimbolo"></select></div>
@@ -1168,12 +1179,16 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
                 <option value="contra">Contra la multitud (lo inverso del momentum)</option>
                 <option value="nada">No comprar nada (quedarse afuera)</option>
               </select></div>
-              <div><label>Mirar <span class="val" id="vMirar"></span></label><input type="range" id="rMirar" min="4" max="240" step="4" value="24"></div>
-              <div><label>Stop loss <span class="val" id="vStop"></span></label><input type="range" id="rStop" min="0.3" max="12" step="0.1" value="1.5"></div>
-              <div><label>Objetivo <span class="val" id="vObj"></span></label><input type="range" id="rObj" min="0.5" max="40" step="0.5" value="3"></div>
-              <div><label>Plazo máximo <span class="val" id="vPlazo"></span></label><input type="range" id="rPlazo" min="4" max="720" step="4" value="48"></div>
-              <div><label>Comisión por lado <span class="val" id="vCom"></span></label><input type="range" id="rCom" min="0" max="0.3" step="0.01" value="0.1"></div>
-              <div><label>Capital inicial <span class="val" id="vCap"></span></label><input type="range" id="rCap" min="100" max="20000" step="100" value="1000"></div>
+              <details class="avanzadas"><summary>Ajustar la regla</summary>
+                <div style="display:flex;flex-direction:column;gap:11px">
+                  <div><label>Mirar <span class="val" id="vMirar"></span></label><input type="range" id="rMirar" min="4" max="240" step="4" value="24"></div>
+                  <div><label>Stop loss <span class="val" id="vStop"></span></label><input type="range" id="rStop" min="0.3" max="12" step="0.1" value="1.5"></div>
+                  <div><label>Objetivo <span class="val" id="vObj"></span></label><input type="range" id="rObj" min="0.5" max="40" step="0.5" value="3"></div>
+                  <div><label>Plazo máximo <span class="val" id="vPlazo"></span></label><input type="range" id="rPlazo" min="4" max="720" step="4" value="48"></div>
+                  <div><label>Comisión por lado <span class="val" id="vCom"></span></label><input type="range" id="rCom" min="0" max="0.3" step="0.01" value="0.1"></div>
+                  <div><label>Capital inicial <span class="val" id="vCap"></span></label><input type="range" id="rCap" min="100" max="20000" step="100" value="1000"></div>
+                </div>
+              </details>
               <div style="margin-top:4px"><button class="btn btn-primario" id="labComparar" style="width:100%;margin:0">Comparar las 5 estrategias</button></div>
               <div style="margin-top:4px"><button class="btn" id="labBajar" style="width:100%;margin:0">Descargar laboratorio (CSV)</button></div>
             </div>
@@ -1185,9 +1200,9 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             </div>
           </div>
         </div>
-        <div class="card" style="margin-bottom:12px">
+        <div class="card" style="margin-bottom:16px">
           <h3>¿Qué hubiera pasado si…?</h3>
-          <div class="note">Elegí una moneda, una fecha y un monto, y mirá qué hubiera pasado con tres decisiones simples: comprar todo ese día y no tocar, comprar de a poco cada semana (DCA), o no comprar nada. Usa las velas reales de 1 hora que ya están en tu PC y descuenta comisión y deslizamiento en cada compra. No es una predicción: es historia, y cambiar la fecha cambia el resultado.</div>
+          <div class="note">Elegí moneda, fecha y monto: compara comprar todo y no tocar, comprar de a poco cada semana (DCA), o no comprar nada. Es historia real con costos, no una predicción.</div>
           <div class="simCtrl">
             <div><label>Moneda</label><select id="simSimbolo"></select></div>
             <div><label>Desde</label><input type="date" id="simFecha"></div>
@@ -1198,17 +1213,16 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
           <div id="simTabla"></div>
         </div>
         <div class="foot">
-          <b>Qué te da esta pantalla:</b> la posibilidad de ver con tus propios números por qué casi cualquier regla simple, con comisión real,
-          termina por debajo de no hacer nada. <b>No es un simulador de éxito: es un detector de humo.</b>
-          El motor replica en el navegador las mismas reglas del motor de Python (entrada en la vela siguiente, stop antes que objetivo cuando ambos caen en la misma vela).
+          <b>Qué te da esta pantalla:</b> ver con tus números por qué casi cualquier regla simple termina por debajo de no hacer nada.
+          <b>No es un simulador de éxito: es un detector de humo.</b>
         </div>
       </div></section>
 
       <!-- ================= CARTERA ================= -->
       <section class="view" id="v-cartera"><div class="wrap">
-        <div class="card" style="margin-bottom:12px">
+        <div class="card" style="margin-bottom:16px">
           <h3>Cartera en papel <span class="pill">PLATA FALSA</span><span class="fe" data-fe="cartera"></span></h3>
-          <div class="note">Cuenta de práctica con <b>precios reales</b> y dinero ficticio. No mueve plata de verdad: sirve para probar las órdenes inteligentes (entrada, stop, objetivo en partes, trailing y límite) antes de confiar en ellas. Es aparte del bot S11, que se mira en «El bot».</div>
+          <div class="note">Cuenta de práctica con <b>precios reales</b> y dinero ficticio: no mueve plata de verdad. Es aparte del bot S11.</div>
           <div class="row c4" id="caResumen" style="margin-top:10px"></div>
           <div class="note m" id="caDias" style="margin-top:8px"></div>
           <div class="scrolly"><table><thead><tr><th>Cuenta por moneda</th><th>Efectivo USD</th><th>Invertido USD</th><th>Valor total USD</th></tr></thead><tbody id="caSaldos"></tbody></table></div>
@@ -1216,24 +1230,28 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
         <div class="row split">
           <div class="card"><h3>Nueva orden en papel</h3>
-            <div class="note">Elegí la moneda y los frenos. El tamaño se calcula solo: arriesga el % que elijas hasta el stop. Todo en fracciones de plata falsa.</div>
+            <div class="note">Elegí moneda y frenos; el tamaño se calcula solo. Todo es plata falsa.</div>
             <div class="formgrid">
               <label>Moneda<select id="caMoneda"></select></label>
               <label>Tipo de entrada<select id="caTipo"><option value="mercado">A mercado (ya)</option><option value="limite">Límite (espera precio)</option></select></label>
               <label id="caLimiteWrap" style="display:none">Precio límite (USD)<input id="caLimite" type="number" step="any" min="0" placeholder="ej. 60000"></label>
               <label>Stop-loss (%)<input id="caStop" type="number" step="0.1" min="0.1" max="50" value="1.5"></label>
               <label>Objetivo 1 (%)<input id="caTp1" type="number" step="0.1" min="0.1" value="3"></label>
-              <label>Objetivo 2 (%, opcional)<input id="caTp2" type="number" step="0.1" min="0.1" placeholder="vende el resto"></label>
-              <label>Trailing stop (%)<input id="caTrailing" type="number" step="0.1" min="0" max="50" value="0"></label>
               <label>Riesgo por operación (%)<input id="caRiesgo" type="number" step="0.1" min="0.1" max="10" value="2"></label>
             </div>
-            <div class="note m" style="margin:8px 0">Si ponés Objetivo 2, vende la mitad en el primero y el resto en el segundo. Trailing en 0 = apagado.</div>
+            <details class="avanzadas"><summary>Más opciones (objetivo 2 y trailing)</summary>
+              <div class="formgrid">
+                <label>Objetivo 2 (%, opcional)<input id="caTp2" type="number" step="0.1" min="0.1" placeholder="vende el resto"></label>
+                <label>Trailing stop (%)<input id="caTrailing" type="number" step="0.1" min="0" max="50" value="0"></label>
+              </div>
+              <div class="note m" style="margin:8px 0">Si ponés Objetivo 2, vende la mitad en el primero y el resto en el segundo. Trailing en 0 = apagado.</div>
+            </details>
             <button class="btn btn-verde" id="caColocar" style="font-weight:700">Colocar orden en papel</button>
             <div class="note" id="caOrdenMsg" style="margin-top:8px"></div>
           </div>
 
           <div class="card"><h3>Calculadora de riesgo <span class="note m" id="caRiesgoMoneda" style="margin:0"></span></h3>
-            <div class="note">Estimá la pérdida para la moneda seleccionada. Podés hacer la cuenta en dólares o pesos: no convierte divisas ni consulta un tipo de cambio.</div>
+            <div class="note">Estimá la pérdida en dólares o pesos. No convierte divisas.</div>
             <div class="formgrid">
               <label>Unidad del cálculo<select id="caRiesgoUnidad"><option value="USD">Dólares (USD)</option><option value="pesos">Pesos</option></select></label>
               <label>Pongo<input id="caRiesgoMonto" type="number" step="any" min="1" value="1000"></label>
@@ -1245,7 +1263,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
 
         <div class="card" style="margin-top:12px"><h3>Posiciones abiertas</h3>
-          <div class="note">Pérdida o ganancia estimada si cerraras ahora, descontando comisiones y deslizamiento. Las órdenes se revisan al actualizar esta vista (también cada 90 segundos mientras está abierta), no son órdenes enviadas al exchange ni vigilancia continua.</div>
+          <div class="note">Ganancia o pérdida estimada si cerraras ahora, con comisiones. Las órdenes se revisan al actualizar esta vista: no se envían al exchange ni hay vigilancia continua.</div>
           <button class="btn" id="caActualizar">Actualizar cartera</button>
           <div class="note" id="caEstado" role="status" style="margin-top:8px"></div>
           <div class="scrolly"><table><thead><tr>
@@ -1261,7 +1279,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
 
         <div class="card" style="margin-top:12px"><h3>Historial de órdenes</h3>
-          <div class="note">Órdenes abiertas, pendientes, canceladas y ejecuciones cerradas, con fecha, moneda, precio, cantidad, comisión, motivo y resultado. En una pendiente o cancelada, cantidad y precio de entrada son los solicitados: no se ejecutaron ni cobraron. Se puede buscar y bajar en CSV.</div>
+          <div class="note">Abiertas, pendientes, canceladas y ejecutadas, con comisión y motivo. Una pendiente no se ejecutó ni cobró. Se puede buscar y bajar en CSV.</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0">
             <input id="caBuscar" placeholder="Buscar por moneda o motivo…" autocomplete="off" style="flex:1;min-width:180px">
             <button class="btn" id="caBajarCsv">Descargar historial (CSV)</button>
@@ -1276,8 +1294,8 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
       <!-- ================= NOTICIAS ================= -->
       <section class="view" id="v-noticias"><div class="wrap">
         <div class="head"><h2>Últimas noticias relevantes</h2>
-          <p>Para qué sirve: es la pizarra de lo que pasó de verdad en el mundo cripto, con la hora, la moneda y una línea en español de qué trata — y lo distinto: marca si el precio se movió de verdad en la hora siguiente. Noticias conectadas con el precio, no una lista suelta.</p></div>
-        <div class="card" style="margin-bottom:12px">
+          <p>Lo que pasó en el mundo cripto, con hora, fuente y moneda — y qué hizo el precio en la hora siguiente.</p></div>
+        <div class="card" style="margin-bottom:16px">
           <div class="ntnHead">
             <div class="seg" id="ntnFiltro" style="margin:0">
               <button class="on" data-f="todas">Todas</button>
@@ -1316,7 +1334,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
       <!-- ================= AJUSTES ================= -->
       <section class="view" id="v-ajustes"><div class="wrap">
         <div class="card"><h3>Preferencias</h3>
-          <div class="note">Se guardan en esta PC y sobreviven al cerrar el panel. No cambian ningún número ni ninguna decisión: sólo cómo se ve.</div>
+          <div class="note">Se guardan en esta PC. Sólo cambian cómo se ve, ningún número.</div>
           <div class="kv"><div class="k">Tema</div><div class="v seg" id="ajTema"><button type="button" data-tema="oscuro">Oscuro</button><button type="button" data-tema="claro">Claro</button></div></div>
           <div class="kv"><div class="k">Para qué sirve</div><div class="v seg" id="ajParaque"><button type="button" data-pq="show">Mostrar</button><button type="button" data-pq="hide">Ocultar</button></div></div>
         </div>
@@ -1546,15 +1564,15 @@ function hora(ts){ return new Date(ts).toTimeString().slice(0,8); }
 
 /* ==================== vistas ==================== */
 var PARA_QUE = {
-  panel: 'Es la pantalla de siempre. Arriba, en lenguaje simple, te dice cómo está el mercado, qué está pasando y cuánto perderías si entraras hoy con la plata que vos elijas. Abajo están los precios, el gráfico y las cuentas del programa.',
-  grafico: 'Acá se mira un solo mercado en grande. Podés prender o apagar las líneas de promedio, el volumen, el RSI y el abanico de escenarios. La línea gris del abanico no es una predicción: es qué tan ancho es lo desconocido.',
-  bot: 'Te dice si el programa está apagado o prendido, por qué, y qué pasó cuando lo probó con datos viejos. Acá también está el registro de decisiones: qué dijo cada día y qué pasó después de verdad.',
-  cuaderno: 'La libreta. Cada lectura que toma el programa queda escrita en un archivo de tu PC, con hora y precio. Es lo único que se puede auditar un mes después, y se puede abrir en Excel.',
-  onchain: 'El tamaño real de la industria, no el precio: cuánta plata hay bloqueada en cada red, qué protocolos la usan, cuántos dólares digitales hay dando vuelta, y cuánto cuesta mover Bitcoin.',
-  lab: 'El detector de humo. Vos elegís una regla simple y un corte, y el programa la prueba contra casi tres años de precios reales, descontando la comisión del exchange, y la compara contra no hacer nada.',
-  cartera: 'Tu cuenta de práctica con plata falsa y precios reales. Colocás órdenes a mano (entrada, stop, objetivo en partes, trailing o límite), ves cuánto tenés en cada moneda, la ganancia o pérdida en vivo, la curva de tu dinero y el historial que se baja en CSV. Es aparte del bot S11.',
-  noticias: 'Lo que pasó de verdad en el mundo cripto, con hora y fuente. Lo distinto: mide qué hizo el precio en la hora siguiente a cada noticia. Noticias conectadas con el precio, no una lista suelta.',
-  ajustes: 'Cómo se usa cada cosa y de dónde sale cada dato, con la antigüedad de cada fuente. Si un dato está viejo, acá se ve viejo.'
+  panel: 'Cómo está el mercado, en palabras simples, y cuánto podrías perder si entrás hoy.',
+  grafico: 'Un mercado en grande, con sus promedios, volumen y escenarios.',
+  bot: 'Si el programa está prendido o apagado, por qué, y qué decidió cada día.',
+  cuaderno: 'La libreta: cada lectura queda guardada en tu PC y se abre en Excel.',
+  onchain: 'El tamaño real de la industria: plata bloqueada, dólares digitales y costo de mover Bitcoin.',
+  lab: 'Probá una regla simple contra precios reales y comparala con no hacer nada.',
+  cartera: 'Tu cuenta de práctica: plata falsa, precios reales, para probar órdenes sin riesgo.',
+  noticias: 'Noticias con hora y fuente, y qué hizo el precio en la hora siguiente.',
+  ajustes: 'Cómo se usa cada cosa y de dónde sale cada dato.'
 };
 
 var VISTAS_MAS = ['cuaderno','onchain','lab','noticias','ajustes'];
@@ -1625,14 +1643,14 @@ function pintarKpis(){
             +ex.largo_corto.datos[ex.largo_corto.datos.length-1].longShortRatio : null;
 
   var d = [
-    ['Capital total', g ? fmtCap(g.total_market_cap.usd) : '—', '', g ? pct(g.market_cap_change_percentage_24h_usc||g.market_cap_change_percentage_24h_usd) : '', g ? (g.market_cap_change_percentage_24h_usd>=0?'g':'r') : ''],
-    ['Volumen 24 h', g ? fmtCap(g.total_volume.usd) : '—', '', (g?g.active_cryptocurrencies:0)+' monedas', ''],
-    ['Dominancia BTC', dom===null?'—':dom.toFixed(1)+' %', 'c', 'sobre lo que seguimos', ''],
-    ['Miedo / codicia', fng ? fng.value : '—', +((fng&&fng.value)>=50?'g':'r'), fng ? fng.value_classification : '', ''],
-    ['Mediana 24 h', (med>=0?'+':'')+med.toFixed(2)+' %', med>=0?'g':'r', verde+' de '+ms.length+' en verde', ''],
-    ['Funding 8 h', funding===null?'—':(funding>=0?'+':'')+funding.toFixed(4)+' %', funding>=0?'g':'r', 'apalancamiento pagado ahora', ''],
-    ['Largo / corto', lsr===null?'—':lsr.toFixed(2), lsr>1?'g':'r', lsr===null?'cuentas abiertas':'cuentas largas contra cortas', ''],
-    ['Ancho abanico', E ? ((E.p90/E.p10-1)*100).toFixed(1)+' %' : '—', 'v', E ? E.arriba+'/'+N_ESC+' caminos arriba' : '']
+    ['Capital total', g ? fmtCap(g.total_market_cap.usd) : '—', '', g ? (g.market_cap_change_percentage_24h_usd>=0?'g':'r') : '', g ? pct(g.market_cap_change_percentage_24h_usc||g.market_cap_change_percentage_24h_usd) : ''],
+    ['Volumen 24 h', g ? fmtCap(g.total_volume.usd) : '—', '', '', (g?g.active_cryptocurrencies:0)+' monedas'],
+    ['Dominancia BTC', dom===null?'—':dom.toFixed(1)+' %', 'c', '', 'sobre lo que seguimos'],
+    ['Miedo / codicia', fng ? fng.value : '—', fng ? (fng.value>=50?'g':'r') : '', '', fng ? fng.value_classification : ''],
+    ['Mediana 24 h', (med>=0?'+':'')+med.toFixed(2)+' %', med>=0?'g':'r', '', verde+' de '+ms.length+' en verde'],
+    ['Funding 8 h', funding===null?'—':(funding>=0?'+':'')+funding.toFixed(4)+' %', funding>=0?'g':'r', '', 'apalancamiento pagado ahora'],
+    ['Largo / corto', lsr===null?'—':lsr.toFixed(2), lsr>1?'g':'r', '', lsr===null?'cuentas abiertas':'cuentas largas contra cortas'],
+    ['Ancho abanico', E ? ((E.p90/E.p10-1)*100).toFixed(1)+' %' : '—', 'v', '', E ? E.arriba+'/'+N_ESC+' caminos arriba' : '']
   ];
   document.getElementById('kpis').innerHTML = d.map(function(x){
     return '<div class="card stat"><div class="lb">'+x[0]+'</div><div class="vl '+x[2]+'">'+x[1]+'</div><div class="dl '+x[3]+'">'+x[4]+'</div></div>';
