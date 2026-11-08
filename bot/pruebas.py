@@ -670,5 +670,90 @@ _puede8c, _, _ = _cerebro.ventaja_s11()
 check("P8c sin prueba de ventaja el bot no opera", _puede8c is False)
 _cerebro.RAIZ = _raiz_real_p
 
+print("\n== ordenes inteligentes (C1) ==")
+# L) orden limite: queda pendiente hasta que el precio baja al limite
+cfg_lim = Configuracion(capital=1000.0, riesgo_por_operacion=0.02, stop_loss=0.015,
+                        take_profit=0.03, comision=0.0, deslizamiento=0.0,
+                        max_velas_en_posicion=1000)
+b = Broker(cfg_lim)
+b.abrir("X", base, 100.0, 0.6, limite=95.0)
+check("L1 orden limite queda pendiente", b.posicion is not None and b.posicion.llena is False
+      and b.posicion.es_limite is True, f"llena={b.posicion.llena}")
+check("L1b limite pendiente no descuenta efectivo", abs(b.efectivo - 1000.0) < 1e-9, f"{b.efectivo:.2f}")
+b.marca(base, 100.0)
+check("L1c limite pendiente no cuenta como posicion", b.curva[-1]["en_posicion"] == 0
+      and abs(b.curva[-1]["capital"] - 1000.0) < 1e-9, str(b.curva[-1]))
+b.actualizar("X", base + 3_600_000, 100.0, 101.0, 96.0, 99.0)   # low=96 > limite=95
+check("L2 limite no se llena si no toca el precio", b.posicion.llena is False, "low=96 > limite=95")
+b.actualizar("X", base + 7_200_000, 96.0, 97.0, 94.0, 95.5)     # low=94 <= limite=95
+check("L3 limite se llena al tocar el precio", b.posicion is not None and b.posicion.llena is True
+      and abs(b.posicion.entrada_precio - 95.0) < 1e-9, f"entrada={b.posicion.entrada_precio}")
+check("L3b al llenarse descuenta el efectivo", b.efectivo < 1000.0, f"{b.efectivo:.2f}")
+check("L3c entrada_ts es el momento del llenado", b.posicion.entrada_ts == base + 7_200_000)
+
+# T) trailing stop: sube con el precio, nunca baja, cierra cuando el precio vuelve
+cfg_tr = Configuracion(capital=1000.0, riesgo_por_operacion=0.02, stop_loss=0.015,
+                       take_profit=0.50, comision=0.0, deslizamiento=0.0,
+                       trailing_stop=0.02, max_velas_en_posicion=1000)
+b = Broker(cfg_tr)
+b.abrir("X", base, 100.0, 0.6)
+stop0 = b.posicion.stop
+b.actualizar("X", base + 3_600_000, 100.0, 110.0, 99.0, 108.0)    # high=110 -> stop=107.8
+check("T1 trailing sube el stop", b.posicion is not None and abs(b.posicion.stop - 107.8) < 1e-6,
+      f"stop={b.posicion.stop:.4f} inicial={stop0:.4f}")
+b.actualizar("X", base + 7_200_000, 108.0, 112.0, 109.0, 111.0)   # high=112 -> stop=109.76
+check("T2 trailing sigue subiendo", b.posicion is not None and abs(b.posicion.stop - 109.76) < 1e-6,
+      f"stop={b.posicion.stop:.4f}")
+b.actualizar("X", base + 10_800_000, 111.0, 111.0, 110.5, 110.8)  # high menor -> stop no baja
+check("T3 trailing nunca baja el stop", b.posicion is not None and abs(b.posicion.stop - 109.76) < 1e-6,
+      f"stop={b.posicion.stop:.4f}")
+b.actualizar("X", base + 14_400_000, 110.0, 110.0, 108.0, 109.0)  # low=108 <= stop -> cierra
+check("T4 trailing stop cierra la posicion", b.posicion is None and len(b.operaciones) == 1,
+      b.operaciones[0].motivo_salida if b.operaciones else "sigue abierta")
+check("T4b el cierre dice trailing stop", b.operaciones[0].motivo_salida == "trailing stop",
+      b.operaciones[0].motivo_salida)
+check("T4c trailing stop aseguro ganancia", b.operaciones[0].pnl_neto > 0, f"{b.operaciones[0].pnl_neto:.2f}")
+
+# TP) take profit en partes: vende porciones y la contabilidad cierra exacta
+cfg_tp = Configuracion(capital=1000.0, riesgo_por_operacion=0.02, stop_loss=0.015,
+                       take_profit=0.06, comision=0.001, deslizamiento=0.0,
+                       take_profits=((0.5, 0.03), (0.5, 0.06)), max_velas_en_posicion=1000)
+b = Broker(cfg_tp)
+b.abrir("X", base, 100.0, 0.6)
+q0 = b.posicion.cantidad_inicial
+check("TP1 prepara dos objetivos", len(b.posicion.tp_pendientes) == 2, str(b.posicion.tp_pendientes))
+b.actualizar("X", base + 3_600_000, 100.0, 104.0, 101.0, 103.0)   # high=104 >= 103 -> vende mitad
+check("TP2 vende la primera parte", len(b.operaciones) == 1 and b.posicion is not None,
+      b.operaciones[0].motivo_salida if b.operaciones else "nada")
+check("TP2b la primera parte es la mitad", b.operaciones[0].motivo_salida == "take profit 1"
+      and abs(b.operaciones[0].cantidad - q0 * 0.5) < 1e-6, f"q={b.operaciones[0].cantidad:.4f}")
+check("TP2c queda la otra mitad abierta", b.posicion is not None and abs(b.posicion.cantidad - q0 * 0.5) < 1e-6,
+      f"queda={b.posicion.cantidad:.4f}")
+b.actualizar("X", base + 7_200_000, 103.0, 107.0, 103.0, 106.0)   # high=107 >= 106 -> vende el resto
+check("TP3 vende el resto y cierra", b.posicion is None and len(b.operaciones) == 2,
+      b.operaciones[1].motivo_salida if len(b.operaciones) > 1 else "sigue abierta")
+check("TP3b la segunda parte es el resto", b.operaciones[1].motivo_salida == "take profit 2"
+      and abs(b.operaciones[1].cantidad - q0 * 0.5) < 1e-6, f"q={b.operaciones[1].cantidad:.4f}")
+ganado_efectivo = b.efectivo - cfg_tp.capital
+suma_pnl = sum(o.pnl_neto for o in b.operaciones)
+check("TP4 la contabilidad cierra exacta", abs(ganado_efectivo - suma_pnl) < 1e-6,
+      f"efectivo={ganado_efectivo:.4f} suma_pnl={suma_pnl:.4f}")
+check("TP4b las dos partes ganaron", all(o.pnl_neto > 0 for o in b.operaciones),
+      f"{[round(o.pnl_neto, 2) for o in b.operaciones]}")
+
+# TPS) take profit parcial y despues stop loss: la comision de entrada no se cuenta dos veces
+b = Broker(cfg_tp)
+b.abrir("X", base, 100.0, 0.6)
+b.actualizar("X", base + 3_600_000, 100.0, 104.0, 101.0, 103.0)   # vende mitad en +3%
+b.actualizar("X", base + 7_200_000, 100.0, 101.0, 97.0, 98.0)     # low=97 <= stop -> cierra el resto
+check("TPS1 tras la parte, el stop cierra el resto", b.posicion is None and len(b.operaciones) == 2,
+      b.operaciones[1].motivo_salida if len(b.operaciones) > 1 else "sigue abierta")
+check("TPS2 el cierre final es stop loss", b.operaciones[1].motivo_salida == "stop loss",
+      b.operaciones[1].motivo_salida)
+ganado_efectivo = b.efectivo - cfg_tp.capital
+suma_pnl = sum(o.pnl_neto for o in b.operaciones)
+check("TPS3 la contabilidad cierra exacta con stop", abs(ganado_efectivo - suma_pnl) < 1e-6,
+      f"efectivo={ganado_efectivo:.4f} suma_pnl={suma_pnl:.4f}")
+
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)

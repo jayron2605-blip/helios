@@ -25,6 +25,12 @@ class Configuracion:
     umbral_entrada: float = 0.55
     umbral_salida: float = 0.45
     solo_largo: bool = True
+    # C1 ordenes inteligentes. Por defecto apagadas: el papel de S11 usa stop+objetivo
+    # simples. trailing_stop: fraccion bajo el maximo (0.02 = 2%); 0 = apagado.
+    # take_profits: tupla de (fraccion, pct) para vender en partes; el ultimo vende lo
+    # que quede. Vacio = un solo objetivo (take_profit).
+    trailing_stop: float = 0.0
+    take_profits: tuple = ()
 
 
 @dataclass
@@ -44,6 +50,14 @@ class Operacion:
     capital_final: float = 0.0
     prob_entrada: float = 0.0
     velas: int = 0
+    # C1 ordenes inteligentes. Con valor por defecto para que las posiciones viejas
+    # guardadas en posiciones.json se reconstruyan sin estos campos.
+    cantidad_inicial: float = 0.0     # cantidad al abrir; para repartir la comision de entrada
+    stop_inicial: float = 0.0         # stop al abrir; si el actual es mayor, hubo trailing
+    tp_pendientes: list = field(default_factory=list)  # [[precio, cantidad_o_None, motivo], ...]
+    es_limite: bool = False           # True si es orden limite pendiente de llenar
+    precio_limite: float = 0.0        # precio al que se llena la orden limite
+    llena: bool = True                # False mientras la orden limite no se ha llenado
 
 
 class Broker:
@@ -68,11 +82,15 @@ class Broker:
         castigo = precio_ref * self.cfg.deslizamiento
         return precio_ref + castigo if comprar else precio_ref - castigo
 
-    def abrir(self, simbolo, ts, precio_ref, prob):
+    def abrir(self, simbolo, ts, precio_ref, prob, limite=None):
+        """Abre una posicion. limite=None: compra a mercado (como siempre).
+        limite=precio: deja una orden limite pendiente; no se descuenta el efectivo
+        hasta que el precio baje al limite y se llene (ver actualizar)."""
         if self.posicion is not None:
             return False
         c = self.cfg
-        precio = self.precio_entrada(precio_ref, comprar=True)
+        es_limite = limite is not None
+        precio = float(limite) if es_limite else self.precio_entrada(precio_ref, comprar=True)
         stop = precio * (1 - c.stop_loss)
         objetivo = precio * (1 + c.take_profit)
         arriesgado = self.efectivo * c.riesgo_por_operacion
@@ -88,12 +106,72 @@ class Broker:
             comision = costo * c.comision
         if cantidad <= 0 or costo < 10:
             return False
+        # take profits en partes: cada (fraccion, pct) vende una porcion; el ultimo
+        # vende lo que quede. Vacio = un solo objetivo (take_profit), como siempre.
+        tp = []
+        if c.take_profits:
+            n = len(c.take_profits)
+            for i, (frac, pct) in enumerate(c.take_profits):
+                precio_tp = precio * (1 + pct)
+                q = None if i == n - 1 else cantidad * frac
+                tp.append([precio_tp, q, "take profit %d" % (i + 1)])
+            objetivo = tp[-1][0]
+        if es_limite:
+            # orden pendiente: el efectivo se descuenta recien cuando se llene
+            self.posicion = Operacion(simbolo=simbolo, entrada_ts=ts, entrada_precio=precio,
+                                      cantidad=cantidad, cantidad_inicial=cantidad,
+                                      stop=stop, stop_inicial=stop, objetivo=objetivo,
+                                      prob_entrada=prob, comisiones=comision, tp_pendientes=tp,
+                                      es_limite=True, precio_limite=precio, llena=False)
+            return True
         self.efectivo -= costo + comision
         self.posicion = Operacion(simbolo=simbolo, entrada_ts=ts, entrada_precio=precio,
-                                  cantidad=cantidad, stop=stop, objetivo=objetivo,
-                                  prob_entrada=prob,
-                                  comisiones=comision)
+                                  cantidad=cantidad, cantidad_inicial=cantidad,
+                                  stop=stop, stop_inicial=stop, objetivo=objetivo,
+                                  prob_entrada=prob, comisiones=comision, tp_pendientes=tp)
         return True
+
+    def _llenar_limite(self, ts, p):
+        """La orden limite pendiente se llena: recien ahora se descuenta el efectivo."""
+        costo = p.cantidad * p.entrada_precio
+        comision = costo * self.cfg.comision
+        if costo + comision > self.efectivo:
+            self.posicion = None   # no alcanza el efectivo: la orden se cancela
+            return
+        self.efectivo -= costo + comision
+        p.entrada_ts = ts
+        p.comisiones = comision
+        p.llena = True
+
+    def _vender_parcial(self, ts, precio_ref, q, motivo):
+        """Vende una parte de la posicion (take profit parcial). q=None vende lo que queda.
+        La comision de entrada se reparte en proporcion a la cantidad vendida."""
+        p = self.posicion
+        if p is None:
+            return None
+        if q is None or q >= p.cantidad - 1e-9:
+            q = p.cantidad
+        cant_antes = p.cantidad
+        precio = self.precio_entrada(precio_ref, comprar=False)
+        bruto = (precio - p.entrada_precio) * q
+        venta = precio * q
+        com_salida = venta * self.cfg.comision
+        com_entrada = p.comisiones * (q / cant_antes) if cant_antes > 0 else 0.0
+        neto = bruto - com_salida - com_entrada
+        self.efectivo += venta - com_salida
+        parte = Operacion(simbolo=p.simbolo, entrada_ts=p.entrada_ts, entrada_precio=p.entrada_precio,
+                          cantidad=q, stop=p.stop, objetivo=p.objetivo,
+                          salida_ts=ts, salida_precio=precio, motivo_salida=motivo,
+                          pnl_bruto=bruto, comisiones=com_salida + com_entrada, pnl_neto=neto,
+                          capital_final=self.efectivo, prob_entrada=p.prob_entrada)
+        self.operaciones.append(parte)
+        p.comisiones -= com_entrada
+        p.cantidad -= q
+        if self.contador is not None:
+            self.contador.registrar_cierre(neto)
+        if p.cantidad <= 1e-9:
+            self.posicion = None
+        return parte
 
     def cerrar(self, ts, precio_ref, motivo, comprar=False):
         p = self.posicion
@@ -123,18 +201,38 @@ class Broker:
         """Recibe la vela recien cerrada. Primero resuelve la posicion abierta contra ESA vela."""
         if self.posicion is not None and self.posicion.simbolo == simbolo:
             p = self.posicion
+            # orden limite pendiente: se llena si el precio bajo al limite. Recien
+            # llenada, no se resuelve en la misma vela (evita mirar el futuro).
+            if not p.llena:
+                if l <= p.precio_limite:
+                    self._llenar_limite(ts, p)
+                return self.posicion
             if l <= p.stop:
-                self.cerrar(ts, p.stop, "stop loss")
+                motivo = "trailing stop" if (self.cfg.trailing_stop > 0 and p.stop > p.stop_inicial) else "stop loss"
+                self.cerrar(ts, p.stop, motivo)
+            elif p.tp_pendientes and h >= p.tp_pendientes[0][0]:
+                precio_tp, q, motivo = p.tp_pendientes.pop(0)
+                self._vender_parcial(ts, precio_tp, q, motivo)
+                if self.posicion is not None and self.posicion.tp_pendientes:
+                    self.posicion.objetivo = self.posicion.tp_pendientes[0][0]
             elif h >= p.objetivo:
                 self.cerrar(ts, p.objetivo, "take profit")
             elif ts - p.entrada_ts >= self.cfg.max_velas_en_posicion * 3600 * 1000:
                 self.cerrar(ts, c, "vencio el plazo")
+            # trailing stop: sube el stop al cierre de esta vela, rige para la siguiente
+            if (self.posicion is not None and self.posicion.simbolo == simbolo
+                    and self.posicion.llena and self.cfg.trailing_stop > 0):
+                nuevo = h * (1 - self.cfg.trailing_stop)
+                if nuevo > self.posicion.stop:
+                    self.posicion.stop = nuevo
         return self.posicion
 
     def marca(self, ts, precio):
-        valor = self.efectivo + (self.posicion.cantidad * precio if self.posicion else 0)
+        # una orden limite sin llenar todavia no es plata invertida: no cuenta en el capital
+        pos = self.posicion if (self.posicion is not None and self.posicion.llena) else None
+        valor = self.efectivo + (pos.cantidad * precio if pos else 0)
         self.curva.append({"t": ts, "capital": round(valor, 2),
-                           "en_posicion": int(self.posicion is not None)})
+                           "en_posicion": int(pos is not None)})
         return valor
 
     # ---------- resumen ----------
