@@ -6,19 +6,37 @@
 <title>Helios — terminal de mercado</title>
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
-/* ---------- tokens ---------- */
+/* ---------- tokens ----------
+   SISTEMA DE COLOR (6 colores principales, siempre los mismos en todo el panel):
+   1 verde --up   ganancia / bien / encendido      #0ecb81 (oscuro) / #0a9b63 (claro)
+   2 rojo  --dn   perdida / mal / peligro          #f6465d (oscuro) / #d9364e (claro)
+   3 amarillo --yel avisos, nunca para todo        #f0b90b
+   4 azul  --azul botones principales y enlaces    #2f7fff (oscuro) / #1d6fe0 (claro)
+   5 violeta --vi solo lo especial: asistente y noticias de Brio
+   6 cian  --cy  acento de terminal (activo, focos, graficos)
+   Escala miedo/codicia: rojo extremo, naranja miedo, amarillo neutro,
+   verde claro codicia, verde fuerte codicia extrema (ver .fng).
+   Naranja --naranja solo se usa en esa escala y en avisos de miedo.
+   Fondos: --bg fondo, --bg2 barras, --card tarjetas (un poco mas claras
+   que el fondo), --card2 tarjeta dentro de tarjeta, --raise al pasar el mouse.
+   Texto: --tx principal, --md secundario, --ft tenue. Contraste alto en
+   oscuro y en claro: nunca texto claro sobre fondo claro ni al reves. */
 :root{
   --bg:#080b0f; --bg2:#0d1117; --card:#11161d; --card2:#151c25; --raise:#1a222d;
-  --bd:#1d2733; --bd2:#27333f;
-  --tx:#e8edf3; --md:#93a3b5; --ft:#5c6d80;
-  --up:#0ecb81; --dn:#f6465d; --yel:#f0b90b; --cy:#00d1ff; --vi:#8b5cf6; --pk:#ff2d78;
+  --bd:#1d2733; --bd2:#2c3a49;
+  --tx:#e8edf3; --md:#9fb0c2; --ft:#7d8ea3;
+  --up:#0ecb81; --dn:#f6465d; --yel:#f0b90b; --azul:#2f7fff; --azul2:#1d6fe0;
+  --naranja:#f5820b; --cy:#00d1ff; --vi:#8b5cf6;
+  --sel:rgba(0,209,255,.12); --sel-bd:rgba(0,209,255,.45);
+  --sombra:0 1px 2px rgba(0,0,0,.35),0 4px 14px rgba(0,0,0,.25);
   --sp1:4px; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:22px;
-  --r1:6px; --r2:10px; --r3:14px;
-  --f1:10px; --f2:11px; --f3:12.5px; --f4:15px; --f5:19px; --f6:26px;
-  --mono:"Cascadia Mono","Roboto Mono",Consolas,monospace;
-  --sans:"Inter","Segoe UI",system-ui,sans-serif;
+  --r1:8px; --r2:12px; --r3:16px;
+  --f1:10.5px; --f2:12px; --f3:13px; --f4:15px; --f5:20px; --f6:28px;
+  --mono:"Cascadia Mono","Roboto Mono",Consolas,"Courier New",monospace;
+  --sans:"Inter","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html,body{height:100%}
 body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:var(--f3);
   -webkit-font-smoothing:antialiased;overflow:hidden}
@@ -27,7 +45,10 @@ body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:var(
 ::-webkit-scrollbar-thumb{background:#243040;border-radius:4px}
 ::-webkit-scrollbar-thumb:hover{background:#31415a}
 button{font-family:inherit}
-input{font-family:inherit}
+input,select,textarea{font-family:inherit}
+:focus-visible{outline:2px solid var(--azul);outline-offset:2px;border-radius:4px}
+/* El texto siempre va derecho y legible: nada de giros ni diagonales en todo el panel. */
+em,i{font-style:normal}
 
 /* ---------- shell ---------- */
 .app{display:grid;grid-template-columns:56px 1fr;height:100vh}
@@ -38,10 +59,11 @@ input{font-family:inherit}
 .rail button{width:40px;height:40px;border:0;background:transparent;border-radius:9px;color:var(--ft);
   cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:.14s}
 .rail button:hover{color:var(--tx);background:var(--raise)}
-.rail button.on{color:var(--cy);background:#0d2430}
+.rail button.on{color:var(--cy);background:var(--sel)}
 .rail button.on::before{content:"";position:absolute;left:-10px;top:9px;height:22px;width:3px;
   background:var(--cy);border-radius:0 3px 3px 0}
 .rail svg{width:19px;height:19px}
+.rlbl{display:none}
 .rail .grow{flex:1}
 
 .main{display:flex;flex-direction:column;min-width:0;overflow:hidden}
@@ -49,9 +71,9 @@ input{font-family:inherit}
   gap:var(--sp3);padding:0 var(--sp4);background:var(--bg2)}
 .brand{font-size:var(--f4);font-weight:700;letter-spacing:.16em}
 .brand i{color:var(--cy);font-style:normal}
-.brand b{color:var(--pk);font-weight:700}
+.brand b{color:var(--azul);font-weight:700}
 .search{position:relative;width:250px}
-.search input{width:100%;height:30px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r1);
+.search input{width:100%;height:36px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r1);
   color:var(--tx);padding:0 10px 0 30px;font-size:var(--f2);outline:none;transition:.14s}
 .search input:focus{border-color:var(--cy);box-shadow:0 0 0 3px rgba(0,209,255,.1)}
 .search svg{position:absolute;left:9px;top:8px;width:14px;height:14px;color:var(--ft)}
@@ -89,8 +111,8 @@ input{font-family:inherit}
 .c8{grid-template-columns:repeat(8,1fr)}
 .split{grid-template-columns:2.05fr 1fr}
 .split3{grid-template-columns:1fr 1.15fr 1.05fr}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r2);padding:var(--sp3) var(--sp4);
-  min-width:0;transition:border-color .16s}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r2);padding:var(--sp4) var(--sp5);
+  min-width:0;box-shadow:var(--sombra);transition:border-color .16s,box-shadow .16s}
 .card:hover{border-color:var(--bd2)}
 .card h3{font-size:var(--f1);letter-spacing:.13em;text-transform:uppercase;color:var(--md);
   font-weight:700;margin-bottom:var(--sp1);display:flex;align-items:center;gap:8px}
@@ -103,7 +125,7 @@ h3 .fe{display:inline-block;margin-top:0;margin-left:8px;font-weight:400}
 
 .stat{position:relative;overflow:hidden}
 .stat .lb{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ft);margin-bottom:5px}
-.stat .vl{font-family:var(--mono);font-size:var(--f5);font-weight:600;letter-spacing:-.02em}
+.stat .vl{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:-.02em}
 .stat .dl{font-size:10.5px;color:var(--ft);margin-top:3px}
 .stat .dl u{text-decoration:none;font-family:var(--mono)}
 .g{color:var(--up)}.r{color:var(--dn)}.y{color:var(--yel)}.c{color:var(--cy)}.v{color:var(--vi)}.m{color:var(--md)}
@@ -112,32 +134,40 @@ h3 .fe{display:inline-block;margin-top:0;margin-left:8px;font-weight:400}
 @keyframes fr{0%{background:rgba(246,70,93,.28)}100%{background:transparent}}
 
 .head{border:1px solid var(--bd);border-radius:var(--r2);padding:var(--sp4) var(--sp5);margin-bottom:var(--sp3);
-  background:linear-gradient(115deg,#101822,var(--card) 60%)}
-.head h2{font-size:21px;font-weight:700;letter-spacing:-.015em;margin-bottom:5px}
+  background:linear-gradient(115deg,#101822,var(--card) 60%);box-shadow:var(--sombra)}
+.head h2{font-size:24px;font-weight:700;letter-spacing:-.015em;margin-bottom:5px}
 .head p{font-size:var(--f3);color:var(--md);line-height:1.55;max-width:135ch}
 
 .seg{display:inline-flex;background:var(--card);border:1px solid var(--bd);border-radius:var(--r1);
   padding:2px;gap:2px;margin-bottom:var(--sp3)}
 .seg button{border:0;background:transparent;color:var(--ft);font-size:var(--f2);font-weight:700;
-  padding:5px 12px;border-radius:4px;cursor:pointer;transition:.13s}
+  padding:8px 14px;min-height:36px;border-radius:4px;cursor:pointer;transition:.13s}
 .seg button:hover{color:var(--tx)}
 .seg button.on{background:var(--raise);color:var(--cy)}
 .seg.big{display:flex;width:100%}
 .seg.big button{flex:1;text-align:left;padding:9px 13px}
 .seg.big button small{display:block;font-weight:400;font-size:10px;color:var(--ft);margin-top:2px}
 .seg.big button.on{background:rgba(14,203,129,.1);color:var(--up)}
-.seg.big button.on2{background:rgba(255,45,120,.1);color:var(--pk)}
+.seg.big button.on2{background:rgba(47,127,255,.1);color:var(--azul)}
 
 .tf{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:var(--sp3)}
 .tf button{background:var(--card2);border:1px solid var(--bd);color:var(--ft);font-size:var(--f2);
-  padding:4px 11px;border-radius:var(--r1);cursor:pointer;transition:.13s}
+  padding:8px 13px;min-height:36px;border-radius:var(--r1);cursor:pointer;transition:.13s}
 .tf button:hover{color:var(--tx);border-color:var(--bd2)}
-.tf button.on{background:#0d2430;border-color:rgba(0,209,255,.5);color:var(--cy)}
+.tf button.on{background:var(--sel);border-color:var(--sel-bd);color:var(--cy)}
 
 table{width:100%;border-collapse:collapse;font-size:var(--f2)}
+/* Las tablas anchas no se salen de la pantalla: se mueven de lado con el dedo
+   dentro de su caja (.scrolly / .vlist), sin romper el resto de la vista. */
+.scrolly{overflow:auto}
+.scrolly table,.vlist table{min-width:620px}
+.scrolly table th,.scrolly table td,.vlist table th,.vlist table td{white-space:nowrap}
+.scrolly table td.txt,.vlist table td.txt{white-space:normal;min-width:110px}
+#cmpTabla,#labTabla,#simTabla{overflow-x:auto}
+#cmpTabla table,#labTabla table,#simTabla table{min-width:560px}
 th{text-align:left;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ft);
   padding:0 8px 7px;border-bottom:1px solid var(--bd);font-weight:700;position:sticky;top:0;background:var(--card);z-index:2}
-td{padding:5px 8px;border-bottom:1px solid #131b24;font-family:var(--mono);font-size:var(--f2)}
+td{padding:5px 8px;border-bottom:1px solid var(--bd);font-family:var(--mono);font-size:var(--f2)}
 tbody tr{transition:background .1s}
 tbody tr:hover{background:var(--card2)}
 tbody tr.sel{background:rgba(0,209,255,.07)}
@@ -145,18 +175,30 @@ td.txt{font-family:var(--sans)}
 .scrolly{max-height:330px;overflow:auto}
 .scrolly::-webkit-scrollbar{width:6px}
 
-.pill{font-size:9.5px;letter-spacing:.09em;padding:3px 7px;border-radius:4px;border:1px solid var(--bd2);
+.pill{font-size:10.5px;letter-spacing:.09em;padding:4px 8px;border-radius:4px;border:1px solid var(--bd2);
   color:var(--md);font-weight:700;white-space:nowrap}
+#botModo{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:5px 10px}
+#botModo::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.pill.brio{border-color:rgba(139,92,246,.5);color:var(--vi);background:rgba(139,92,246,.08)}
 .pill.ok{border-color:rgba(14,203,129,.45);color:var(--up)}
 .pill.warn{border-color:rgba(240,185,11,.5);color:var(--yel)}
 .pill.bad{border-color:rgba(246,70,93,.45);color:var(--dn)}
-.btn{background:var(--card2);border:1px solid var(--bd);color:var(--tx);font-size:var(--f2);
-  padding:6px 13px;border-radius:var(--r1);cursor:pointer;transition:.13s;margin-right:6px}
+.btn{background:var(--card2);border:1px solid var(--bd2);color:var(--tx);font-size:13px;font-weight:600;
+  padding:10px 16px;min-height:40px;border-radius:var(--r1);cursor:pointer;transition:.13s;margin-right:6px}
 .btn:hover{border-color:var(--cy);color:var(--cy)}
+.btn:active{transform:translateY(1px)}
+/* Boton principal: azul, texto blanco, solo para la accion principal de cada tarjeta. */
+.btn-primario{background:var(--azul2);border-color:var(--azul2);color:#fff}
+.btn-primario:hover{filter:brightness(1.15);color:#fff}
+/* Boton de peligro: rojo, solo para apagar / cerrar. */
+.btn-peligro{background:var(--dn);border-color:var(--dn);color:#fff}
+.btn-peligro:hover{filter:brightness(1.12);color:#fff}
 .bar{height:3px;background:var(--raise);border-radius:2px;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;border-radius:2px;transition:width .5s ease}
 
 .chartbox{position:relative}
+#chart,#chartBig{width:100%}
+#chartBig{height:440px}
 #chart{height:392px}
 #rsiChart{height:104px}
 .overlay{position:absolute;left:10px;top:6px;pointer-events:none;z-index:4}
@@ -174,13 +216,13 @@ td.txt{font-family:var(--sans)}
 canvas{display:block;width:100%}
 .spark{height:26px;width:74px;display:inline-block;vertical-align:middle}
 
-.kv{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid #131b24;gap:10px}
+.kv{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--bd);gap:10px}
 .kv:last-child{border-bottom:0}
 .kv .k{font-size:var(--f2);color:var(--md);white-space:nowrap}
 .kv .v{font-family:var(--mono);font-size:var(--f3);text-align:right}
 .kv .s{font-size:10px;color:var(--ft);text-align:right}
 
-.lect{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #131b24;font-size:var(--f2)}
+.lect{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:var(--f2)}
 .lect:last-child{border-bottom:0}
 .lect .n{width:100px;color:var(--tx);font-weight:600}
 .lect .d{flex:1;color:var(--ft);font-size:10.5px}
@@ -225,29 +267,35 @@ canvas{display:block;width:100%}
 @keyframes sk{from{background-position:200% 0}to{background-position:-200% 0}}
 .fng{display:flex;align-items:center;gap:10px}
 .fng .num{font-family:var(--mono);font-size:var(--f5);font-weight:600}
-.fng .track{flex:1;height:5px;border-radius:3px;background:linear-gradient(90deg,var(--dn),var(--yel),var(--up));position:relative}
+.fng .track{flex:1;height:6px;border-radius:3px;position:relative;
+  background:linear-gradient(90deg,var(--dn) 0%,var(--naranja) 25%,var(--yel) 45%,#7cc24a 70%,var(--up) 100%)}
 .fng .track i{position:absolute;top:-4px;width:3px;height:13px;background:var(--tx);border-radius:2px;transition:left .6s ease}
 
-.paraque{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--bd);
-  background:var(--bg2);font-size:12px;color:var(--md);line-height:1.45;flex:0 0 auto}
-.paraque b{color:var(--cy);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.paraque{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--bd);
+  background:var(--card);font-size:13px;color:var(--md);line-height:1.5;flex:0 0 auto}
+.paraque b{color:#fff;background:var(--azul2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  white-space:nowrap;padding:4px 9px;border-radius:5px;font-weight:700}
 @media(max-width:900px){.paraque{flex-direction:column;align-items:flex-start;gap:3px;padding:7px 10px}}
 </style>
 <style>
 /* ---------- capa 2: tema, oficio, responsive ---------- */
 body[data-tema="claro"]{
   --bg:#eef1f5; --bg2:#f8fafc; --card:#ffffff; --card2:#f3f6f9; --raise:#e6ebf1;
-  --bd:#dde4ec; --bd2:#c9d4e0; --tx:#0f1720; --md:#546575; --ft:#8494a5;
-  --up:#0a9b63; --dn:#d9364e; --yel:#b8860b; --cy:#0a87a8; --vi:#6d43d6; --pk:#d1246a;
+  --bd:#dde4ec; --bd2:#c9d4e0; --tx:#0f1720; --md:#4d5f70; --ft:#5d707f;
+  --up:#067a4e; --dn:#d9364e; --yel:#8a6800; --azul:#1d6fe0; --azul2:#1859b8;
+  --naranja:#c25e00; --cy:#0a87a8; --vi:#6d43d6;
+  --sel:rgba(10,135,168,.12); --sel-bd:rgba(10,135,168,.45);
+  --sombra:0 1px 2px rgba(15,23,32,.08),0 4px 14px rgba(15,23,32,.08);
 }
 body[data-tema="claro"] .head{background:linear-gradient(115deg,#f2f6fa,var(--card) 60%)}
 body[data-tema="claro"] .tape .tk .p{color:var(--tx)}
 body[data-tema="claro"] th{background:var(--card)}
 body[data-tema="claro"] .rail .mark{color:#fff}
 body[data-tema="claro"] .overlay .px{text-shadow:none}
+body[data-tema="claro"] .dot.on{color:#fff}
 
 .acc{display:flex;align-items:center;gap:6px}
-.acc button{height:28px;min-width:28px;padding:0 8px;background:var(--card);border:1px solid var(--bd);
+.acc button{height:36px;min-width:36px;padding:0 10px;background:var(--card);border:1px solid var(--bd);
   border-radius:var(--r1);color:var(--md);cursor:pointer;display:flex;align-items:center;gap:6px;
   font-size:10.5px;font-weight:700;transition:.13s}
 .acc button:hover{border-color:var(--cy);color:var(--cy)}
@@ -264,24 +312,46 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
 
 @media(max-width:1320px){
   .c8{grid-template-columns:repeat(4,1fr)}
-  .split,.split3{grid-template-columns:1fr}
+  .split,.split3{grid-template-columns:minmax(0,1fr)}
   .row.c4{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:900px){
   body{overflow:auto}
-  .app{grid-template-columns:1fr;grid-template-rows:1fr auto;height:100vh}
-  .rail{flex-direction:row;order:2;border-right:0;border-top:1px solid var(--bd);
-    padding:6px 8px;justify-content:space-around;gap:2px}
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:1fr auto;height:100vh}
+  .rail{flex-direction:row;order:2;border-right:0;border-top:1px solid var(--bd);min-width:0;
+    padding:4px 2px 6px;justify-content:space-around;gap:2px}
   .rail .mark{display:none}
   .rail .grow{display:none}
-  .rail button.on::before{left:9px;top:auto;bottom:-6px;height:3px;width:22px;border-radius:3px 3px 0 0}
+  .rail button{flex:1 1 0;min-width:0;height:52px;flex-direction:column;gap:3px;border-radius:8px}
+  .rail button svg{width:20px;height:20px}
+  .rlbl{display:block;font-size:8.5px;font-weight:700;letter-spacing:.02em;color:inherit;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .rail button.on .rlbl{color:var(--cy)}
+  .rail button.on::before{left:50%;transform:translateX(-50%);top:auto;bottom:-6px;height:3px;width:22px;border-radius:3px 3px 0 0}
   .top{flex-wrap:wrap;height:auto;padding:8px 10px;gap:8px}
   .search{width:100%}
   .c8{grid-template-columns:repeat(2,1fr)}
   .row.c4{grid-template-columns:1fr}
   .heat{grid-template-columns:repeat(4,1fr)}
   #chart{height:300px}
+  #chartBig{height:320px}
+  #chartRsi{height:100px}
   .scroll{padding:10px}
+  .overlay .px{font-size:22px}
+  .head h2{font-size:20px}
+  .asisEstado .big{font-size:28px}
+  .seg.big{flex-direction:column}
+  .seg.big button{text-align:left}
+  .btn{min-height:44px;padding:12px 18px}
+  .tf button,.seg button,.tabs button{min-height:44px}
+  .cmpSel select{flex:1 1 100%}
+  .simCtrl>div{flex:1 1 160px}
+  .simCtrl select,.simCtrl input{width:100%}
+  .vlist{height:360px}
+  input,select,textarea{font-size:16px;min-height:44px}
+  input[type=range]{min-height:32px}
+  .lab input[type=range]{height:36px}
+  .cap input[type=range]{height:36px}
 }
 
 /* ---------- capa 4: laboratorio ---------- */
@@ -302,11 +372,12 @@ body[data-tema="claro"] .overlay .px{text-shadow:none}
 .veredicto.bien{border-left-color:var(--up);background:rgba(14,203,129,.07)}
 .veredicto.mal{border-left-color:var(--dn);background:rgba(246,70,93,.07)}
 .compara{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:10px}
-@media(max-width:1100px){.lab{grid-template-columns:1fr}.labmetric{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1100px){.lab{grid-template-columns:minmax(0,1fr)}.labmetric{grid-template-columns:repeat(2,1fr)}
+  .lab .ctrl,.lab>div{min-width:0}}
 
 /* ---------- parte C: favoritos, comparador y simulador ---------- */
 .favTh{width:26px}
-td.fav{cursor:pointer;color:var(--ft);text-align:center;width:26px;user-select:none}
+td.fav{cursor:pointer;color:var(--ft);text-align:center;width:26px;user-select:none;font-size:16px;min-width:36px}
 td.fav.on{color:#f0b90b}
 td.fav:hover{color:#f0b90b}
 #btnSoloFavs.on{color:#f0b90b;border-color:#f0b90b}
@@ -331,17 +402,20 @@ td.fav:hover{color:#f0b90b}
   padding:9px 10px;font-size:13px;box-sizing:border-box}
 #caBuscar:focus{outline:none;border-color:var(--cy)}
 #caCurva{width:100%;display:block}
-.caCerrar{padding:3px 9px;font-size:11px;margin:0}
+.caCerrar{padding:8px 12px;font-size:12px;margin:0;min-height:36px;min-width:44px}
 #v-cartera .btn{min-height:44px;min-width:44px}
 #v-cartera .scrolly{max-width:100%;overscroll-behavior-x:contain}
 #v-cartera th,#v-cartera td{white-space:nowrap}
 @media(max-width:600px){
+  .top .clock,#chipMundo{display:none}
+  .brand{font-size:13px}
   .formgrid{grid-template-columns:minmax(0,1fr)}
   #v-cartera .note,#v-cartera td{font-size:14px}
   #v-cartera input,#v-cartera select{font-size:16px;min-height:44px}
   #v-cartera h3{flex-wrap:wrap}
-  .rail{overflow-x:auto;justify-content:flex-start}
-  .rail button{flex:0 0 44px;min-height:44px}
+  .rail{overflow:visible;justify-content:space-around}
+  .rail button{flex:1 1 0;min-width:0;min-height:44px}
+  .rlbl{font-size:8px}
   .status{height:32px;flex-basis:32px;overflow-x:auto;white-space:nowrap;font-size:12px}
   .status span{flex-shrink:0}
   .status .grow,.status span:last-child{display:none}
@@ -350,7 +424,7 @@ td.fav:hover{color:#f0b90b}
 /* ---------- on-chain ---------- */
 .tabs{display:flex;gap:3px;border-bottom:1px solid var(--bd);margin-bottom:12px;flex-wrap:wrap}
 .tabs button{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ft);
-  padding:8px 13px;font-size:11.5px;font-weight:700;cursor:pointer}
+  padding:10px 14px;min-height:40px;font-size:12px;font-weight:700;cursor:pointer}
 .tabs button.on{color:var(--cy);border-bottom-color:var(--cy)}
 .mini{display:flex;align-items:center;gap:8px}
 .mini .n{width:118px;font-size:11.5px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -359,8 +433,9 @@ td.fav:hover{color:#f0b90b}
 .mini .v{font-family:var(--mono);font-size:11px;color:var(--md);width:74px;text-align:right}
 
 /* ---------- asistente: la cara principal ---------- */
-.asis{border:1px solid var(--bd);border-radius:var(--r3);margin-bottom:var(--sp3);overflow:hidden;
-  background:linear-gradient(150deg,var(--card2),var(--card) 55%)}
+.asis{border:1px solid var(--bd);border-left:4px solid var(--vi);border-radius:var(--r3);margin-bottom:var(--sp3);overflow:hidden;
+  background:linear-gradient(150deg,var(--card2),var(--card) 55%);box-shadow:var(--sombra)}
+.asisTexto .lb{color:var(--vi)}
 .asisTop{display:grid;grid-template-columns:290px 1fr;gap:0;border-bottom:1px solid var(--bd)}
 .asisEstado{padding:18px 20px;border-right:1px solid var(--bd);position:relative}
 .asisEstado::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
@@ -369,7 +444,7 @@ td.fav:hover{color:#f0b90b}
 .asisEstado.nervioso::before{background:var(--yel)}
 .asisEstado.peligroso::before{background:var(--dn)}
 .asisEstado .lb{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ft);margin-bottom:6px}
-.asisEstado .big{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.05}
+.asisEstado .big{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.05}
 .asisEstado.calmado .big{color:var(--up)}
 .asisEstado.normal .big{color:var(--tx)}
 .asisEstado.nervioso .big{color:var(--yel)}
@@ -383,8 +458,8 @@ td.fav:hover{color:#f0b90b}
 .asisBottom{display:grid;grid-template-columns:1fr 1fr}
 .riesgo{padding:16px 20px;border-right:1px solid var(--bd)}
 .riesgo .lb,.veredictoBot .lb{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ft);margin-bottom:8px}
-.cap{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.cap input{flex:1;accent-color:var(--cy)}
+.cap{display:flex;align-items:center;gap:10px;margin-bottom:10px;min-width:0}
+.cap input{flex:1;min-width:0;accent-color:var(--cy)}
 .cap .mono{font-size:13px;color:var(--cy);min-width:74px;text-align:right}
 .riesgoTxt{font-size:13px;line-height:1.55;color:var(--tx)}
 .riesgoTxt b{color:var(--yel)}
@@ -395,42 +470,43 @@ td.fav:hover{color:#f0b90b}
 .veredictoBot.encendido .txt b{color:var(--up)}
 .chipcito{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 8px;
   border-radius:4px;border:1px solid rgba(14,203,129,.45);color:var(--up);margin-bottom:9px}
-@media(max-width:1100px){.asisTop{grid-template-columns:1fr}.asisEstado{border-right:0;border-bottom:1px solid var(--bd)}
-  .asisBottom{grid-template-columns:1fr}.riesgo{border-right:0;border-bottom:1px solid var(--bd)}}
+@media(max-width:1100px){.asisTop{grid-template-columns:minmax(0,1fr)}.asisEstado{border-right:0;border-bottom:1px solid var(--bd)}
+  .asisBottom{grid-template-columns:minmax(0,1fr)}.riesgo{border-right:0;border-bottom:1px solid var(--bd)}
+  .asisEstado,.asisTexto,.riesgo,.veredictoBot{min-width:0}}
 
 /* ---------- noticias en vivo ---------- */
 .ntnHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .ntnList{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 @media(max-width:1100px){.ntnList{grid-template-columns:1fr}}
-.ntn{background:var(--card);border:1px solid var(--bd);border-radius:var(--r2);padding:12px 14px;cursor:pointer;
+.ntn{background:var(--card);border:1px solid var(--bd);border-radius:var(--r2);padding:14px 16px;cursor:pointer;box-shadow:var(--sombra);
   transition:.14s;display:flex;flex-direction:column;gap:7px}
 .ntn:hover{border-color:var(--cy)}
 .ntn.sinEnlace{cursor:default}
 .ntn.sinEnlace:hover{border-color:var(--bd)}
 .ntn .meta{font-size:10px;color:var(--ft);display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:var(--mono)}
-.ntn .titular{font-size:13px;font-weight:600;line-height:1.45;color:var(--tx);color:var(--tx)}
+.ntn .titular{font-size:14.5px;font-weight:700;line-height:1.45;color:var(--tx)}
 body[data-tema="claro"] .ntn .titular{color:var(--tx)}
-.ntn .resum{font-size:12px;color:var(--md);line-height:1.5}
+.ntn .resum{font-size:12.5px;color:var(--md);line-height:1.55}
 .ntn .mvto{font-size:10.5px;border-radius:4px;padding:2px 7px;border:1px solid var(--bd2);color:var(--md);display:inline-block}
 .ntn .mvto.g{border-color:rgba(14,203,129,.45);color:var(--up)}
 .ntn .mvto.r{border-color:rgba(246,70,93,.45);color:var(--dn)}
-.ntn .fuenteAbajo{font-size:10px;color:var(--ft);border-top:1px solid #131b24;padding-top:7px;margin-top:2px}
+.ntn .fuenteAbajo{font-size:10px;color:var(--ft);border-top:1px solid var(--bd);padding-top:7px;margin-top:2px}
 </style>
 </head>
 <body>
 <div class="app">
   <nav class="rail">
     <div class="mark">H</div>
-    <button class="on" data-v="panel" title="Panel (1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></button>
-    <button data-v="grafico" title="Gráfico (2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 3 5-8"/></svg></button>
-    <button data-v="bot" title="El bot (3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 13h.01M15 13h.01M9 17h6"/></svg></button>
-    <button data-v="cuaderno" title="Cuaderno (4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4a2 2 0 012-2h12v20H6a2 2 0 01-2-2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></button>
-    <button data-v="onchain" title="On-chain (5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg></button>
-    <button data-v="lab" title="Laboratorio (6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v6L4.5 19a2 2 0 001.7 3h11.6a2 2 0 001.7-3L14 9V3"/><path d="M7 15h10"/></svg></button>
-    <button data-v="cartera" title="Cartera (9)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M16 12h.01M3 9h18"/></svg></button>
-    <button data-v="noticias" title="Noticias (8)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M7 9h6M7 13h10M7 16h10"/><path d="M15 9h2"/></svg></button>
+    <button class="on" data-v="panel" title="Panel (1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span class="rlbl">Panel</span></button>
+    <button data-v="grafico" title="Gráfico (2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 3 5-8"/></svg><span class="rlbl">Gráfico</span></button>
+    <button data-v="bot" title="El bot (3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 13h.01M15 13h.01M9 17h6"/></svg><span class="rlbl">Bot</span></button>
+    <button data-v="cuaderno" title="Cuaderno (4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4a2 2 0 012-2h12v20H6a2 2 0 01-2-2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg><span class="rlbl">Cuaderno</span></button>
+    <button data-v="onchain" title="On-chain (5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg><span class="rlbl">On-chain</span></button>
+    <button data-v="lab" title="Laboratorio (6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v6L4.5 19a2 2 0 001.7 3h11.6a2 2 0 001.7-3L14 9V3"/><path d="M7 15h10"/></svg><span class="rlbl">Lab</span></button>
+    <button data-v="cartera" title="Cartera (9)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M16 12h.01M3 9h18"/></svg><span class="rlbl">Cartera</span></button>
+    <button data-v="noticias" title="Noticias (8)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M7 9h6M7 13h10M7 16h10"/><path d="M15 9h2"/></svg><span class="rlbl">Noticias</span></button>
     <div class="grow"></div>
-    <button data-v="ajustes" title="Ajustes (7)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7.7 1.6 1.6 0 01-1.8 1.5h-.2a2 2 0 110-4 1.6 1.6 0 00-.7-2.7 1.6 1.6 0 00-.7.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 004 12.6a1.6 1.6 0 01-1.5-1.8v-.2a2 2 0 114 0 1.6 1.6 0 002.7.7 1.6 1.6 0 00.7-.4l.1-.1A2 2 0 1112.8 4.3l-.1.1a1.6 1.6 0 001.8 2.7h.2a2 2 0 110 4 1.6 1.6 0 00-.7.7z"/></svg></button>
+    <button data-v="ajustes" title="Ajustes (7)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7.7 1.6 1.6 0 01-1.8 1.5h-.2a2 2 0 110-4 1.6 1.6 0 00-.7-2.7 1.6 1.6 0 00-.7.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 004 12.6a1.6 1.6 0 01-1.5-1.8v-.2a2 2 0 114 0 1.6 1.6 0 002.7.7 1.6 1.6 0 00.7-.4l.1-.1A2 2 0 1112.8 4.3l-.1.1a1.6 1.6 0 001.8 2.7h.2a2 2 0 110 4 1.6 1.6 0 00-.7.7z"/></svg><span class="rlbl">Ajustes</span></button>
   </nav>
 
   <div class="main">
@@ -509,7 +585,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
               <div id="chart"></div>
             </div>
             <div class="legend">
-              <span><i style="background:#fff"></i>mediana</span>
+              <span><i style="background:var(--tx)"></i>mediana</span>
               <span><i style="background:rgba(14,203,129,.8)"></i>terminan arriba</span>
               <span><i style="background:rgba(246,70,93,.8)"></i>terminan abajo</span>
               <span id="legHorizonte"></span>
@@ -595,13 +671,13 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
           <div class="chartbox">
             <div class="overlay"><div class="px" id="gPrecio">—</div><div class="chg" id="gCambio">—</div></div>
             <div class="ohlc" id="gOhlc"></div>
-            <div id="chartBig" style="height:440px"></div>
+            <div id="chartBig"></div>
           </div>
           <div id="chartRsi" style="height:110px;margin-top:6px"></div>
           <span class="fe" data-fe="velas,extra"></span>
           <div class="legend">
             <span><i style="background:#f0b90b"></i>EMA 20</span>
-            <span><i style="background:#00d1ff"></i>EMA 50</span>
+            <span><i style="background:#0a87a8"></i>EMA 50</span>
             <span><i style="background:#8b5cf6"></i>EMA 200</span>
             <span><i style="background:rgba(14,203,129,.8)"></i>escenarios arriba</span>
             <span><i style="background:rgba(246,70,93,.8)"></i>escenarios abajo</span>
@@ -624,7 +700,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
           <div class="note" id="botSub">Sin datos del bot todavía.</div>
           <div class="row c4" id="botPapel" style="margin-top:10px"></div>
           <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-            <button class="btn" id="botParar" style="background:var(--dn);color:#fff;font-weight:700;padding:12px 22px;font-size:15px">■ PARAR EL BOT</button>
+            <button class="btn btn-peligro" id="botParar" style="font-weight:700;padding:12px 22px;font-size:15px">■ PARAR EL BOT</button>
             <button class="btn" id="botPrender" style="padding:12px 18px">Reanudar (sólo papel)</button>
             <span class="note m" id="botPararTxt" style="margin:0"></span>
           </div>
@@ -741,7 +817,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <div><label>Moneda</label><select id="simSimbolo"></select></div>
             <div><label>Desde</label><input type="date" id="simFecha"></div>
             <div><label>Capital</label><input type="number" id="simCapital" min="10" max="1000000" step="10" value="1000"></div>
-            <div><button class="btn" id="simCalcular" style="margin:0">Calcular</button></div>
+            <div><button class="btn btn-primario" id="simCalcular" style="margin:0">Calcular</button></div>
           </div>
           <div class="veredicto" id="simVeredicto">Elegí una moneda y una fecha, y dale Calcular.</div>
           <div id="simTabla"></div>
@@ -777,7 +853,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
               <label>Riesgo por operación (%)<input id="caRiesgo" type="number" step="0.1" min="0.1" max="10" value="2"></label>
             </div>
             <div class="note m" style="margin:8px 0">Si ponés Objetivo 2, vende la mitad en el primero y el resto en el segundo. Trailing en 0 = apagado.</div>
-            <button class="btn" id="caColocar" style="font-weight:700">Colocar orden en papel</button>
+            <button class="btn btn-primario" id="caColocar" style="font-weight:700">Colocar orden en papel</button>
             <div class="note" id="caOrdenMsg" style="margin-top:8px"></div>
           </div>
 
@@ -837,7 +913,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             </div>
             <div style="flex:1"></div>
             <span class="chip" id="ntnEdad">—</span>
-            <button class="btn" id="ntnRefrescar" style="margin:0"
+            <button class="btn btn-primario" id="ntnRefrescar" style="margin:0"
               title="Este botón NO llama a Brio. Sólo vuelve a leer lo que Brio ya mandó y guardó, y busca por RSS.">Actualizar ahora</button>
           </div>
           <div class="note" id="ntnBrio"></div>
@@ -1246,9 +1322,9 @@ function pintarDispersin(){
     g.beginPath(); g.arc(X(m.cambio), Y(p), rad, 0, 6.2832);
     var col = m.cambio>=0 ? '14,203,129' : '246,70,93';
     g.fillStyle='rgba('+col+',.18)'; g.fill();
-    g.strokeStyle = m.sym===estado.nombre ? '#00d1ff' : 'rgba('+col+',.8)';
+    g.strokeStyle = m.sym===estado.nombre ? '#0a87a8' : 'rgba('+col+',.8)';
     g.lineWidth = m.sym===estado.nombre ? 2 : 1; g.stroke();
-    if(rad>5 || m.sym===estado.nombre){ g.fillStyle = m.sym===estado.nombre ? '#00d1ff' : '#7f93a8';
+    if(rad>5 || m.sym===estado.nombre){ g.fillStyle = m.sym===estado.nombre ? '#0a87a8' : '#7f93a8';
       g.font = (m.sym===estado.nombre?'700 ':'')+'8.5px Cascadia Mono'; g.fillText(m.sym, X(m.cambio)-rad, Y(p)-rad-2); }
   });
   cv.onclick = function(e){
@@ -1374,7 +1450,7 @@ function montar(){
   serieVelas = grafico.addCandlestickSeries({ upColor:'#0ecb81', downColor:'#f6465d', borderVisible:false, wickUpColor:'#0ecb81', wickDownColor:'#f6465d' });
   serieVol = grafico.addHistogramSeries({ priceFormat:{type:'volume'}, priceScaleId:'v' });
   grafico.priceScale('v').applyOptions({ scaleMargins:{ top:.85, bottom:0 } });
-  serieMediana = grafico.addLineSeries({ color:'#ffffff', lineWidth:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  serieMediana = grafico.addLineSeries({ color:'#8a97a8', lineWidth:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
 }
 function limpiarEsc(){ serieEsc.forEach(function(s){ grafico.removeSeries(s); }); serieEsc = []; }
 
@@ -1412,11 +1488,11 @@ function montarGrande(){
   bigVol = big.addHistogramSeries({ priceFormat:{type:'volume'}, priceScaleId:'v' });
   big.priceScale('v').applyOptions({ scaleMargins:{ top:.86, bottom:0 } });
   bigE20 = big.addLineSeries({ color:'#f0b90b', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
-  bigE50 = big.addLineSeries({ color:'#00d1ff', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  bigE50 = big.addLineSeries({ color:'#0a87a8', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
   bigE200 = big.addLineSeries({ color:'#8b5cf6', lineWidth:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
-  bigMed = big.addLineSeries({ color:'#ffffff', lineWidth:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  bigMed = big.addLineSeries({ color:'#8a97a8', lineWidth:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
   rsiG = LightweightCharts.createChart(document.getElementById('chartRsi'), opcionGrafico());
-  rsiSerie = rsiG.addLineSeries({ color:'#00d1ff', lineWidth:1.5, priceLineVisible:false, lastValueVisible:false });
+  rsiSerie = rsiG.addLineSeries({ color:'#0a87a8', lineWidth:1.5, priceLineVisible:false, lastValueVisible:false });
   rsiG.priceScale('right').applyOptions({ autoScale:false });
   rsiSerie.setData([{time:estado.velas.length?estado.velas[0].t:0, value:0}]);
   rsiSerie.createPriceLine({ price:70, color:'rgba(246,70,93,.4)', lineWidth:1, lineStyle:3, title:'70' });
@@ -1786,7 +1862,7 @@ function pintarNoticias(){
       + (n.titulo_original ? ' title="' + escHtml(n.titulo_original) + '"' : '') + '>'
       + '<div class="meta"><span>' + escHtml(haceTxt(n.cuando)) + '</span><span>·</span>'
       + '<span>' + escHtml(n.fuente || '—') + '</span>'
-      + (esBrio ? '<span class="pill ok">BRIO' + (n.importancia === 'alta' ? ' · ALTA' : '') + '</span>' : '')
+      + (esBrio ? '<span class="pill brio">BRIO' + (n.importancia === 'alta' ? ' · ALTA' : '') + '</span>' : '')
       + (moneda ? '<span class="pill" style="border-color:var(--bd2)">' + escHtml(moneda) + '</span>' : '')
       + '<span class="pill ' + clasePill + '" style="margin-left:auto">' + escHtml(etiquetaSent) + '</span></div>'
       + '<div class="titular">' + escHtml(n.titulo) + '</div>'
@@ -2156,7 +2232,7 @@ function pintarMiedoCurva(){
 
   g.beginPath();
   datos.forEach(function(d,i){ i ? g.lineTo(X(i), Y(d.valor)) : g.moveTo(X(i), Y(d.valor)); });
-  g.strokeStyle='#00d1ff'; g.lineWidth=1.8; g.stroke();
+  g.strokeStyle='#0a87a8'; g.lineWidth=1.8; g.stroke();
   g.lineTo(ancho-pad.r, Y(0)); g.lineTo(pad.l, Y(0)); g.closePath();
   g.fillStyle='rgba(0,209,255,.08)'; g.fill();
 
@@ -2547,7 +2623,7 @@ function labMontarGrafico(){
     autoSize:true });
   lab.serieBh = lab.grafico.addAreaSeries({ lineColor:'#8494a5', lineWidth:1, priceLineVisible:false,
     topColor:'rgba(132,148,165,.08)', bottomColor:'rgba(132,148,165,.02)' });
-  lab.serieBot = lab.grafico.addAreaSeries({ lineColor:'#00d1ff', lineWidth:2, priceLineVisible:false,
+  lab.serieBot = lab.grafico.addAreaSeries({ lineColor:'#0a87a8', lineWidth:2, priceLineVisible:false,
     topColor:'rgba(0,209,255,.16)', bottomColor:'rgba(0,209,255,.02)' });
 }
 function labCorrer(){

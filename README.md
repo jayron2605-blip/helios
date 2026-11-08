@@ -78,6 +78,23 @@ bot/que_se_puede.py  test de qué es predecible y qué no
 
 Cada vista trae arriba una barra que dice, en español simple, para qué sirve.
 
+## La interfaz (mejora de noviembre 2026, rama `ui-mejora-interfaz`)
+
+Solo se cambió cómo se ve el panel (`panel.html`); la lógica, los números y
+las funciones son los mismos. Detalle en `AUDITORIA-UI.md`.
+
+- **Modo oscuro por defecto**, como una terminal profesional, y **modo claro
+  que funciona de verdad** (fondos, tarjetas, texto y gráficos, no solo el fondo).
+- **6 colores, siempre los mismos:** verde ganancia, rojo pérdida, amarillo
+  solo avisos, azul botones principales, violeta solo asistente y noticias de
+  Brio, cian acento. Miedo y codicia con su escala de 5 colores.
+- **Panel primero:** qué está pasando, qué dice el asistente, cuánto lleva el
+  bot en papel y las monedas favoritas, ordenados y sin amontonar.
+- **En teléfono:** menú de abajo con icono y texto corto, botones de 44px,
+  tablas que se mueven de lado con el dedo, buscador y formularios a 16px
+  (sin zoom al tocar), gráficos completos a 360px y 390px.
+- Estado del bot con punto de color **y** palabra (apagado, encendido, peligro).
+
 ### Cartera manual: qué hace y qué no
 
 Cuenta independiente de S11, sin claves: USD 1.000 ficticios por cada moneda que uses. Permite
