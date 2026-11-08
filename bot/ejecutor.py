@@ -175,7 +175,7 @@ class Broker:
 
     def cerrar(self, ts, precio_ref, motivo, comprar=False):
         p = self.posicion
-        if p is None:
+        if p is None or not p.llena:
             return None
         precio = self.precio_entrada(precio_ref, comprar=False)
         bruto = (precio - p.entrada_precio) * p.cantidad
@@ -201,20 +201,22 @@ class Broker:
         """Recibe la vela recien cerrada. Primero resuelve la posicion abierta contra ESA vela."""
         if self.posicion is not None and self.posicion.simbolo == simbolo:
             p = self.posicion
-            # orden limite pendiente: se llena si el precio bajo al limite. Recien
-            # llenada, no se resuelve en la misma vela (evita mirar el futuro).
             if not p.llena:
                 if l <= p.precio_limite:
                     self._llenar_limite(ts, p)
+                    # No se presume que el máximo haya ocurrido después del llenado.
+                    if self.posicion is not None and l <= p.stop:
+                        self.cerrar(ts, min(o, p.stop), "stop loss")
                 return self.posicion
             if l <= p.stop:
                 motivo = "trailing stop" if (self.cfg.trailing_stop > 0 and p.stop > p.stop_inicial) else "stop loss"
-                self.cerrar(ts, p.stop, motivo)
+                self.cerrar(ts, min(o, p.stop), motivo)
             elif p.tp_pendientes and h >= p.tp_pendientes[0][0]:
-                precio_tp, q, motivo = p.tp_pendientes.pop(0)
-                self._vender_parcial(ts, precio_tp, q, motivo)
-                if self.posicion is not None and self.posicion.tp_pendientes:
-                    self.posicion.objetivo = self.posicion.tp_pendientes[0][0]
+                while self.posicion is not None and p.tp_pendientes and h >= p.tp_pendientes[0][0]:
+                    precio_tp, q, motivo = p.tp_pendientes.pop(0)
+                    self._vender_parcial(ts, precio_tp, q, motivo)
+                if self.posicion is not None and p.tp_pendientes:
+                    p.objetivo = p.tp_pendientes[0][0]
             elif h >= p.objetivo:
                 self.cerrar(ts, p.objetivo, "take profit")
             elif ts - p.entrada_ts >= self.cfg.max_velas_en_posicion * 3600 * 1000:

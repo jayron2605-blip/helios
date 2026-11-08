@@ -337,54 +337,57 @@ mentira. S13 (sentimiento de noticias) sigue apuntada, no se simuló con datos i
 Este es el plan final, en el orden exacto que pide el prompt. **No se programa nada nuevo fuera
 de esta lista**: las ideas que se ocurran van a `IDEAS-FUTURAS.md`, no se codean. Cada función se
 da por terminada solo si funciona de verdad, con datos reales, en computadora y en teléfono, y con
-su prueba pasando. Lo de abajo está **verificado leyendo el código hoy**, no es creencia.
+su prueba pasando. **Actualizado el 2026-11-08 al cerrar C.** Las secciones 1–8 son antecedentes
+históricos; el estado vigente está en 9–11 y `CONTINUAR-AQUI.md`. Se distingue código implementado,
+pruebas automatizadas y verificación de navegador; una categoría no sustituye a la otra.
 
 ### Pasos 1 y 2 (este trabajo) — HECHO
 - Leída la carpeta completa en `Y:` y corrido `python bot/pruebas.py` → **TODO OK, 90 pruebas**.
 - Este PLAN actualizado sin reescribirlo: se marca lo hecho, se corrige lo que estaba mal y se
   agrega el plan final A–H (sección 9), la lista de prueba (sección 10) y las decisiones (sección 11).
 
-### A. Arreglar lo que está a medias — primero, antes de lo nuevo
-- **A1 `registrar_cierre()` sin cablear → FALTA.** Existe en `exchange.py:192`, acumula bien
-  (pruebas X/X2/X3 pasan), pero **solo lo llaman las pruebas** (`pruebas.py:197-206`).
-  `Broker.cerrar()` (`ejecutor.py`), `modelo.py` y `cerebro.py` no lo llaman. Hay que conectarlo
-  para que cada operación cerrada en papel/prueba registre su resultado, y añadir pruebas nuevas.
-- **A2 Detalles del panel → PARCIAL.**
-  - Ayuda "1 a 7" → **HECHO**: ya dice "1-8 vistas" (`panel.html:767`) y "Teclas 1 a 8" (`:1810`).
-  - Tema del gráfico del Laboratorio → **HECHO**: `aplicarTema()` ya repinta `lab.grafico` (`:1855`).
-  - Exportar Laboratorio y scorecard a CSV → **FALTA**: hoy solo se bajan `cuaderno.csv` (`:1782`)
-    y `decisiones.csv` (`:2148`).
-  - Fuente y antigüedad en cada tarjeta → **FALTA (parcial)**: Noticias tiene `haceTxt()` por
-    tarjeta (`:1587`) y Ajustes describe la edad de cada fuente (`:935`); el resto de tarjetas no.
-  - Revisar botones muertos / números de ejemplo / texto en inglés → **FALTA** (auditoría pendiente).
-- **A3 `.bat` y Python → FALTA (decisión del dueño).** Los `.bat` piden `py -3.12`; esta PC tiene
-  3.14 sin `py` en PATH. El README ya trae los comandos a mano. Ver sección 11, decisión 5.
-- **A4 No romper las pruebas → HECHO como regla.** Después de cada cambio, `TODO OK`. Hoy 90;
-  al final tienen que ser más de 90, no menos.
+### A. Arreglar lo que está a medias — código implementado
+- **A1 → HECHO.** `Broker` registra cada cierre mediante el contador opcional; el papel S11 lo
+  usa y el backtest no contamina el contador del día. Pruebas RC y P5b pasan.
+- **A2 → IMPLEMENTADO; auditoría global pendiente en H3.** Ayuda 1–9, tema del Laboratorio,
+  CSV de Laboratorio/scorecard y etiquetas de fuente/edad agregados en `fe5f63b`.
+  No se considera probada aquí toda la interfaz: el cierre del 2026-11-08 se limita a Cartera.
+- **A3 → HECHO.** `_python.bat` encuentra un intérprete utilizable, incluido Python 3.14;
+  ya no se depende exclusivamente de `py -3.12`. Se conservan comandos manuales en README.
+- **A4 → HECHO.** Suite del 2026-11-08: **177 comprobaciones OK, TODO OK** (base inicial: 90).
 
-### B. El bot de verdad — lo más importante
-- **B1 Conectar el cerebro en papel → FALTA.** `cerebro.py:14-15` importa `Broker` y `exchange`
-  y no los usa; solo escribe JSON/CSV. Hay que hacer que `decide()` pase por `Broker`, abra y
-  cierre posiciones en papel con precios reales y registre cada decisión en `bot/decisiones.py`.
-- **B2 Usar S11, no el modelo viejo → FALTA.** S11 (confirmación día+semana+mes) es la única que
-  aprobó (+69,2 %, 4/6). El modelo de dirección S1 queda solo como comparación, no como bot.
-- **B3 Prueba en papel en vivo ≥30 días → FALTA / PENDIENTE DE AUTORIZACIÓN.** No se arranca sin
-  el visto bueno del dueño (sección 11, decisión 3). No se simula con datos inventados.
-- **B4 Dinero real solo con aprobación escrita → FALTA.** `SOLO_PRUEBA=True` se mantiene
-  (`exchange.py:28`). El archivo `bot/APAGADO` ya detiene todo, pero **el botón grande de apagar
-  en el panel no existe** (solo hay texto informativo en `panel.html:1358`). Claves en `claves.json`
-  que crea el dueño, nunca en el código ni en archivos compartidos.
-- **B5 El panel dice apagado/encendido, por qué y cuánto lleva en papel → PARCIAL.** La vista El bot
-  muestra el modo y el motivo (`:1343`, `:1418`); "cuánto lleva en papel" falta porque el bot aún no opera.
-- **B6 No llamar IA a una regla simple → HECHO como criterio.** S11 se describe como regla de
-  tendencia, no IA, en el README y en `ventaja.py`.
+### B. El bot de verdad — código implementado; ensayo largo pendiente
+- **B1/B2 → HECHO EN CÓDIGO Y PRUEBAS.** `cerebro.py` usa `CarteraPapel` de `papel.py`, Broker,
+  S11 (día+semana+mes) y el registro de decisiones. S1 queda como comparación. Pruebas P pasan.
+- **B3 → FALTA / PENDIENTE DE AUTORIZACIÓN.** No se inició el ensayo en vivo de ≥30 días.
+  No se reemplaza por datos inventados ni por las pruebas unitarias.
+- **B4 → IMPLEMENTADO.** Botón de parada y archivo `bot/APAGADO` para S11. `SOLO_PRUEBA=True`
+  sigue fijo; ninguna orden real. Las claves las crea el dueño y nunca se comparten.
+- **B5 → IMPLEMENTADO.** Estado, motivo y días de la cuenta en papel. La antigüedad de una cuenta
+  no demuestra 30 días de funcionamiento continuo. Revalidar la vista El bot en la auditoría global.
+- **B6 → HECHO como criterio.** S11 es una regla de tendencia, no IA.
 
-### C. Órdenes inteligentes y cartera en vivo → FALTA (todo)
-C1 stop-loss/take-profit al entrar, varios take-profit, trailing stop y órdenes límite (no solo a
-mercado). C2 cartera en vivo (saldo total, por moneda, posiciones abiertas, P/L en vivo, gráfica del
-dinero en el tiempo). C3 historial de órdenes con fecha, moneda, precio, cantidad, comisión, motivo y
-resultado, buscable y en CSV. C4 calculadora de riesgo también en la cartera. Nada de esto existe
-todavía; el `Broker` actual (`ejecutor.py`) es solo para backtest.
+### C. Órdenes inteligentes y cartera → HECHO en papel (2026-11-08)
+- **C1:** entrada a mercado/límite, stop y objetivo al entrar, objetivos parciales y trailing.
+  Stop prioritario en velas ambiguas; saltos de precio no garantizan el precio del stop.
+  Comisiones/deslizamiento descontados; objetivos simultáneos y cierres anteriores respetados.
+- **C2:** vista 9 sin quitar las anteriores; saldo total y por moneda, efectivo/invertido,
+  posiciones, P/L estimado neto de cierre y curva con varios movimientos por hora.
+  Sin red conserva la última valoración y avisa; no opera con cotizaciones vencidas.
+- **C3:** historial de abiertas, pendientes, canceladas y ejecuciones cerradas; fecha, moneda,
+  precio, cantidad, comisión, motivo y resultado; búsqueda y CSV descargado y comprobado.
+  Cancelar una pendiente no genera dinero, comisiones ni una operación ganada/perdida.
+- **C4:** calculadora en USD o pesos sin conversión de divisas, validación de entrada y stop natural.
+- **Verificación:** Chrome a 1440 px y emulación móvil táctil a 360/390 px; órdenes, cierre,
+  cancelación, filtros, CSV, actualización, pérdida/recuperación de conexión, tema, sin errores JS.
+  Botones de Cartera de al menos 44 px y tablas con desplazamiento horizontal contenido.
+  Disparos de stops/objetivos/trailing cubiertos con datos controlados en pruebas, no se esperó
+  a que el mercado real tocara esos niveles. Cuenta temporal aislada, sin alterar la cuenta del dueño.
+- **Alcance:** cuenta manual independiente de S11, USD 1.000 ficticios por moneda usada.
+  Resuelve al consultar/actualizar la vista (cada 90 s mientras está abierta), no vigilancia continua
+  ni órdenes alojadas en un exchange. Revisa hasta 120 velas horarias disponibles y los ticks
+  observados; no reconstruye extremos anteriores a la entrada/último tick ni garantiza cubrir
+  desconexiones más largas. Todo esto sigue siendo práctica, no ejecución real.
 
 ### D. Código abierto y más exchanges → PARCIAL
 - **D1 Usar `ta` de verdad → FALTA.** `ta` 0.11.0 instalado pero **sin importar** en el código
@@ -420,8 +423,8 @@ todavía; el `Broker` actual (`ejecutor.py`) es solo para backtest.
 - **F2 Arreglar lo que se ve mal en teléfono → FALTA.** Tablas que no se salgan (scroll lateral con
   el dedo), botones no más chicos que un dedo, gráficos completos, buscador/filtros/comparador/
   simulador con toque, texto legible sin zoom.
-- **F3 Probar en 360px y 390px reales → FALTA.** No se hizo en esta tanda; hay que usar el modo
-  teléfono del navegador y anotar cada pantalla que se rompe.
+- **F3 Probar en 360px y 390px → PARCIAL.** Cartera y su navegación probadas el 2026-11-08
+  en emulación móvil de Chrome con toque; no fue un teléfono físico. Falta auditar las otras vistas.
 - **F4 Abrir desde el teléfono por web → FALTA.** Depende de E2. Dejar por escrito cómo abrirlo en
   la misma red y cómo desde internet cuando esté publicado.
 
@@ -446,23 +449,25 @@ README y PLAN con los números reales y entregar el resumen al dueño.
 ## 10. Lista para probar una por una (copiada del prompt final)
 
 Marcada con **HECHO** o **FALTA**, con fecha y lo que se vio. No se marca HECHO lo que no se probó
-en el navegador (o, si es de API/backtest, con pruebas/curl). Fecha de esta revisión: **2026-11-07**.
+en el navegador (o, si es de API/backtest, con pruebas/curl). Revisión de C: **2026-11-08**;
+las comprobaciones anteriores conservan su fecha y la auditoría global aún falta.
 
 **Bot y papel:**
-- **FALTA** — El bot en papel compra y vende con S11, con plata falsa y precios reales. (`cerebro.py` no opera; B1/B2 pendientes.)
-- **FALTA (parcial)** — Cada decisión queda escrita: fecha, moneda, precio, probabilidad, acción, motivo y resultado. (`bot/decisiones.py` existe y escribe CSV con resultado 24 h, pero el bot en papel aún no abre/cierra; no hay decisiones en vivo.)
-- **FALTA** — El stop y el take-profit se ponen al entrar, y se venden solos cuando se tocan. (C1 pendiente.)
-- **FALTA (parcial)** — Si pierde más de lo permitido en un día, se apaga solo ese día. (El freno y `registrar_cierre` existen y pasan X/X2/X3, pero no están cableados a operaciones de papel; A1.)
-- **FALTA (parcial)** — El botón de apagar para todo, y el archivo `APAGADO` para todo. (El archivo `bot/APAGADO` detiene todo; el botón grande en el panel no existe, solo texto en `panel.html:1358`; B4.)
-- **FALTA (parcial)** — El panel dice si está apagado o encendido, por qué, y cuánto lleva en papel. (La vista El bot muestra modo y motivo en código `:1343`/`:1418`; "cuánto lleva en papel" falta; no probado en navegador en esta tanda.)
+- **HECHO EN PRUEBAS / FALTA ENSAYO LARGO** — S11 abre/cierra y persiste usando Broker (P1–P8c, 2026-11-08). No inició el ensayo de ≥30 días con precios en vivo.
+- **FALTA VALIDACIÓN EN VIVO** — Registro de decisiones conectado; resultado real a 24 h y ensayo continuo pendientes, no se inventan resultados.
+- **HECHO EN PAPEL** — Stop y take-profit al entrar. Orden configurada en navegador y disparos en pruebas A–C, P5, CM9 y CF (2026-11-08); resolución al actualizar, no continua.
+- **HECHO EN PRUEBAS** — Freno de pérdida diaria conectado a S11: X/X2/X3, RC1–RC3 y P5b (2026-11-08). No confundir con la cuenta manual independiente.
+- **FALTA REVALIDACIÓN GLOBAL** — Botón de apagado y archivo APAGADO implementados para S11; el archivo bloquea en pruebas K. No se probó otra vez el botón en este cierre de C.
+- **FALTA REVALIDACIÓN GLOBAL** — Estado, motivo y días implementados en El bot; P7b pasa (2026-11-08). Antigüedad de cuenta no prueba funcionamiento continuo.
 
-**Órdenes y cartera:**
-- **FALTA** — Orden límite funciona. (C1.)
-- **FALTA** — Orden con stop y take-profit juntos funciona. (C1.)
-- **FALTA** — Trailing stop funciona. (C1.)
-- **FALTA** — Vender en varias partes funciona. (C1.)
-- **FALTA** — Cartera en vivo: saldo, posiciones, ganancia o pérdida en vivo. (C2.)
-- **FALTA** — Historial de órdenes, con comisión y motivo, y se puede bajar en CSV. (C3; hoy solo hay `decisiones.csv`, que no es historial de órdenes con comisión.)
+**Órdenes y cartera (2026-11-08):**
+- **HECHO** — Límite: creación y cancelación en navegador; llenado al precio en pruebas L y CM6.
+- **HECHO** — Stop y objetivo juntos: configurados en navegador y resolución probada en motor; stop primero en vela ambigua.
+- **HECHO** — Trailing: configuración visible en navegador; sube, no baja y cierra en pruebas T y CF19/CF20.
+- **HECHO** — Venta en partes: dos objetivos al crear en navegador; ventas y comisiones verificadas en TP/TPS/CM7/CF1–CF2, incluso misma vela.
+- **HECHO** — Saldo total/por moneda, posiciones, P/L vivo neto estimado, curva y calculadora; navegador a 1440/360/390 px. Sin conexión avisa y se recupera.
+- **HECHO** — Historial buscable con abiertas/pendientes/canceladas/ejecutadas, comisión y motivo; CSV descargado y contenido comprobado en los tres tamaños.
+- Los disparos de precio usan datos controlados en pruebas; no se esperó una señal del mercado en vivo. Las pruebas de interfaz usan cotizaciones públicas reales y dinero ficticio aislado.
 
 **Exchanges e indicadores:**
 - **FALTA** — Cambiar de exchange entre Binance, Bybit, OKX y Kraken funciona. (D2; `ccxt` instalado pero sin usar.)
@@ -477,8 +482,8 @@ en el navegador (o, si es de API/backtest, con pruebas/curl). Fecha de esta revi
 - **HECHO** — El botón "Actualizar ahora" no llama a Brio. (2026-11-07: verificado en código, tooltip y pie de vista; solo lee lo guardado o busca RSS.)
 
 **Teléfono y web:**
-- **FALTA** — Panel en teléfono a 360px: ninguna tabla se sale, ningún botón es chico, todo se lee sin zoom. (F3; no probado en tamaño teléfono real.)
-- **FALTA** — Panel en teléfono a 390px: lo mismo. (F3.)
+- **FALTA (parcial)** — Panel en teléfono a 360px: Cartera probada en emulación táctil Chrome el 2026-11-08, sin desborde de página y botones ≥44 px; faltan las otras vistas (F3).
+- **FALTA (parcial)** — Panel en teléfono a 390px: misma verificación de Cartera y mismos pendientes (F3).
 - **FALTA (parcial)** — Menú abajo funciona, favoritos, comparador y simulador funcionan con toque. (Favoritos/comparador/simulador verificados en navegador de escritorio el 2026-11-07, commit 23542b1; NO probados con toque en teléfono; F2/F3.)
 - **FALTA** — Se puede abrir desde el teléfono por web, no solo desde la PC. (F4; depende de E2, servidor solo en `127.0.0.1`.)
 
@@ -489,7 +494,7 @@ en el navegador (o, si es de API/backtest, con pruebas/curl). Fecha de esta revi
 
 **Reportes y sin errores:**
 - **FALTA** — Reporte por mes, con ganancia, operaciones y peor caída, y se baja en CSV. (H1.)
-- **FALTA (parcial)** — `python bot/pruebas.py` sale `TODO OK`, con más de 90 pruebas. (2026-11-07: `TODO OK` con **90** verificado hoy; falta superar 90 al añadir las pruebas de cada parte nueva.)
+- **HECHO** — `python bot/pruebas.py` sale `TODO OK`, con más de 90 pruebas. (2026-11-08: **177 comprobaciones OK**, contadas en la salida; base original de este plan: 90.)
 - **FALTA (parcial)** — No hay botones muertos, ni pantallas vacías, ni números inventados. (Revisión parcial hecha; falta auditoría completa de botones y prueba en teléfono; H3.)
 
 ## 11. Lo que el dueño tiene que decidir — no lo decide el agente solo
@@ -504,7 +509,10 @@ en el navegador (o, si es de API/backtest, con pruebas/curl). Fecha de esta revi
 3. **Arrancar la prueba en papel de S11 por 30 días.** Cuando lo autorice. Sin eso, B3 queda pendiente.
 4. **Dinero real.** Solo con su aprobación por escrito, después de la prueba en papel. Nunca antes.
    `SOLO_PRUEBA=True` se mantiene todo este trabajo.
-5. **Python de los `.bat`.** ¿Se ajustan a 3.14 o se corre a mano? El README ya trae los comandos sueltos.
+5. **Python de los `.bat`: resuelto en A.** `_python.bat` detecta un intérprete válido, incluido 3.14.
+   Sigue disponible la ejecución manual documentada; ya no bloquea el trabajo.
 6. **Cuentas y pago.** ¿Qué plan es gratis y qué plan es de pago, y cuánto cuesta? (G3, por escrito.)
+7. **GitHub.** Decisión ya tomada: seguir y subir al final. La autenticación quedó pendiente;
+   no reintentar el push en este cierre parcial de C.
 
 Si una de estas decisiones no está, ese trabajo queda marcado como pendiente, no se inventa.

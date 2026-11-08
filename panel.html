@@ -332,7 +332,20 @@ td.fav:hover{color:#f0b90b}
 #caBuscar:focus{outline:none;border-color:var(--cy)}
 #caCurva{width:100%;display:block}
 .caCerrar{padding:3px 9px;font-size:11px;margin:0}
-@media(max-width:600px){.formgrid{grid-template-columns:1fr}}
+#v-cartera .btn{min-height:44px;min-width:44px}
+#v-cartera .scrolly{max-width:100%;overscroll-behavior-x:contain}
+#v-cartera th,#v-cartera td{white-space:nowrap}
+@media(max-width:600px){
+  .formgrid{grid-template-columns:minmax(0,1fr)}
+  #v-cartera .note,#v-cartera td{font-size:14px}
+  #v-cartera input,#v-cartera select{font-size:16px;min-height:44px}
+  #v-cartera h3{flex-wrap:wrap}
+  .rail{overflow-x:auto;justify-content:flex-start}
+  .rail button{flex:0 0 44px;min-height:44px}
+  .status{height:32px;flex-basis:32px;overflow-x:auto;white-space:nowrap;font-size:12px}
+  .status span{flex-shrink:0}
+  .status .grow,.status span:last-child{display:none}
+}
 
 /* ---------- on-chain ---------- */
 .tabs{display:flex;gap:3px;border-bottom:1px solid var(--bd);margin-bottom:12px;flex-wrap:wrap}
@@ -747,6 +760,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
           <div class="note">Cuenta de práctica con <b>precios reales</b> y dinero ficticio. No mueve plata de verdad: sirve para probar las órdenes inteligentes (entrada, stop, objetivo en partes, trailing y límite) antes de confiar en ellas. Es aparte del bot S11, que se mira en «El bot».</div>
           <div class="row c4" id="caResumen" style="margin-top:10px"></div>
           <div class="note m" id="caDias" style="margin-top:8px"></div>
+          <div class="scrolly"><table><thead><tr><th>Cuenta por moneda</th><th>Efectivo USD</th><th>Invertido USD</th><th>Valor total USD</th></tr></thead><tbody id="caSaldos"></tbody></table></div>
         </div>
 
         <div class="row split">
@@ -768,10 +782,11 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
           </div>
 
           <div class="card"><h3>Calculadora de riesgo <span class="note m" id="caRiesgoMoneda" style="margin:0"></span></h3>
-            <div class="note">Pongo tanto dinero, si me sale mal pierdo tanto. En dólares y en porcentaje, para la moneda que estás mirando.</div>
+            <div class="note">Estimá la pérdida para la moneda seleccionada. Podés hacer la cuenta en dólares o pesos: no convierte divisas ni consulta un tipo de cambio.</div>
             <div class="formgrid">
-              <label>Pongo (USD)<input id="caRiesgoMonto" type="number" step="any" min="1" value="1000"></label>
-              <label>Stop-loss (%)<input id="caRiesgoStop" type="number" step="0.1" min="0.1" value="1.5"></label>
+              <label>Unidad del cálculo<select id="caRiesgoUnidad"><option value="USD">Dólares (USD)</option><option value="pesos">Pesos</option></select></label>
+              <label>Pongo<input id="caRiesgoMonto" type="number" step="any" min="1" value="1000"></label>
+              <label>Corte de pérdida (%)<input id="caRiesgoStop" type="number" step="any" min="0.1" max="50" value="1.5"></label>
             </div>
             <button class="btn" id="caRiesgoNatural" style="margin-top:8px">Usar el stop natural de esta moneda</button>
             <div class="note" id="caRiesgoOut" style="margin-top:10px;font-size:15px"></div>
@@ -779,7 +794,9 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
 
         <div class="card" style="margin-top:12px"><h3>Posiciones abiertas</h3>
-          <div class="note">Ganancia o pérdida en vivo de cada una, con el precio real de ahora. El stop y el objetivo se actualizan solos cuando refrescás.</div>
+          <div class="note">Pérdida o ganancia estimada si cerraras ahora, descontando comisiones y deslizamiento. Las órdenes se revisan al actualizar esta vista (también cada 90 segundos mientras está abierta), no son órdenes enviadas al exchange ni vigilancia continua.</div>
+          <button class="btn" id="caActualizar">Actualizar cartera</button>
+          <div class="note" id="caEstado" role="status" style="margin-top:8px"></div>
           <div class="scrolly"><table><thead><tr>
             <th>Moneda</th><th>Cantidad</th><th>Entrada</th><th>Precio ahora</th><th>P/L vivo</th><th>Stop</th><th>Objetivo</th><th>Trailing</th><th></th>
           </tr></thead><tbody id="caPosiciones"></tbody></table></div>
@@ -793,13 +810,13 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
 
         <div class="card" style="margin-top:12px"><h3>Historial de órdenes</h3>
-          <div class="note">Cada orden cerrada, con fecha, moneda, precio, cantidad, comisión, motivo y resultado. Se puede buscar y bajar en CSV.</div>
+          <div class="note">Órdenes abiertas, pendientes, canceladas y ejecuciones cerradas, con fecha, moneda, precio, cantidad, comisión, motivo y resultado. En una pendiente o cancelada, cantidad y precio de entrada son los solicitados: no se ejecutaron ni cobraron. Se puede buscar y bajar en CSV.</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0">
             <input id="caBuscar" placeholder="Buscar por moneda o motivo…" autocomplete="off" style="flex:1;min-width:180px">
             <button class="btn" id="caBajarCsv">Descargar historial (CSV)</button>
           </div>
           <div class="scrolly" style="max-height:320px"><table><thead><tr>
-            <th>Fecha</th><th>Moneda</th><th>Entrada</th><th>Salida</th><th>Cantidad</th><th>Comisión</th><th>Motivo</th><th>Resultado</th>
+            <th>Fecha</th><th>Moneda</th><th>Estado</th><th>Entrada</th><th>Salida</th><th>Cantidad</th><th>Comisión</th><th>Motivo</th><th>Resultado</th>
           </tr></thead><tbody id="caHistorial"></tbody></table></div>
           <div class="note m" id="caHistCount" style="margin-top:8px"></div>
         </div>
@@ -1073,7 +1090,12 @@ function irA(v){
   if(v==='onchain' && !oc.cadenas) traerOnchain();
   if(v==='lab' && !lab.lista) { lab.lista = true; labIniciar(); }
   if(v==='noticias') traerNoticias();
-  if(v==='cartera') traerCartera();
+  if(v==='cartera'){
+    var sel = document.getElementById('caMoneda');
+    if(CART_SIMBOLOS.indexOf(estado.simbolo)>=0) sel.value=estado.simbolo;
+    sel.dispatchEvent(new Event('change'));
+    traerCartera();
+  }
 }
 Array.prototype.forEach.call(document.querySelectorAll('.rail button[data-v]'), function(b){
   b.onclick = function(){ irA(b.dataset.v); };
@@ -1908,6 +1930,7 @@ function traerBot(){
 function recargar(){
   traerMercados().then(traerVelas).then(traerLog).catch(function(e){ avisar('No se pudo actualizar: '+e.message); });
   traerChispas(); traerMundo(); traerBot();
+  if(document.getElementById('v-cartera').classList.contains('on')) traerCartera();
 }
 
 /* ==================== cuaderno ==================== */
@@ -2042,6 +2065,7 @@ function aplicarTema(){
   [serieVelas, bigVelas].forEach(function(s){ if(s) s.applyOptions({ upColor:up, downColor:dn, wickUpColor:up, wickDownColor:dn }); });
   if(serieVol) serieVol.applyOptions({ priceScaleId:'v' });
   pintarGrafico(); pintarDispersin(); pintarProfundidad();
+  if(cart && document.getElementById('v-cartera').classList.contains('on')) pintarCurvaCartera();
 }
 document.getElementById('btnTema').onclick = function(){
   PREF.tema = PREF.tema==='claro' ? 'oscuro' : 'claro'; salvarPref(); aplicarTema();
@@ -2718,6 +2742,10 @@ function simContar(d, objetivo, capital){
 var CART_SIMBOLOS = ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','DOGEUSDT'];
 var cart = null, cartCargando = false, cartHistFiltro = '';
 function cartNombre(sim){ return String(sim||'').replace('USDT',''); }
+function cartDinero(v){ return '$'+Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function cartMotivo(v){
+  return String(v||'').replace('trailing stop','corte móvil').replace('stop loss','corte de pérdida').replace('take profit','objetivo de ganancia');
+}
 function fechaCorta(ts){
   if(!ts) return '—';
   var d = new Date(ts);
@@ -2732,10 +2760,11 @@ function traerCartera(){
   }
   if(cartCargando) return;
   cartCargando = true;
-  pedir('cartera').then(function(j){
+  document.getElementById('caEstado').textContent = 'Actualizando cotizaciones…';
+  return pedir('cartera').then(function(j){
     cartCargando = false;
     if(!j || j.estado!=='ok' || !j.datos){
-      document.getElementById('caDias').textContent = 'No se pudo leer la cartera ('+(j&&j.estado?j.estado:'sin respuesta')+'). Dale R para reintentar.';
+      document.getElementById('caEstado').textContent = 'No se pudo leer la cartera. Los valores anteriores no son cotizaciones actuales; reintentá con Actualizar cartera.';
       return;
     }
     cart = j.datos;
@@ -2743,7 +2772,7 @@ function traerCartera(){
     pintarFuentes();
   }).catch(function(e){
     cartCargando = false;
-    document.getElementById('caDias').textContent = 'No se pudo leer la cartera: '+e.message+'. Revisá la conexión y dale R.';
+    document.getElementById('caEstado').textContent = 'Sin conexión. Se conservan valores anteriores, no actuales. Usá Actualizar cartera para reintentar.';
   });
 }
 
@@ -2751,8 +2780,8 @@ function pintarCartera(){
   if(!cart) return;
   var r = cart.resumen || {}, pnl = num(r.pnl_neto), vacia = !r.mercados;
   var cards = [
-    ['Saldo total', vacia?'—':dol(r.capital_total), 'c', 'efectivo + posiciones', ''],
-    ['Ganancia / pérdida', vacia||pnl===null?'—':(pnl>=0?'+':'−')+'$'+Math.round(Math.abs(pnl)).toLocaleString('es-AR'), vacia||pnl===null?'':cls(pnl), vacia?'sin usar todavía':pct((r.retorno||0)*100,2)+' sobre lo puesto', vacia||pnl===null?'':cls(pnl)],
+    ['Saldo total (USD)', vacia?'—':cartDinero(r.capital_total), 'c', 'efectivo + posiciones', ''],
+    ['Ganancia / pérdida', vacia||pnl===null?'—':(pnl>=0?'+':'−')+cartDinero(Math.abs(pnl)), vacia||pnl===null?'':cls(pnl), vacia?'sin usar todavía':pct((r.retorno||0)*100,2)+' sobre lo puesto', vacia||pnl===null?'':cls(pnl)],
     ['Operaciones', String(r.operaciones||0), '', (r.ganadoras||0)+' ganadoras', ''],
     ['En posición', String(r.en_posicion||0), 'v', (r.mercados||0)+' monedas usadas', '']
   ];
@@ -2763,7 +2792,13 @@ function pintarCartera(){
     ? 'Todavía no colocaste ninguna orden. Cada moneda arranca con <b>'+dol(cart.capital_por_mercado)+'</b> de plata falsa cuando abrís su primera posición. Colocá una orden arriba para empezar.'
     : 'Cuenta en papel desde hace <b>'+n1(r.dias_en_papel||0)+' días</b>. Arrancó con <b>'+dol(r.capital_inicial)+'</b> ('+dol(cart.capital_por_mercado)+' por moneda). Todo es plata falsa: no mueve dinero real.';
 
+  document.getElementById('caEstado').textContent = (cart.sin_precio||[]).length
+    ? 'Sin cotización reciente de '+cart.sin_precio.map(cartNombre).join(', ')+'. Se conserva la última valoración; no se ejecutaron órdenes con precios viejos.'
+    : 'Cuenta actualizada. Importes en USD; dinero ficticio.';
   var poss = (cart.mercados||[]).filter(function(m){ return m.posicion; });
+  document.getElementById('caSaldos').innerHTML = (cart.mercados||[]).map(function(m){
+    return '<tr><td>'+escHtml(cartNombre(m.simbolo))+'</td><td>'+cartDinero(m.efectivo)+'</td><td>'+cartDinero(m.valor_posicion||0)+'</td><td>'+cartDinero(m.valor)+'</td></tr>';
+  }).join('');
   var tbody = document.getElementById('caPosiciones');
   if(!poss.length){
     tbody.innerHTML = '';
@@ -2773,16 +2808,17 @@ function pintarCartera(){
     tbody.innerHTML = poss.map(function(m){
       var p = m.posicion, llena = p.llena!==false, precio = num(m.precio), pnlv = num(m.pnl_vivo);
       var valor = llena && precio!==null ? p.cantidad*precio : null;
-      var trailing = p.stop > p.stop_inicial + 1e-9;
+      var trailing = m.cfg && m.cfg.trailing_stop > 0;
+      var fresco = (cart.sin_precio||[]).indexOf(m.simbolo)<0;
       return '<tr>'+
         '<td class="txt"><b>'+escHtml(cartNombre(m.simbolo))+'</b><div class="note m" style="margin:2px 0 0;font-size:10px">'+(llena?(valor!==null?dol(valor)+' en esta moneda':'—'):'orden límite pendiente')+'</div></td>'+
         '<td>'+fmt(p.cantidad)+'</td>'+
         '<td>'+(llena?fmt(p.entrada_precio):fmt(p.precio_limite)+' <span class="m">(límite)</span>')+'</td>'+
-        '<td>'+(precio!==null?fmt(precio):'—')+'</td>'+
+        '<td>'+(precio!==null?fmt(precio):'—')+(fresco?'':' (anterior)')+'</td>'+
         '<td class="'+(llena&&pnlv!==null?cls(pnlv):'')+'">'+(llena&&pnlv!==null?(pnlv>=0?'+':'−')+'$'+Math.abs(pnlv).toFixed(2):'—')+'</td>'+
         '<td>'+fmt(p.stop)+'</td>'+
         '<td>'+fmt(p.objetivo)+'</td>'+
-        '<td>'+(trailing?'<span class="g">activo ↑</span>':'<span class="m">—</span>')+'</td>'+
+        '<td>'+(trailing?'<span class="g">'+n1(m.cfg.trailing_stop*100)+' %</span>':'<span class="m">apagado</span>')+'</td>'+
         '<td><button class="btn caCerrar" data-sim="'+escHtml(m.simbolo)+'">'+(llena?'Cerrar':'Cancelar')+'</button></td>'+
       '</tr>';
     }).join('');
@@ -2796,12 +2832,12 @@ function pintarCurvaCartera(){
   if(!cv) return;
   var datos = (cart && cart.curva) || [], txt = document.getElementById('caCurvaTxt');
   var ctx = cv.getContext('2d');
-  var W = Math.max(280, cv.clientWidth || (cv.parentNode?cv.parentNode.clientWidth:600) || 600);
+  var W = Math.max(1, cv.parentNode.clientWidth - parseFloat(getComputedStyle(cv.parentNode).paddingLeft) - parseFloat(getComputedStyle(cv.parentNode).paddingRight));
   var H = 200, dpr = window.devicePixelRatio||1;
   cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
   cv.style.width = W+'px'; cv.style.height = H+'px';
   ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
-  var cs = getComputedStyle(document.documentElement);
+  var cs = getComputedStyle(document.body);
   var cUp=(cs.getPropertyValue('--up')||'#0ecb81').trim(), cDn=(cs.getPropertyValue('--dn')||'#f6465d').trim();
   var cFt=(cs.getPropertyValue('--ft')||'#5e6c7b').trim(), cBd=(cs.getPropertyValue('--bd')||'#1c2733').trim();
   if(datos.length<2){
@@ -2813,14 +2849,14 @@ function pintarCurvaCartera(){
   var vals = datos.map(function(d){return d.capital;});
   var lo=Math.min.apply(null,vals.concat([base])), hi=Math.max.apply(null,vals.concat([base]));
   var pad=(hi-lo)*0.12 || Math.max(1,hi*0.01); lo-=pad; hi+=pad;
-  var L=52,R=12,T=12,B=26, pw=W-L-R, ph=H-T-B;
+  var L=76,R=12,T=12,B=26, pw=W-L-R, ph=H-T-B;
   function X(i){ return L + i/(datos.length-1)*pw; }
   function Y(v){ return T + (1-(v-lo)/(hi-lo))*ph; }
   ctx.font='10px ui-monospace,monospace'; ctx.fillStyle=cFt; ctx.strokeStyle=cBd; ctx.lineWidth=1;
   for(var g=0;g<=3;g++){
     var vv=lo+(hi-lo)*g/3, yy=Y(vv);
     ctx.beginPath(); ctx.moveTo(L,yy); ctx.lineTo(W-R,yy); ctx.stroke();
-    ctx.fillText('$'+Math.round(vv).toLocaleString('es-AR'), 4, yy+3);
+    ctx.fillText(cartDinero(vv), 4, yy+3);
   }
   ctx.save(); ctx.setLineDash([4,4]); ctx.strokeStyle=cFt;
   ctx.beginPath(); ctx.moveTo(L,Y(base)); ctx.lineTo(W-R,Y(base)); ctx.stroke(); ctx.restore();
@@ -2834,24 +2870,25 @@ function pintarCurvaCartera(){
   ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
   ctx.beginPath(); ctx.arc(X(datos.length-1),Y(last),3,0,7); ctx.fillStyle=col; ctx.fill();
   var delta=last-base, dp=base?delta/base*100:0, signo=delta>=0?'+':'−';
-  txt.innerHTML = 'Empezaste con <b>'+dol(base)+'</b>; ahora la cuenta marca <b class="'+cls(delta)+'">'+dol(last)+'</b> (<span class="'+cls(delta)+'">'+signo+'$'+Math.round(Math.abs(delta)).toLocaleString('es-AR')+' · '+pct(dp,2)+'</span>). '+datos.length+' momentos marcados.';
+  txt.innerHTML = 'Capital inicial de las monedas usadas: <b>'+cartDinero(base)+'</b>; ahora la cuenta marca <b class="'+cls(delta)+'">'+cartDinero(last)+'</b> (<span class="'+cls(delta)+'">'+signo+cartDinero(Math.abs(delta))+' · '+pct(dp,2)+'</span>). '+datos.length+' momentos marcados. Cada moneda usada aporta su capital inicial a toda la curva; sumar otra moneda no cuenta como ganancia.';
 }
 
 function pintarHistorialCartera(){
   var hist = (cart && cart.historial) || [], f = cartHistFiltro.toLowerCase();
   var filas = hist.filter(function(o){
-    return !f || (cartNombre(o.simbolo)+' '+(o.motivo_salida||'')).toLowerCase().indexOf(f)>=0;
+    return !f || (cartNombre(o.simbolo)+' '+o.estado+' '+cartMotivo(o.motivo_salida)).toLowerCase().indexOf(f)>=0;
   });
   document.getElementById('caHistorial').innerHTML = filas.map(function(o){
     var neto = num(o.pnl_neto);
     return '<tr>'+
-      '<td class="txt">'+fechaCorta(o.salida_ts)+'</td>'+
+      '<td class="txt">'+fechaCorta(o.salida_ts||o.entrada_ts)+'</td>'+
       '<td>'+escHtml(cartNombre(o.simbolo))+'</td>'+
+      '<td>'+escHtml(o.estado)+'</td>'+
       '<td>'+fmt(o.entrada_precio)+'</td>'+
-      '<td>'+fmt(o.salida_precio)+'</td>'+
+      '<td>'+(o.salida_precio==null?'—':fmt(o.salida_precio))+'</td>'+
       '<td>'+fmt(o.cantidad)+'</td>'+
       '<td>$'+(+o.comisiones||0).toFixed(2)+'</td>'+
-      '<td class="txt">'+escHtml(o.motivo_salida||'')+'</td>'+
+      '<td class="txt">'+escHtml(cartMotivo(o.motivo_salida))+'</td>'+
       '<td class="'+(neto===null?'':cls(neto))+'">'+(neto===null?'—':(neto>=0?'+':'−')+'$'+Math.abs(neto).toFixed(2))+'</td>'+
     '</tr>';
   }).join('');
@@ -2860,10 +2897,10 @@ function pintarHistorialCartera(){
 
 function bajarCsvCartera(){
   var hist = (cart && cart.historial) || [];
-  if(!hist.length){ avisar('Todavía no hay órdenes cerradas para bajar.'); return; }
-  var cab = ['fecha_salida','moneda','entrada_precio','salida_precio','cantidad','comision','motivo','pnl_neto','pnl_bruto','velas'];
+  if(!hist.length){ avisar('Todavía no hay órdenes para bajar.'); return; }
+  var cab = ['fecha_salida','moneda','entrada_precio','salida_precio','cantidad','comision','motivo','pnl_neto','pnl_bruto','velas','fecha_entrada','estado'];
   var filas = hist.map(function(o){
-    return [o.salida_ts?new Date(o.salida_ts).toISOString():'', cartNombre(o.simbolo), o.entrada_precio, o.salida_precio, o.cantidad, o.comisiones, o.motivo_salida, o.pnl_neto, o.pnl_bruto, o.velas];
+    return [o.salida_ts?new Date(o.salida_ts).toISOString():'', cartNombre(o.simbolo), o.entrada_precio, o.salida_precio, o.cantidad, o.comisiones, cartMotivo(o.motivo_salida), o.pnl_neto, o.pnl_bruto, o.velas, o.entrada_ts?new Date(o.entrada_ts).toISOString():'', o.estado];
   });
   descargar(csvDe(cab,filas), 'cartera_historial.csv');
   avisarOk('Historial bajado como cartera_historial.csv ('+hist.length+(hist.length===1?' orden':' órdenes')+').');
@@ -2873,12 +2910,13 @@ function calcRiesgoCartera(){
   var monto = parseFloat(document.getElementById('caRiesgoMonto').value);
   var stop = parseFloat(document.getElementById('caRiesgoStop').value);
   var out = document.getElementById('caRiesgoOut');
-  if(!isFinite(monto)||monto<=0||!isFinite(stop)||stop<=0){
-    out.innerHTML = 'Poné un monto y un stop válidos para ver cuánto perderías si te sale mal.';
+  if(!isFinite(monto)||monto<=0||!isFinite(stop)||stop<0.1||stop>50){
+    out.textContent = 'Poné un monto positivo y un corte entre 0,1 y 50 %.';
     return;
   }
   var perdida = monto*stop/100, sim = cartNombre(document.getElementById('caMoneda').value);
-  out.innerHTML = 'Si ponés <b>'+dol(monto)+'</b> en <b>'+escHtml(sim)+'</b> y te sale mal, con un stop de <b>'+n1(stop)+' %</b> perdés <b class="r">$'+Math.round(perdida).toLocaleString('es-AR')+'</b> (o sea <b class="r">'+n1(stop)+' %</b> de lo que pusiste). Te quedarían <b>'+dol(monto-perdida)+'</b>.';
+  var unidad = document.getElementById('caRiesgoUnidad').value;
+  out.innerHTML = 'Si ponés <b>'+cartDinero(monto)+' '+unidad+'</b> en <b>'+escHtml(sim)+'</b>, un corte de <b>'+n1(stop)+' %</b> representa <b class="r">'+cartDinero(perdida)+' '+unidad+'</b> ('+n1(stop)+' %). Quedarían <b>'+cartDinero(monto-perdida)+' '+unidad+'</b>, antes de comisiones y deslizamiento. Es una estimación: un salto de precio puede aumentar la pérdida.';
 }
 
 function riesgoNaturalCartera(){
@@ -2888,6 +2926,7 @@ function riesgoNaturalCartera(){
   pedir('asistente',{simbolo:sim}).then(function(j){
     btn.disabled=false; btn.textContent='Usar el stop natural de esta moneda';
     var d = j && j.datos;
+    if(document.getElementById('caMoneda').value!==sim) return;
     if(!d || !d.riesgo || !isFinite(d.riesgo.stop_pct)){
       avisar('No se pudo calcular el stop natural de '+cartNombre(sim)+'. Probá de nuevo.'); return;
     }
@@ -2906,12 +2945,15 @@ function colocarOrdenCartera(){
   var stop = parseFloat(document.getElementById('caStop').value);
   var tp1 = parseFloat(document.getElementById('caTp1').value);
   var tp2v = document.getElementById('caTp2').value, tp2 = tp2v?parseFloat(tp2v):null;
-  var trailing = parseFloat(document.getElementById('caTrailing').value)||0;
+  var trailing = parseFloat(document.getElementById('caTrailing').value);
   var riesgo = parseFloat(document.getElementById('caRiesgo').value);
   if(LOCAL){ msg.innerHTML='<span class="r">La cartera necesita el servidor local. Abrí «Abrir panel.bat».</span>'; return; }
   if(!isFinite(stop)||stop<=0){ msg.innerHTML='<span class="r">Poné un stop-loss válido (%).</span>'; return; }
   if(!isFinite(tp1)||tp1<=0){ msg.innerHTML='<span class="r">Poné un objetivo 1 válido (%).</span>'; return; }
   if(!isFinite(riesgo)||riesgo<=0){ msg.innerHTML='<span class="r">Poné un riesgo por operación válido (%).</span>'; return; }
+  if(stop>50 || stop<0.1 || riesgo>10 || riesgo<0.1 || tp1>500 || tp1<0.1 || !isFinite(trailing) || trailing<0 || trailing>50 || (tp2v && (!isFinite(tp2)||tp2<=tp1||tp2>500))){
+    msg.textContent='Revisá los límites: corte 0,1–50 %, riesgo 0,1–10 %, corte móvil 0–50 %, objetivos hasta 500 % y en orden creciente.'; return;
+  }
   var body = {simbolo:sim, tipo:tipo, stop_loss:stop/100, take_profit:tp1/100, trailing_stop:trailing/100, riesgo_por_operacion:riesgo/100};
   if(tipo==='limite'){
     var pl = parseFloat(document.getElementById('caLimite').value);
@@ -2950,7 +2992,7 @@ function cerrarPosicionCartera(sim, btn){
       if(j.estado==='ok'){ avisarOk(j.detalle && j.detalle.cancelada ? 'Orden límite de '+cartNombre(sim)+' cancelada (plata falsa).' : 'Posición de '+cartNombre(sim)+' cerrada (plata falsa).'); }
       else { avisar(j.detalle||'No se pudo cerrar la posición.'); }
       traerCartera();
-    }).catch(function(e){ avisar('Error: '+e.message); traerCartera(); });
+    }).catch(function(e){ avisar('Error: '+e.message); traerCartera(); }).finally(function(){ btn.disabled=false; btn.textContent='Cerrar / cancelar'; });
 }
 
 function carteraInit(){
@@ -2962,6 +3004,8 @@ function carteraInit(){
   });
   document.getElementById('caColocar').onclick = colocarOrdenCartera;
   document.getElementById('caRiesgoNatural').onclick = riesgoNaturalCartera;
+  document.getElementById('caActualizar').onclick = traerCartera;
+  document.getElementById('caRiesgoUnidad').addEventListener('change', calcRiesgoCartera);
   document.getElementById('caRiesgoMonto').addEventListener('input', calcRiesgoCartera);
   document.getElementById('caRiesgoStop').addEventListener('input', calcRiesgoCartera);
   sel.addEventListener('change', function(){

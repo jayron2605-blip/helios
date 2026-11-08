@@ -800,8 +800,7 @@ check("CM7b las dos partes se vendieron", len(ops_sol) == 2 and cmtp.estado["mer
 cmv = _cartera.CarteraManual(ruta=os.path.join(tmp, "cartera_val.json"))
 okv, detv = cmv.colocar_orden("BNBUSDT", _cm_velas([100.0, 100.0]),
                               {"stop_loss": 99.0, "take_profit": -5.0, "trailing_stop": "basura"})
-check("CM8 acota valores absurdos sin romper", okv and 0 < detv["posicion"]["stop"] < 100.0,
-      f"stop={detv['posicion']['stop']:.3f}" if okv else str(detv))
+check("CM8 rechaza parametros absurdos sin cambiar la cuenta", not okv and not cmv.estado["mercados"], str(detv))
 
 cms = _cartera.CarteraManual(ruta=os.path.join(tmp, "cartera_stop.json"))
 cms.colocar_orden("XRPUSDT", _cm_velas([100.0, 100.0]), {"stop_loss": 0.015, "take_profit": 0.5})
@@ -809,6 +808,94 @@ cms.procesar("XRPUSDT", _cm_velas([97.0], ini=2))
 ops_xrp = cms.estado["mercados"]["XRPUSDT"]["operaciones"]
 check("CM9 el stop loss cierra y registra perdida", len(ops_xrp) == 1 and ops_xrp[0]["pnl_neto"] < 0,
       ops_xrp[0]["motivo_salida"] if ops_xrp else "sigue abierta")
+
+print("\n== cierre de cartera: regresiones ==")
+from unittest.mock import patch
+from copy import deepcopy
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import servidor as _servidor
+
+b = Broker(cfg_tp)
+b.abrir("X", base, 100, 0.6)
+b.actualizar("X", base + 3600000, 100, 107, 99, 106)
+check("CF1 vende todos los objetivos tocados en una vela", b.posicion is None and len(b.operaciones) == 2)
+check("CF2 objetivos simultaneos conservan contabilidad", abs(b.efectivo - 1000 - sum(o.pnl_neto for o in b.operaciones)) < 1e-8)
+b = Broker(cfg_lim)
+b.abrir("X", base, 100, 0.6, limite=95)
+b.cerrar(base + 1, 100, "no debe vender una pendiente")
+check("CF3 cerrar limite sin llenar no crea dinero", b.efectivo == 1000 and not b.operaciones)
+b.actualizar("X", base + 3600000, 96, 98, 90, 92)
+check("CF4 limite y stop en la misma vela protegen la cuenta", b.posicion is None and b.operaciones[0].pnl_neto < 0)
+b = Broker(cfg_lim)
+b.abrir("X", base, 100, 0.6)
+b.actualizar("X", base + 3600000, 90, 95, 89, 94)
+check("CF5 salto de precio no inventa venta al stop", b.operaciones[0].salida_precio == 90)
+
+cerradas = _cm_velas([100, 100])
+actual = {"t": base + 7200000, "o": 100, "h": 130, "l": 50, "c": 100, "cerrada": False}
+momento = actual["t"] + 60000
+cc = _cartera.CarteraManual(ruta=os.path.join(tmp, "final_cartera.json"))
+cc.colocar_orden("BTCUSDT", cerradas + [actual], {}, momento=momento)
+check("CF6 la orden registra su hora real", cc.estado["mercados"]["BTCUSDT"]["posicion"]["entrada_ts"] == momento)
+cc.procesar("BTCUSDT", cerradas + [actual], momento=momento + 1000)
+check("CF7 ignora maximo y minimo previos de vela abierta", cc.estado["mercados"]["BTCUSDT"]["posicion"] is not None)
+det = cc.detalle({"BTCUSDT": 100})
+check("CF8 P/L vivo descuenta entrada y salida", det["mercados"][0]["pnl_vivo"] < -2)
+sin_red = cc.detalle()
+check("CF9 sin red conserva valor invertido", abs(sin_red["mercados"][0]["valor"] - det["mercados"][0]["valor"]) < .01)
+check("CF10 saldo y detalle sin red coinciden", abs(sin_red["resumen"]["capital_total"] - sum(m["valor"] for m in sin_red["mercados"])) < .01)
+cc.cerrar("BTCUSDT", cerradas + [actual], momento=momento + 2000)
+check("CF11 curva guarda varios movimientos de la misma hora", len(cc.detalle()["curva"]) >= 3)
+cc.salvar()
+check("CF12 persistencia conserva curva e historial", _cartera.CarteraManual(ruta=cc.ruta).detalle()["historial"] == cc.detalle()["historial"])
+
+for nombre, entrada in [("numero no finito", {"stop_loss": float("nan")}),
+                         ("tipo desconocido", {"tipo": "otro"}),
+                         ("objetivos mal formados", {"take_profits": 5}),
+                         ("objetivos desordenados", {"take_profits": [[.5, .06], [.5, .03]]}),
+                         ("porciones excesivas", {"take_profits": [[.8, .03], [.8, .06]]}),
+                         ("booleano como monto", {"stop_loss": True})]:
+    anterior = deepcopy(cc.estado)
+    resultado, _ = cc.colocar_orden("ETHUSDT", cerradas, entrada)
+    check("CF13 rechaza " + nombre, not resultado and cc.estado == anterior)
+
+cvacia = _cartera.CarteraManual(ruta=os.path.join(tmp, "no_existe_cartera.json"))
+check("CF14 cuenta vacia sin capital inventado", cvacia.resumen()["capital_inicial"] == cvacia.resumen()["capital_total"] == 0)
+with open(os.path.join(tmp, "rota.json"), "w", encoding="utf-8") as f:
+    f.write("{")
+try:
+    _cartera.CarteraManual(ruta=os.path.join(tmp, "rota.json"))
+    check("CF15 archivo roto no reinicia saldo", False)
+except ValueError:
+    check("CF15 archivo roto no reinicia saldo", True)
+
+with patch.object(_servidor, "pedir", return_value=([[base, "100", "102", "99", "100", "10", base+3599999]], "stale:TimeoutError")):
+    check("CF16 no ejecuta con cache vencida", _servidor.cartera_velas("BTCUSDT") == [])
+with patch.object(_servidor.time, "time", return_value=(base+60000)/1000), patch.object(_servidor, "pedir", return_value=([[base, "100", "102", "99", "100", "10", base+3599999]], "ok")):
+    check("CF17 identifica vela todavia abierta", _servidor.cartera_velas("BTCUSDT")[0]["cerrada"] is False)
+with patch.object(_servidor, "pedir", return_value=([[base, "NaN", "102", "99", "100", "10", base+3599999]], "ok")):
+    check("CF18 rechaza cotizacion invalida", _servidor.cartera_velas("BTCUSDT") == [])
+
+ct = _cartera.CarteraManual(ruta=os.path.join(tmp, "trailing_ticks.json"))
+ct.colocar_orden("BTCUSDT", cerradas + [actual], {"trailing_stop": .02, "take_profit": .5}, momento=momento)
+ct.procesar("BTCUSDT", [dict(actual, c=110)], momento=momento + 1000)
+ct.procesar("BTCUSDT", [dict(actual, cerrada=True, c=110),
+                        dict(actual, t=actual["t"]+3600000, c=110)], momento=momento+3600000)
+check("CF19 una vela anterior al tick no dispara el trailing retroactivamente", ct.estado["mercados"]["BTCUSDT"]["posicion"] is not None)
+ct.procesar("BTCUSDT", [dict(actual, t=actual["t"]+3600000, c=107)], momento=momento+3601000)
+check("CF20 el tick siguiente si ejecuta el trailing", ct.estado["mercados"]["BTCUSDT"]["posicion"] is None)
+
+ch = _cartera.CarteraManual(ruta=os.path.join(tmp, "cierre_atrasado.json"))
+ch.colocar_orden("BTCUSDT", cerradas, {})
+ch.cerrar("BTCUSDT", _cm_velas([90, 100], ini=2), momento=base+14400000)
+check("CF21 cerrar a mano respeta el stop anterior", ch.detalle()["historial"][0]["motivo_salida"] == "stop loss")
+ch.colocar_orden("ETHUSDT", cerradas, {"tipo": "limite", "precio_limite": 95})
+check("CF22 historial incluye orden pendiente sin cobro", any(o["estado"] == "pendiente" and o["comisiones"] == 0 for o in ch.detalle()["historial"]))
+saldo_antes = ch.resumen()["capital_total"]
+ch.cerrar("ETHUSDT", [], momento=base+18000000)
+ch.salvar()
+ch = _cartera.CarteraManual(ruta=ch.ruta)
+check("CF23 cancelacion persiste sin afectar saldo ni operaciones", ch.resumen()["capital_total"] == saldo_antes and ch.resumen()["operaciones"] == 1 and any(o["estado"] == "cancelada" and o["pnl_neto"] is None and o["comisiones"] == 0 for o in ch.detalle()["historial"]))
 
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)

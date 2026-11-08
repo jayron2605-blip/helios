@@ -17,9 +17,9 @@ gráfico usa una librería por CDN).
 | `Abrir panel.bat` | Levanta el servidor local y abre el terminal en el navegador |
 | `Entrenar.bat` | Baja el histórico de velas y entrena el modelo con walk-forward |
 | `Bot en papel.bat` | Cada 15 minutos mira el mercado, decide y anota |
-| `Probar el motor.bat` | Corre las 94 pruebas del motor, de los frenos, del candado y de las noticias |
+| `Probar el motor.bat` | Corre las 177 pruebas del motor, de los frenos, del candado y de las noticias |
 
-Teclas dentro del panel: `1`-`8` cambian de vista, `/` busca, `R` actualiza, `T` tema, `F` pantalla completa.
+Teclas dentro del panel: `1`-`9` cambian de vista, `/` busca, `R` actualiza, `T` tema, `F` pantalla completa.
 
 Los `.bat` ya no piden una versión fija: cada uno llama a `_python.bat`, que busca un Python que
 sirva de verdad (primero `py -3.12`, después el launcher de Python, después cualquier
@@ -32,7 +32,7 @@ Igual todo se puede correr a mano desde la carpeta del proyecto, con el intérpr
 
 ```
 python servidor.py          # el panel en http://127.0.0.1:8765/
-python bot/pruebas.py       # las 94 pruebas
+python bot/pruebas.py       # las 177 pruebas
 python bot/datos.py         # baja o actualiza las velas locales
 python bot/ventaja.py       # la búsqueda de ventaja (S0 a S12)
 python bot/cerebro.py 24    # una decisión en papel y la registra
@@ -41,7 +41,7 @@ python bot/cerebro.py 24    # una decisión en papel y la registra
 ## Qué hay dentro
 
 ```
-panel.html        panel de 8 vistas (sin framework)
+panel.html        panel de 9 vistas (sin framework)
 servidor.py       proxy local con caché; agrega los endpoints /api/*
 bot/asistente.py  traduce los números a palabras: estado, qué pasa y cuánto podés perder
 bot/decisiones.py registro de decisiones, con el resultado escrito 24 h después
@@ -50,14 +50,16 @@ bot/datos.py      descarga velas del repositorio público de Binance
 bot/modelo.py     entrenamiento walk-forward (33 pliegues, reentrena cada mes)
 bot/ejecutor.py   motor de órdenes: mismo código para backtest y prueba
 bot/exchange.py   firmado HMAC de Binance + 6 frenos + candado de modo prueba fijo
-bot/cerebro.py    circuito vivo: decide, registra y avisa; se apaga solo si no hay ventaja
+bot/cerebro.py    circuito S11 en papel: decide, registra y avisa
+bot/papel.py      cuenta automática S11; ensayo de 30 días pendiente de autorización
+bot/cartera.py    cuenta manual en papel, órdenes inteligentes y valoración
 bot/noticias.py   noticias en vivo con RSS, sin clave, conectadas con el precio
 bot/avisos.py     avisos al teléfono por Telegram, sólo cuando cambia algo importante
-bot/pruebas.py    94 pruebas del motor, de los frenos, del candado y de las noticias
+bot/pruebas.py    177 pruebas del motor, de los frenos, del candado y de las noticias
 bot/que_se_puede.py  test de qué es predecible y qué no
 ```
 
-## Las 8 vistas
+## Las 9 vistas
 
 1. **Panel** — el asistente arriba y debajo precios, gráfico, internos, seguimiento con
    favoritos (★, guardados en tu PC) y un comparador de hasta tres monedas lado a lado.
@@ -69,10 +71,35 @@ bot/que_se_puede.py  test de qué es predecible y qué no
 6. **Laboratorio** — reglas simples probadas contra velas reales, comparadas con no hacer nada, y
    el simulador **«¿Qué hubiera pasado si…?»**: moneda + fecha + capital, y compara
    comprar-y-sostener, DCA semanal y no comprar nada, con los rojos a la vista.
-7. **Noticias** — lo que pasó, con hora, fuente, moneda y qué hizo el precio la hora siguiente.
-8. **Ajustes** — cómo se usa cada cosa y de dónde sale cada dato.
+7. **Ajustes** — cómo se usa cada cosa y de dónde sale cada dato.
+8. **Noticias** — lo que pasó, con hora, fuente, moneda y qué hizo el precio la hora siguiente.
+9. **Cartera** — práctica manual: órdenes inteligentes, saldos por moneda, posiciones, curva,
+   historial buscable/CSV y calculadora de riesgo.
 
 Cada vista trae arriba una barra que dice, en español simple, para qué sirve.
+
+### Cartera manual: qué hace y qué no
+
+Cuenta independiente de S11, sin claves: USD 1.000 ficticios por cada moneda que uses. Permite
+entrada a mercado o límite, stop-loss, dos objetivos desde el panel y trailing stop. El motor
+admite hasta cuatro objetivos. Muestra comisiones, pérdidas y una estimación neta si cerraras ahora.
+El historial incluye abiertas, pendientes, canceladas y ejecuciones; cancelar sin llenar no cobra
+comisión ni genera una ganancia. Se guarda en `bot/cartera_manual.json`, fuera de Git.
+
+Las órdenes se resuelven al consultar la cartera: manualmente o cada 90 segundos mientras su
+vista está abierta. **No hay vigilancia continua ni órdenes alojadas en el exchange.** Se usan
+cotizaciones públicas y hasta 120 velas horarias recientes; una desconexión larga puede dejar
+períodos sin cubrir. Los extremos de una vela anteriores a la entrada o al último tick observado
+no se reutilizan para disparar un stop retroactivo. Sin cotización reciente no se opera y se
+identifica la valoración guardada. Un salto de precio puede superar la pérdida prevista al stop.
+
+La calculadora trabaja en USD o pesos, sin convertir monedas. La curva suma el capital inicial de
+cada moneda usada a toda la serie, para que agregar una moneda no parezca una ganancia.
+
+Verificado el 2026-11-08: **177 comprobaciones, TODO OK**; Cartera en Chrome a 1440 px y emulación
+móvil táctil a 360/390 px, incluidas órdenes, cancelaciones, filtros, CSV, errores de conexión y tema.
+No equivale a auditar todas las vistas ni a probar un teléfono físico. Para continuar el proyecto,
+leer `CONTINUAR-AQUI.md`: siguiente parte D; ensayo S11 de 30 días pendiente de autorización.
 
 ## El asistente
 

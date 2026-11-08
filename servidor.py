@@ -199,30 +199,46 @@ def recortar_estables(datos):
              "mecanismo": s.get("pegMechanism"), "precio": s.get("price")} for s in orden]
 
 
+BLOQUEO_CARTERA = threading.Lock()
+
+
 def cartera_velas(sim):
-    """Velas de 1h recientes para marcar la cartera en papel a precio real. Usa el cache."""
     url = f"{BINANCE}/api/v3/klines?symbol={sim}&interval=1h&limit=120"
-    datos, _ = pedir(url, "velas:" + sim + "1h", CACHE_SEG["velas"])
-    if not isinstance(datos, list):
+    datos, estado = pedir(url, "cartera:velas:" + sim, 10)
+    if estado not in ("ok", "cache") or not isinstance(datos, list) or not datos:
         return []
-    return [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]),
-             "l": float(k[3]), "c": float(k[4])} for k in datos if len(k) >= 5]
+    ahora = int(time.time() * 1000)
+    try:
+        salida = [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]),
+                   "l": float(k[3]), "c": float(k[4]), "cerrada": int(k[6]) < ahora}
+                  for k in datos]
+        if int(datos[-1][6]) < ahora - 120000:
+            return []
+        import math
+        if any(not math.isfinite(v[k]) or v[k] <= 0 for v in salida for k in ("o", "h", "l", "c")):
+            return []
+        return salida
+    except (TypeError, ValueError, IndexError, KeyError):
+        return []
 
 
 def cartera_actual():
-    """Cartera en papel (C2/C3): resuelve las posiciones abiertas contra el precio
-    real y devuelve resumen, posiciones con P/L vivo, historial y curva de capital."""
     import cartera
-    c = cartera.CarteraManual()
-    precios = {}
-    for sim, m in list(c.estado["mercados"].items()):
-        if m.get("posicion") is not None:
-            velas = cartera_velas(sim)
-            if velas:
-                c.procesar(sim, velas)
-                precios[sim] = velas[-1]["c"]
-    c.salvar()
-    return c.detalle(precios)
+    with BLOQUEO_CARTERA:
+        c = cartera.CarteraManual()
+        precios, sin_precio = {}, []
+        for sim, m in list(c.estado["mercados"].items()):
+            if m.get("posicion") is not None:
+                velas = cartera_velas(sim)
+                if velas:
+                    c.procesar(sim, velas, momento=int(time.time() * 1000))
+                    precios[sim] = velas[-1]["c"]
+                else:
+                    sin_precio.append(sim)
+        c.salvar()
+        detalle = c.detalle(precios)
+        detalle["sin_precio"] = sin_precio
+        return detalle
 
 
 class Atencion(BaseHTTPRequestHandler):
@@ -499,6 +515,11 @@ class Atencion(BaseHTTPRequestHandler):
         """Ordenes en papel (C1). Solo 127.0.0.1, plata falsa, precios reales.
         Valida la moneda y el cuerpo; nunca toca dinero real (SOLO_PRUEBA sigue True)."""
         import cartera
+        origen = self.headers.get("Origin")
+        if origen and origen not in (f"http://127.0.0.1:{PUERTO}", f"http://localhost:{PUERTO}"):
+            return self._json({"estado": "origen_rechazado"}, 403)
+        if self.headers.get_content_type() != "application/json":
+            return self._json({"estado": "se_requiere_json"}, 415)
         try:
             largo = int(self.headers.get("Content-Length") or 0)
         except ValueError:
@@ -514,17 +535,24 @@ class Atencion(BaseHTTPRequestHandler):
         sim = str(cuerpo.get("simbolo") or "").upper()
         if sim not in cartera.SIMBOLOS:
             return self._json({"estado": "rechazado", "detalle": "moneda no permitida"}, 400)
-        velas = cartera_velas(sim)
-        if not velas:
-            return self._json({"estado": "error", "detalle": "no se pudo leer el precio real"}, 502)
-        c = cartera.CarteraManual()
-        if camino == "/api/cartera/orden":
-            ok, det = c.colocar_orden(sim, velas, cuerpo)
-        else:
-            ok, det = c.cerrar(sim, velas)
-        if not ok:
-            return self._json({"estado": "rechazado", "detalle": det}, 400)
-        c.salvar()
+        try:
+            with BLOQUEO_CARTERA:
+                c = cartera.CarteraManual()
+                pos = c.estado["mercados"].get(sim, {}).get("posicion")
+                cancelar = camino == "/api/cartera/cerrar" and pos and not pos.get("llena", True)
+                velas = [] if cancelar else cartera_velas(sim)
+                if not velas and not cancelar:
+                    return self._json({"estado": "error", "detalle": "No hay cotización reciente; no se cambió la cuenta."}, 502)
+                momento = int(time.time() * 1000)
+                if camino == "/api/cartera/orden":
+                    ok, det = c.colocar_orden(sim, velas, cuerpo, momento=momento)
+                else:
+                    ok, det = c.cerrar(sim, velas, momento=momento)
+                if not ok:
+                    return self._json({"estado": "rechazado", "detalle": det}, 400)
+                c.salvar()
+        except (ValueError, OSError):
+            return self._json({"estado": "error", "detalle": "No se pudo leer o guardar la cuenta. Revisá el archivo antes de reintentar."}, 500)
         return self._json({"estado": "ok", "detalle": det})
 
 
