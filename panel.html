@@ -89,10 +89,6 @@ em,i{font-style:normal}
   color:var(--md);font-weight:700;white-space:nowrap}
 .chip.ok{border-color:rgba(14,203,129,.45);color:var(--up);background:rgba(14,203,129,.07)}
 .chip.warn{border-color:rgba(240,185,11,.45);color:var(--yel);background:rgba(240,185,11,.07)}
-.demoBanner{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center;justify-content:center;
-  padding:7px 12px;background:rgba(240,185,11,.10);border-bottom:1px solid rgba(240,185,11,.35);
-  color:var(--yel);font-size:12.5px;font-weight:700;letter-spacing:.02em;text-align:center}
-.demoBanner span{font-weight:600;opacity:.85}
 .chip.bad{border-color:rgba(246,70,93,.45);color:var(--dn);background:rgba(246,70,93,.07)}
 .top .grow{flex:1}
 .clock{font-family:var(--mono);font-size:var(--f2);color:var(--md)}
@@ -361,17 +357,20 @@ body[data-tema="claro"] .dot.on{color:#fff}
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .rail button.on .rlbl{color:var(--cy)}
   .rail button.on::before{left:50%;transform:translateX(-50%);top:auto;bottom:-6px;height:3px;width:22px;border-radius:var(--pill)}
-  .top{flex-wrap:wrap;height:auto;padding:10px 12px 12px;gap:10px;background:var(--card)}
-  body[data-tema="claro"] .acc button,body[data-tema="claro"] .search input{background:#fff;color:#0f1720;border-color:#dde4ec}
-  .top .brand{flex:1 1 auto;min-width:0;font-size:15px;letter-spacing:.12em}
+  .top{flex-wrap:nowrap;height:52px;padding:0 12px;gap:10px;background:var(--card)}
+  body[data-tema="claro"] .acc button{background:#fff !important;color:#0f1720 !important;border-color:#dde4ec !important}
+  .acc button{appearance:none;-webkit-appearance:none}
+  .search input{appearance:none;-webkit-appearance:none}
+  .top .brand{flex:1 1 auto;min-width:0;font-size:13px;letter-spacing:.08em;white-space:nowrap}
+  #btnTema span{display:none}
+  #btnTema{padding:0;width:36px;justify-content:center}
   .top .acc{margin-left:auto;order:2}
   .top .grow{display:none}
   .top #estado{display:none}
-  .search{order:3;width:100%}
-  .search input{height:44px;font-size:14px}
-  .acc button{height:40px;min-width:40px;border-radius:999px}
+  .search{display:none}
+  .acc button{height:36px;min-width:36px;border-radius:999px}
   #btnTema{padding:0 14px}
-  #btnAyuda,#btnPantalla{padding:0;width:40px;justify-content:center}
+  #btnAyuda,#btnPantalla{padding:0;width:36px;justify-content:center}
   .c8{grid-template-columns:repeat(2,1fr)}
   .row.c4{grid-template-columns:1fr}
   .heat{grid-template-columns:repeat(4,1fr)}
@@ -904,8 +903,6 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
     </header>
 
     <div class="tape"><div class="run" id="cinta"></div></div>
-
-    <div class="demoBanner" role="note"><b>Modo demo — dinero falso</b><span>· ninguna orden mueve plata real</span></div>
 
     <div class="scroll">
       <div class="paraque" id="paraque"><b id="pqTitulo">—</b><span id="pqTexto">—</span><button class="pqCerrar" id="pqCerrar" type="button" title="Ocultar para qué sirve" aria-label="Ocultar para qué sirve">×</button></div>
