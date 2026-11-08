@@ -361,8 +361,17 @@ body[data-tema="claro"] .dot.on{color:#fff}
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .rail button.on .rlbl{color:var(--cy)}
   .rail button.on::before{left:50%;transform:translateX(-50%);top:auto;bottom:-6px;height:3px;width:22px;border-radius:var(--pill)}
-  .top{flex-wrap:wrap;height:auto;padding:8px 10px;gap:8px}
-  .search{width:100%}
+  .top{flex-wrap:wrap;height:auto;padding:10px 12px 12px;gap:10px;background:var(--card)}
+  body[data-tema="claro"] .acc button,body[data-tema="claro"] .search input{background:#fff;color:#0f1720;border-color:#dde4ec}
+  .top .brand{flex:1 1 auto;min-width:0;font-size:15px;letter-spacing:.12em}
+  .top .acc{margin-left:auto;order:2}
+  .top .grow{display:none}
+  .top #estado{display:none}
+  .search{order:3;width:100%}
+  .search input{height:44px;font-size:14px}
+  .acc button{height:40px;min-width:40px;border-radius:999px}
+  #btnTema{padding:0 14px}
+  #btnAyuda,#btnPantalla{padding:0;width:40px;justify-content:center}
   .c8{grid-template-columns:repeat(2,1fr)}
   .row.c4{grid-template-columns:1fr}
   .heat{grid-template-columns:repeat(4,1fr)}
@@ -385,7 +394,7 @@ body[data-tema="claro"] .dot.on{color:#fff}
   input[type=range]{min-height:44px}
   .lab input[type=range]{height:44px}
   .cap input[type=range],#asisCapital{height:44px}
-  .acc button{height:44px;min-width:44px}
+  .acc button{height:40px;min-width:40px}
 }
 
 /* ---------- hoja Más (menú de abajo en teléfono) ---------- */
@@ -499,7 +508,7 @@ td.fav:hover{color:#f0b90b}
 #v-cartera th,#v-cartera td{white-space:nowrap}
 @media(max-width:600px){
   .top .clock,#chipMundo{display:none}
-  .brand{font-size:13px}
+  .brand{font-size:14px}
   .formgrid{grid-template-columns:minmax(0,1fr)}
   #v-cartera .note,#v-cartera td{font-size:14px}
   #v-cartera input,#v-cartera select{font-size:16px;min-height:44px}
