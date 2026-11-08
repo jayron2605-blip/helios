@@ -1,5 +1,10 @@
 # CONTINUAR AQUÍ — estado al cerrar la parte C
 
+> **Relevo más reciente: 2026-11-08, rama `demo-cliente`.** Antes de usar este
+> antecedente, leer [RELEVO-DEMO-CLIENTE.md](RELEVO-DEMO-CLIENTE.md): contiene el
+> estado de la rama y su publicación autorizada, las pruebas del punto de pausa y los pendientes
+> de la demo. No reiniciar D desde cero ni aplicar el stash de D1+D2.
+
 Fecha: **2026-11-08**. Trabajar directamente en `\\192.168.100.32\HeliosShare`.
 No copiar el proyecto ni depender de Y: (el mapeo falla; la ruta UNC funciona).
 

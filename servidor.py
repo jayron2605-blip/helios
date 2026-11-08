@@ -1,7 +1,11 @@
-import json, csv, os, time, urllib.parse, urllib.request, webbrowser, threading, sys
+import json, csv, io, os, time, urllib.parse, urllib.request, webbrowser, threading, sys, socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PUERTO = 8765
+# Por defecto el panel sólo se ve en esta PC (127.0.0.1). Para abrirlo desde un
+# teléfono en la MISMA WiFi, arrancar con HELIOS_HOST=0.0.0.0 (sólo red local;
+# nunca abrir el puerto 8765 en el router ni publicarlo a internet).
+HOST = os.environ.get("HELIOS_HOST", "127.0.0.1")
 RUTA_CUADERNO = "cuaderno.csv"
 MAX_CUERPO_BRIO = 512 * 1024   # tope del POST de noticias: un lote de 50 noticias sobra
 
@@ -133,10 +137,24 @@ def anotar(fila):
 
 def leer_cuaderno(limite=400):
     try:
-        with open(RUTA_CUADERNO, newline="", encoding="utf-8") as archivo:
-            filas = list(csv.reader(archivo))
+        with open(RUTA_CUADERNO, "rb") as archivo:
+            crudo = archivo.read()
     except FileNotFoundError:
         return []
+    # Se toleran NUL al leer, sin reescribir el archivo. csv.reader debe
+    # recibir el flujo completo para conservar campos entrecomillados multilínea.
+    texto = crudo.replace(b"\x00", b"").decode("utf-8", errors="replace")
+    filas = []
+    lector = csv.reader(io.StringIO(texto, newline=""), strict=True)
+    while True:
+        try:
+            fila = next(lector)
+        except StopIteration:
+            break
+        except csv.Error:
+            continue
+        if fila and (not filas or len(fila) == len(filas[0])):
+            filas.append(fila)
     if not filas:
         return []
     cabecera, cuerpo = filas[0], filas[1:]
@@ -388,6 +406,24 @@ class Atencion(BaseHTTPRequestHandler):
             ])
             return self._json({"estado": "ok", "datos": paquete})
 
+        if ruta.path == "/api/indicadores":
+            simbolo = (parametros.get("simbolo") or ["BTCUSDT"])[0].upper()
+            intervalo = (parametros.get("intervalo") or ["1h"])[0]
+            if not (simbolo.replace("USDT", "").isalnum() and intervalo in
+                    {"15m", "30m", "1h", "4h", "1d", "1w"}):
+                return self._json({"estado": "rechazado", "datos": None}, 400)
+            url = f"{BINANCE}/api/v3/klines?symbol={simbolo}&interval={intervalo}&limit=500"
+            datos, estado = pedir(url, "velas:" + simbolo + intervalo, CACHE_SEG["velas"])
+            if not isinstance(datos, list) or not datos:
+                return self._json({"estado": estado, "datos": None})
+            try:
+                import indicadores
+                velas = [{"t": int(k[0]) // 1000, "o": float(k[1]), "h": float(k[2]),
+                          "l": float(k[3]), "c": float(k[4]), "v": float(k[5])} for k in datos]
+                return self._json({"estado": estado, "datos": indicadores.calcular(velas)})
+            except Exception as error:
+                return self._json({"estado": "error:" + type(error).__name__, "datos": None})
+
         if ruta.path == "/api/historial":
             simbolo = (parametros.get("simbolo") or ["BTCUSDT"])[0].upper()
             intervalo = (parametros.get("intervalo") or ["1h"])[0]
@@ -565,10 +601,26 @@ def calentar_noticias():
         pass
 
 
+def ip_local():
+    """IPv4 de la red local sin enviar tráfico: el connect UDP sólo elige ruta."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("10.255.255.255", 1))   # no manda ningún paquete
+            return s.getsockname()[0]
+        finally:
+            s.close()
+    except Exception:
+        return "127.0.0.1"
+
+
 def main():
-    servidor = ThreadingHTTPServer(("127.0.0.1", PUERTO), Atencion)
+    servidor = ThreadingHTTPServer((HOST, PUERTO), Atencion)
     direccion = f"http://127.0.0.1:{PUERTO}/"
     print("Helios panel andando en", direccion)
+    if HOST not in ("127.0.0.1", "localhost"):
+        print("Para el teléfono en la misma WiFi:", f"http://{ip_local()}:{PUERTO}/")
+        print("(sólo red local; no abrir el puerto en el router ni publicarlo)")
     print("Cuaderno en:", RUTA_CUADERNO, "(se abre con el Bloc de notas)")
     print("Ctrl+C o cerrar esta ventana para parar.")
     threading.Thread(target=calentar_noticias, daemon=True).start()

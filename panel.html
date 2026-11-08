@@ -89,6 +89,10 @@ em,i{font-style:normal}
   color:var(--md);font-weight:700;white-space:nowrap}
 .chip.ok{border-color:rgba(14,203,129,.45);color:var(--up);background:rgba(14,203,129,.07)}
 .chip.warn{border-color:rgba(240,185,11,.45);color:var(--yel);background:rgba(240,185,11,.07)}
+.demoBanner{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center;justify-content:center;
+  padding:7px 12px;background:rgba(240,185,11,.10);border-bottom:1px solid rgba(240,185,11,.35);
+  color:var(--yel);font-size:12.5px;font-weight:700;letter-spacing:.02em;text-align:center}
+.demoBanner span{font-weight:600;opacity:.85}
 .chip.bad{border-color:rgba(246,70,93,.45);color:var(--dn);background:rgba(246,70,93,.07)}
 .top .grow{flex:1}
 .clock{font-family:var(--mono);font-size:var(--f2);color:var(--md)}
@@ -369,9 +373,10 @@ body[data-tema="claro"] .dot.on{color:#fff}
   .simCtrl select,.simCtrl input{width:100%}
   .vlist{height:360px}
   input,select,textarea{font-size:16px;min-height:48px}
-  input[type=range]{min-height:32px}
-  .lab input[type=range]{height:36px}
-  .cap input[type=range]{height:36px}
+  input[type=range]{min-height:44px}
+  .lab input[type=range]{height:44px}
+  .cap input[type=range],#asisCapital{height:44px}
+  .acc button{height:44px;min-width:44px}
 }
 
 /* ---------- hoja Más (menú de abajo en teléfono) ---------- */
@@ -427,6 +432,7 @@ body[data-tema="claro"] .dot.on{color:#fff}
 #v-lab .lab input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:var(--azul);border:3px solid #fff;margin-top:-8px;box-shadow:0 2px 8px rgba(2,6,18,.5)}
 #v-lab .lab input[type=range]::-moz-range-track{height:8px;border-radius:var(--pill);background:var(--raise)}
 #v-lab .lab input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--azul);border:3px solid #fff;box-shadow:0 2px 8px rgba(2,6,18,.5)}
+@media(max-width:900px){#v-lab .lab input[type=range]{height:44px}}
 #v-lab #labComparar,#v-lab #labBajar{width:100%;margin:0}
 #v-lab #labCurva{height:300px;background:var(--bg2);border:1px solid var(--bd);border-radius:22px;padding:10px;overflow:hidden}
 #v-lab .labmetric{gap:10px}
@@ -881,6 +887,8 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
     <div class="tape"><div class="run" id="cinta"></div></div>
 
+    <div class="demoBanner" role="note"><b>Modo demo — dinero falso</b><span>· ninguna orden mueve plata real</span></div>
+
     <div class="scroll">
       <div class="paraque" id="paraque"><b id="pqTitulo">—</b><span id="pqTexto">—</span><button class="pqCerrar" id="pqCerrar" type="button" title="Ocultar para qué sirve" aria-label="Ocultar para qué sirve">×</button></div>
 
@@ -1018,6 +1026,10 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
               <button class="on" data-c="vol">Volumen</button>
               <button class="on" data-c="fan">Escenarios</button>
               <button class="on" data-c="rsi">RSI</button>
+              <button data-c="macd">MACD</button>
+              <button data-c="boll">Bollinger</button>
+              <button data-c="adx">ADX</button>
+              <button data-c="vwap">VWAP</button>
             </div>
           </div>
           <div class="chartbox">
@@ -1030,6 +1042,8 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <button class="btn btn-rojo" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↘ Vender</button>
           </div>
           <div id="chartRsi" style="height:110px;margin-top:12px"></div>
+          <div id="chartMacd" style="height:110px;margin-top:12px;display:none"></div>
+          <div id="chartAdx" style="height:110px;margin-top:12px;display:none"></div>
           <span class="fe" data-fe="velas,extra"></span>
           <div class="legend">
             <span><i style="background:var(--yel)"></i>EMA 20</span>
@@ -1037,6 +1051,8 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <span><i style="background:var(--vi)"></i>EMA 200</span>
             <span><i style="background:rgba(14,203,129,.8)"></i>escenarios arriba</span>
             <span><i style="background:rgba(246,70,93,.8)"></i>escenarios abajo</span>
+            <span><i style="background:#ff9800"></i>VWAP</span>
+            <span><i style="background:rgba(156,39,176,.6)"></i>Bollinger</span>
             <span id="gNota"></span>
           </div>
         </div>
@@ -1298,6 +1314,11 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
       <!-- ================= AJUSTES ================= -->
       <section class="view" id="v-ajustes"><div class="wrap">
+        <div class="card"><h3>Preferencias</h3>
+          <div class="note">Se guardan en esta PC y sobreviven al cerrar el panel. No cambian ningún número ni ninguna decisión: sólo cómo se ve.</div>
+          <div class="kv"><div class="k">Tema</div><div class="v seg" id="ajTema"><button type="button" data-tema="oscuro">Oscuro</button><button type="button" data-tema="claro">Claro</button></div></div>
+          <div class="kv"><div class="k">Para qué sirve</div><div class="v seg" id="ajParaque"><button type="button" data-pq="show">Mostrar</button><button type="button" data-pq="hide">Ocultar</button></div></div>
+        </div>
         <div class="row split">
           <div class="card"><h3>Cómo se usa</h3><div id="ayuda"></div></div>
           <div class="card"><h3>Qué hay detrás</h3><div class="note">Este terminal no guarda nada en internet. Todo vive en tu PC.</div><div id="fuentes"></div></div>
@@ -1358,13 +1379,14 @@ function url(tipo, params){
   if(tipo === 'ventaja') return LOCAL ? null : BASE + '/ventaja';
   if(tipo === 'decisiones') return LOCAL ? null : BASE + '/decisiones';
   if(tipo === 'miedo_hist') return LOCAL ? null : BASE + '/miedo_hist';
+  if(tipo === 'indicadores') return LOCAL ? null : BASE + '/indicadores?simbolo=' + params.simbolo + '&intervalo=' + params.intervalo;
   return LOCAL ? null : BASE + '/cuaderno';
 }
-function pedir(tipo, params){
+function pedir(tipo, params, opciones){
   var destino = url(tipo, params);
   if(destino === null) return Promise.resolve({ estado:'local', datos:null });
   var t0 = performance.now();
-  return fetch(destino).then(function(r){
+  return fetch(destino, opciones).then(function(r){
     if(!r.ok) throw new Error('HTTP ' + r.status + ' en ' + tipo);
     return r.json();
   }).then(function(j){
@@ -1406,8 +1428,11 @@ function pintarFuentes(){
 setInterval(pintarFuentes, 30000);
 var grafico, serieVelas, serieVol, serieMediana, serieEsc = [];
 var big, bigVelas, bigVol, bigE20, bigE50, bigE200, bigMed, bigEsc = [], rsiG, rsiSerie;
+var macdG, macdLinea, macdSignal, macdHist, adxG, adxLinea, adxDiMas, adxDiMenos;
+var bigBollUpper, bigBollMiddle, bigBollLower, bigVwap;
 var MAX_CACHE_LOCAL = 600, HORIZONTE = 24, N_ESC = 40;
-var capas = { ema:true, vol:true, fan:true, rsi:true };
+var capas = { ema:true, vol:true, fan:true, rsi:true, macd:false, boll:false, adx:false, vwap:false };
+var estadoIndicadores = null, notaIndicadores = '', peticionIndicadores = 0;
 var ESTABLES = {USDT:1,USDC:1,DAI:1,FDUSD:1,TUSD:1,USDE:1,PYUSD:1,USD1:1,USDS:1,BUIDL:1,RLUSD:1,
   USDTB:1,USYC:1,STUSD:1,GUSD:1,LUSD:1,FRAX:1,USDD:1,USTC:1,USDY:1,EURA:1,EURC:1,USDF:1,USDX:1,
   XAUT:1,PAXG:1,WBTC:1,WETH:1,STETH:1,WSTETH:1,WEETH:1,COIN:1};
@@ -1833,11 +1858,12 @@ function pintarCinta(){
 
 /* ==================== gráficos ==================== */
 function opcionGrafico(alto){
+  var p = paleta();
   return { height:alto,
-    layout:{ background:{type:'solid',color:'#0d1117'}, textColor:'#5c6d80', fontSize:10, fontFamily:'Cascadia Mono, monospace' },
-    grid:{ vertLines:{color:'#111a24'}, horzLines:{color:'#111a24'} },
-    rightPriceScale:{ borderColor:'#1d2733' },
-    timeScale:{ borderColor:'#1d2733', timeVisible:true, secondsVisible:false, rightOffset:8 },
+    layout:{ background:{type:'solid',color:p.fondo}, textColor:p.texto, fontSize:10, fontFamily:'Cascadia Mono, monospace' },
+    grid:{ vertLines:{color:p.grilla}, horzLines:{color:p.grilla} },
+    rightPriceScale:{ borderColor:p.borde },
+    timeScale:{ borderColor:p.borde, timeVisible:true, secondsVisible:false, rightOffset:8 },
     crosshair:{ vertLine:{color:'#2b3a4d',labelBackgroundColor:'#1a222d'}, horzLine:{color:'#2b3a4d',labelBackgroundColor:'#1a222d'} },
     handleScroll:true, handleScale:true, autoSize:true };
 }
@@ -1894,9 +1920,26 @@ function montarGrande(){
   rsiSerie.setData([{time:estado.velas.length?estado.velas[0].t:0, value:0}]);
   rsiSerie.createPriceLine({ price:70, color:'rgba(246,70,93,.4)', lineWidth:1, lineStyle:3, title:'70' });
   rsiSerie.createPriceLine({ price:30, color:'rgba(14,203,129,.4)', lineWidth:1, lineStyle:3, title:'30' });
+  // D1: Bollinger y VWAP sobre el chart principal; MACD y ADX como subcharts
+  bigBollUpper = big.addLineSeries({ color:'rgba(156,39,176,.55)', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  bigBollMiddle = big.addLineSeries({ color:'rgba(156,39,176,.35)', lineWidth:1, lineStyle:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  bigBollLower = big.addLineSeries({ color:'rgba(156,39,176,.55)', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  bigVwap = big.addLineSeries({ color:'#ff9800', lineWidth:1.5, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  macdG = LightweightCharts.createChart(document.getElementById('chartMacd'), opcionGrafico());
+  macdLinea = macdG.addLineSeries({ color:'#0a87a8', lineWidth:1.5, priceLineVisible:false, lastValueVisible:false });
+  macdSignal = macdG.addLineSeries({ color:'#ff9800', lineWidth:1, priceLineVisible:false, lastValueVisible:false });
+  macdHist = macdG.addHistogramSeries({ priceLineVisible:false, lastValueVisible:false });
+  adxG = LightweightCharts.createChart(document.getElementById('chartAdx'), opcionGrafico());
+  adxLinea = adxG.addLineSeries({ color:'#8a97a8', lineWidth:1.5, priceLineVisible:false, lastValueVisible:false });
+  adxDiMas = adxG.addLineSeries({ color:'#0ecb81', lineWidth:1, priceLineVisible:false, lastValueVisible:false });
+  adxDiMenos = adxG.addLineSeries({ color:'#f6465d', lineWidth:1, priceLineVisible:false, lastValueVisible:false });
+  adxLinea.createPriceLine({ price:25, color:'rgba(138,151,168,.3)', lineWidth:1, lineStyle:3, title:'25' });
   big.timeScale().subscribeVisibleLogicalRangeChange(function(r){
     if(sincronizando || !r) return; sincronizando = true;
-    try{ rsiG.timeScale().setVisibleLogicalRange(r); }catch(e){} sincronizando = false;
+    try{ rsiG.timeScale().setVisibleLogicalRange(r); }catch(e){}
+    try{ macdG.timeScale().setVisibleLogicalRange(r); }catch(e){}
+    try{ adxG.timeScale().setVisibleLogicalRange(r); }catch(e){}
+    sincronizando = false;
   });
   big.subscribeCrosshairMove(function(param){
     var d = param && param.seriesData ? param.seriesData.get(bigVelas) : null;
@@ -1909,7 +1952,13 @@ function montarGrande(){
   redibujarGrande();
 }
 function redibujarGrande(){
-  if(!bigListo || !estado.velas.length) return;
+  if(!bigListo) return;
+  if(!estado.velas.length){
+    [bigVelas,bigVol,bigE20,bigE50,bigE200,bigMed,rsiSerie,bigBollUpper,bigBollMiddle,bigBollLower,bigVwap,macdLinea,macdSignal,macdHist,adxLinea,adxDiMas,adxDiMenos].forEach(function(s){ s.setData([]); });
+    limpiarBigEsc();
+    document.getElementById('gNota').textContent = 'Sin velas disponibles para este mercado. Probá actualizar u otro intervalo.';
+    return;
+  }
   var V = estado.velas;
   bigVelas.setData(V.map(function(v){ return { time:v.t, open:v.o, high:v.h, low:v.l, close:v.c }; }));
   bigVol.setData(capas.vol ? V.map(function(v){ return { time:v.t, value:v.v, color: v.c>=v.o?'rgba(14,203,129,.25)':'rgba(246,70,93,.25)' }; }) : []);
@@ -1932,19 +1981,93 @@ function redibujarGrande(){
     });
   } else bigMed.setData([]);
   var rr = rsiSerieCalc(closes,14);
-  rsiSerie.setData(capas.rsi ? V.map(function(v,i){ return rr[i]===null?null:{time:v.t,value:rr[i]}; }).filter(Boolean) : []);
+  rsiSerie.setData(capas.rsi ? V.map(function(v,i){ return rr[i]===null ? {time:v.t} : {time:v.t,value:rr[i]}; }) : []);
   document.getElementById('chartRsi').style.display = capas.rsi ? 'block' : 'none';
-  big.timeScale().setVisibleLogicalRange({ from: Math.max(0,V.length-180), to: V.length + (capas.fan&&E?HORIZONTE+3:2) });
-  if(capas.rsi){
-    var rango = big.timeScale().getVisibleLogicalRange();
-    if(rango) rsiG.timeScale().setVisibleLogicalRange(rango);
+  // D1: indicadores reales (librería ta) traídos de /api/indicadores
+  var I = estadoIndicadores;
+  // Mismos timestamps en todos los paneles: los huecos de calentamiento no
+  // son ceros ni desplazan 25 velas el MACD al sincronizar el rango lógico.
+  function indSerie(arr){
+    var porTiempo = {};
+    (arr||[]).forEach(function(p){ porTiempo[p.t] = p.v; });
+    return V.map(function(v){
+      return Number.isFinite(porTiempo[v.t]) ? {time:v.t, value:porTiempo[v.t]} : {time:v.t};
+    });
   }
-  document.getElementById('gNota').innerHTML = '<b>'+V.length+'</b> velas de '+estado.intervalo+' · RSI(14)'
-    + (E && capas.fan ? ' · '+N_ESC+' escenarios' : ' · sin escenarios');
+  bigBollUpper.setData(capas.boll && I ? indSerie(I.bollinger.upper) : []);
+  bigBollMiddle.setData(capas.boll && I ? indSerie(I.bollinger.middle) : []);
+  bigBollLower.setData(capas.boll && I ? indSerie(I.bollinger.lower) : []);
+  bigVwap.setData(capas.vwap && I ? indSerie(I.vwap) : []);
+  macdLinea.setData(capas.macd && I ? indSerie(I.macd.line) : []);
+  macdSignal.setData(capas.macd && I ? indSerie(I.macd.signal) : []);
+  macdHist.setData(capas.macd && I ? indSerie(I.macd.hist).map(function(p){
+    if(p.value!==undefined) p.color = p.value>=0 ? 'rgba(14,203,129,.5)' : 'rgba(246,70,93,.5)';
+    return p;
+  }) : []);
+  adxLinea.setData(capas.adx && I ? indSerie(I.adx.adx) : []);
+  adxDiMas.setData(capas.adx && I ? indSerie(I.adx.di_plus) : []);
+  adxDiMenos.setData(capas.adx && I ? indSerie(I.adx.di_minus) : []);
+  document.getElementById('chartMacd').style.display = capas.macd ? 'block' : 'none';
+  document.getElementById('chartAdx').style.display = capas.adx ? 'block' : 'none';
+  big.timeScale().setVisibleLogicalRange({ from: Math.max(0,V.length-180), to: V.length + (capas.fan&&E?HORIZONTE+3:2) });
+  var rango = big.timeScale().getVisibleLogicalRange();
+  if(rango){
+    if(capas.rsi) rsiG.timeScale().setVisibleLogicalRange(rango);
+    if(capas.macd) macdG.timeScale().setVisibleLogicalRange(rango);
+    if(capas.adx) adxG.timeScale().setVisibleLogicalRange(rango);
+  }
+  var activos = [];
+  if(capas.rsi) activos.push('RSI(14)');
+  if(capas.macd) activos.push('MACD(12,26,9)');
+  if(capas.boll) activos.push('Bollinger(20,2)');
+  if(capas.adx) activos.push('ADX(14)');
+  if(capas.vwap) activos.push('VWAP(14)');
+  var notaInd = (capas.macd||capas.boll||capas.adx||capas.vwap) && notaIndicadores ? ' · '+escHtml(notaIndicadores) : '';
+  if(I){
+    var faltan = [];
+    if(capas.macd && !I.macd.hist.length) faltan.push('MACD');
+    if(capas.boll && !I.bollinger.upper.length) faltan.push('Bollinger');
+    if(capas.adx && !I.adx.adx.length) faltan.push('ADX');
+    if(capas.vwap && !I.vwap.length) faltan.push('VWAP');
+    if(faltan.length) notaInd += ' · Sin suficientes velas válidas para '+faltan.join(', ');
+  }
+  document.getElementById('gNota').innerHTML = '<b>'+V.length+'</b> velas de '+estado.intervalo+' · '+activos.join(' · ')
+    + (E && capas.fan ? ' · '+N_ESC+' escenarios' : ' · sin escenarios') + notaInd;
+}
+function traerIndicadores(){
+  if(LOCAL){
+    notaIndicadores = 'Indicadores: abrí el panel con el servidor local';
+    redibujarGrande(); return Promise.resolve();
+  }
+  var id = ++peticionIndicadores, simbolo = estado.simbolo, intervalo = estado.intervalo;
+  var control = new AbortController();
+  var plazo = setTimeout(function(){ control.abort(); }, 15000);
+  notaIndicadores = 'Indicadores: cargando…'; redibujarGrande();
+  return pedir('indicadores',{simbolo:simbolo, intervalo:intervalo}, {signal:control.signal}).then(function(r){
+    if(id !== peticionIndicadores || estado.simbolo !== simbolo || estado.intervalo !== intervalo) return;
+    if(!r || !r.datos || !r.datos.macd || !r.datos.bollinger || !r.datos.adx) throw new Error('sin datos');
+    estadoIndicadores = r.datos;
+    notaIndicadores = String(r.estado).indexOf('stale')===0 ? 'Indicadores con datos guardados antiguos; no son cotización actual' : '';
+    redibujarGrande();
+  }).catch(function(){
+    if(id !== peticionIndicadores || estado.simbolo !== simbolo || estado.intervalo !== intervalo) return;
+    estadoIndicadores = null;
+    notaIndicadores = 'Indicadores no disponibles. Desactivá y activá la capa para reintentar';
+    redibujarGrande();
+  }).finally(function(){ clearTimeout(plazo); });
 }
 function limpiarBigEsc(){ bigEsc.forEach(function(s){ big.removeSeries(s); }); bigEsc = []; }
 Array.prototype.forEach.call(document.querySelectorAll('#capas button'), function(b){
-  b.onclick = function(){ capas[b.dataset.c] = !capas[b.dataset.c]; b.classList.toggle('on', capas[b.dataset.c]); redibujarGrande(); };
+  b.onclick = function(){
+    capas[b.dataset.c] = !capas[b.dataset.c];
+    b.classList.toggle('on', capas[b.dataset.c]);
+    var c = b.dataset.c;
+    if(capas[c] && (c==='macd'||c==='boll'||c==='adx'||c==='vwap') && !estadoIndicadores){
+      traerIndicadores();
+    } else {
+      redibujarGrande();
+    }
+  };
 });
 
 function pintarMarcos(){
@@ -2171,7 +2294,7 @@ function traerNoticias(forzar){
     pintarNoticias();
   }).catch(function(){ ntn.cargando = false;
     if(!ntn.datos) document.getElementById('ntnList').innerHTML =
-      '<div class="note">No llegaron noticias: revisá la conexión y tocá Actualizar ahora.</div>';
+      '<div class="note"><b>Sin noticias ahora, inténtalo luego.</b> Revisá la conexión y tocá Actualizar ahora.</div>';
   });
 }
 
@@ -2364,12 +2487,15 @@ function binancePara(sym){ return PARES_CONOCIDOS[sym] || (sym + 'USDT'); }
 
 var peticionVelas = 0;
 function traerVelas(){
+  ++peticionIndicadores;
+  estadoIndicadores = null; notaIndicadores = '';
   var id = ++peticionVelas, simbolo = estado.simbolo, intervalo = estado.intervalo;
   return pedir('velas',{simbolo:simbolo, intervalo:intervalo, limite:500}).then(function(r){
     if(id !== peticionVelas) return;
     if(!r.datos || !r.datos.length) throw new Error('sin velas para '+simbolo);
     if(estado.simbolo !== simbolo || estado.intervalo !== intervalo) return;
     estado.velas = r.datos.map(function(k){ return { t:Math.floor(Number(k[0])/1000), o:+k[1], h:+k[2], l:+k[3], c:+k[4], v:+k[5] }; });
+    estadoIndicadores = null;
     estado.coin = estado.mercados.filter(function(m){return m.sym===estado.nombre})[0] || estado.coin;
     estado.lecturas = calcularLecturas();
     estado.escenarios = calcularEscenarios();
@@ -2377,12 +2503,15 @@ function traerVelas(){
     document.getElementById('stVelas').textContent = estado.velas.length + ' VELAS ' + estado.intervalo;
     ok(r.estado);
     anotar(false);
+    if(capas.macd || capas.boll || capas.adx || capas.vwap) traerIndicadores();
     Promise.all([traerLibro(), traerExtra()]);
   }).catch(function(e){
     if(id !== peticionVelas) return;
     avisar('No hay velas públicas de '+simbolo+' en '+intervalo+'. Probá otro de la lista.');
     estado.velas=[]; estado.lecturas=null; estado.escenarios=null;
-    pintarLecturas();
+    ++peticionIndicadores; estadoIndicadores=null; notaIndicadores='';
+    [serieVelas,serieVol,serieMediana].forEach(function(s){ if(s) s.setData([]); });
+    limpiarEsc(); redibujarGrande(); pintarLecturas();
   });
 }
 function traerLibro(){
@@ -2438,7 +2567,10 @@ function traerLog(){
   if(LOCAL) return;
   pedir('cuaderno','').then(function(r){
     var d = r.datos; if(!d || !d.filas) return;
-    pintarLog(d.filas.map(function(f){ var x=f.slice(1); if(x.length<10) x=x.slice(0,8).concat(['—'],x.slice(8)); return x; }));
+    var columnas = ['fecha','hora','mercado','precio','tendencia','agitacion','fuerza','rango24h','coincidencias','escenarios','veredicto'];
+    pintarLog(d.filas.map(function(f){
+      return columnas.map(function(k){ var i = (d.cabecera||columnas).indexOf(k); return i<0 ? 'Sin dato' : escHtml(f[i]||''); });
+    }));
   });
 }
 function pintarLog(filas){
@@ -2517,7 +2649,10 @@ function pintarAyuda(){
 var PREF = { tema:'oscuro', vista:'panel', paraqueOculto:false };
 try{ var guardado = JSON.parse(localStorage.getItem('helios.pref')||'{}');
      Object.keys(PREF).forEach(function(k){ if(guardado[k]!==undefined) PREF[k]=guardado[k]; }); }catch(e){}
-function salvarPref(){ try{ localStorage.setItem('helios.pref', JSON.stringify(PREF)); }catch(e){} }
+function salvarPref(){
+  try{ localStorage.setItem('helios.pref', JSON.stringify(PREF)); }catch(e){}
+  pintarPreferencias();
+}
 
 function paleta(){
   return PREF.tema==='claro'
@@ -2528,7 +2663,7 @@ function aplicarTema(){
   document.body.dataset.tema = PREF.tema;
   document.getElementById('lblTema').textContent = PREF.tema==='claro' ? 'OSCURO' : 'CLARO';
   var p = paleta();
-  [grafico, big, rsiG, lab.grafico].forEach(function(g){
+  [grafico, big, rsiG, macdG, adxG, lab.grafico].forEach(function(g){
     if(!g) return;
     g.applyOptions({ layout:{ background:{type:'solid',color:p.fondo}, textColor:p.texto },
       grid:{ vertLines:{color:p.grilla}, horzLines:{color:p.grilla} },
@@ -2547,6 +2682,32 @@ document.getElementById('btnPantalla').onclick = function(){
   if(!document.fullscreenElement) document.documentElement.requestFullscreen();
   else document.exitFullscreen();
 };
+function pintarPreferencias(){
+  Array.prototype.forEach.call(document.querySelectorAll('#ajTema button'), function(b){
+    b.classList.toggle('on', b.dataset.tema===PREF.tema);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#ajParaque button'), function(b){
+    b.classList.toggle('on', (b.dataset.pq==='hide')===PREF.paraqueOculto);
+  });
+}
+Array.prototype.forEach.call(document.querySelectorAll('#ajTema button'), function(b){
+  b.onclick = function(){ PREF.tema = b.dataset.tema; salvarPref(); aplicarTema(); pintarPreferencias(); };
+});
+Array.prototype.forEach.call(document.querySelectorAll('#ajParaque button'), function(b){
+  b.onclick = function(){
+    PREF.paraqueOculto = (b.dataset.pq==='hide'); salvarPref();
+    var barra = document.getElementById('paraque');
+    if(barra){
+      if(PREF.paraqueOculto){ barra.style.display='none'; }
+      else if(PARA_QUE[PREF.vista]){
+        barra.style.display='flex';
+        document.getElementById('pqTitulo').textContent='Para qué sirve';
+        document.getElementById('pqTexto').textContent=PARA_QUE[PREF.vista];
+      }
+    }
+    pintarPreferencias();
+  };
+});
 
 /* ==================== flash de numeros ==================== */
 var previos = {};

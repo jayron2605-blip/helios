@@ -1,0 +1,196 @@
+== motor ==
+  OK   A stop loss corta la posicion  stop loss
+  OK   A pierde plata  -17.11
+  OK   A paga comision  1.9429
+  OK   B toma ganancia  take profit
+  OK   B gana plata  26.88
+  OK   C ante la duda gana el stop  stop loss
+  OK   D abre posicion
+  OK   D efectivo no negativo  20.00
+  OK   D costo cubierto por el capital
+  OK   E un 0.54 no compra
+  OK   E un 0.56 si compra
+  OK   F cierra por plazo  vencio el plazo
+  OK   G rechaza apilarse
+
+== frenos ==
+  OK   H simulacro bloquea la orden  Esta en modo simulacro. Para operar en serio hay
+  OK   I mercado no permitido bloquea  SOLUSDT no esta en la lista de mercados permitid
+  OK   J tamano excesivo bloquea  500.00 USD pasa el maximo por operacion (50 USD)
+  OK   K archivo APAGADO bloquea  Hay un archivo APAGADO en la carpeta: el bot no
+  OK   L tope de operaciones del dia bloquea  Ya se hicieron 3 operaciones hoy; el tope es 3.
+  OK   M tope de perdida diaria bloquea  Se toco el tope de perdida diaria (40.00 USD). S
+  OK   N firma HMAC de 64 hex
+  OK   O firma coincide con el calculo de referencia
+  OK   P sin claves.json dice que faltan
+  OK   Q sin clave no opera  Sin claves: no se puede operar.
+  OK   R no manda orden real aunque se lo pidan  Helios está en modo prueba fijo: no manda ór
+  OK   S tampoco vende
+  OK   T el modo del exchange es PRUEBA FIJA
+  OK   U puede_operar_de_verdad es falso
+  OK   W monto real de la orden  90.0000
+  OK   W2 freno de tamano con monto real  90.00 USD pasa el maximo por operacion (50 USD).
+  OK   X perdida del dia acumulada  35.00
+  OK   X2 tope de perdida corta despues de cerrar mal  Se toco el tope de perdida diaria (35.00 USD). S
+  OK   X3 ganancia no suma perdida  35.00
+
+== cierre cableado al freno del dia ==
+  OK   RC1 el cierre en papel registra la perdida del dia  perdida_dia=17.11
+  OK   RC1b el pnl registrado coincide con el de la operacion  17.11 vs 17.11
+  OK   RC2 un Broker sin contador no escribe el freno del dia  17.11
+  OK   RC3 cerrar en ganancia no suma perdida del dia  17.11
+  OK   V el asistente aguanta 300 velas
+  OK   V el asistente aguanta 1000 velas
+  OK   V el asistente aguanta 30000 velas
+  OK   Y comprar-y-sostener usa el cierre
+  OK   Z1 titulo buena se clasifica buena  buena
+  OK   Z2 titulo mala se clasifica mala  mala
+  OK   Z3 titulo sin senal queda sin clasificar  None
+  OK   Z4 el tema describe la noticia en una linea  Habla de una subida fuerte del precio.
+  OK   Z5 detecta la moneda del texto  SOL
+  OK   Z6 saca duplicados, spam y viejas  1 quedaron
+  OK   Z7 la nota guardada lleva sentimiento y clase  buena
+  OK   Z8 el Tesoro de EE.UU. no se confunde con reservas  Habla de prohibiciones, bloqueos o restricciones.
+  OK   Z8b esa noticia se marca como mala  mala
+  OK   Z9 descarta lo que no es de cripto  1 quedaron
+  OK   Z9b lo descartado se cuenta  {'no_cripto': 1}
+  OK   Z10 se queda aunque no se pueda clasificar  1 | sent=None
+  OK   Z11 el molde de claves de noticias vive junto a los otros dos
+
+== noticias de Brio ==
+  OK   BR1 sin clave configurada la puerta queda cerrada
+  OK   BR2 la clave correcta entra y la equivocada no
+  OK   BR3 solo pasan enlaces http(s)
+  OK   BR4 el lote del prompt se acepta entero  []
+  OK   BR4b se guarda el titulo en espanol y el original aparte
+  OK   BR5 sentimiento inventado se rechaza
+  OK   BR6 sin hora no se inventa una fecha
+  OK   BR6b la hora ISO con zona horaria se entiende  1794079200000
+  OK   BR6c una hora que no se entiende devuelve None
+  OK   BR7 un lote pasado de tamaño se rechaza
+  OK   BR7b el cuerpo que no es objeto se rechaza
+  OK   BR8 la primera vez guarda una  1/1/[]
+  OK   BR8b queda escrita en disco
+  OK   BR9 el mismo id o url no se duplica  1/0
+  OK   BR9b una url distinta si entra
+  OK   BR10 Brio y RSS comparten lista y no se duplican  1 quedaron
+  OK   BR10b se respeta el sentimiento que mando Brio
+  OK   BR11 un titulo en espanol de Brio no lo tira el filtro en ingles  1 quedaron
+  OK   BR11b sin resumen no se inventa ninguno
+  OK   BR12 mas de 2 horas sin recibir se marca como silencio
+  OK   BR12b hace media hora no es silencio
+  OK   BR13 sin clave responde 401  401
+  OK   BR13b con clave equivocada responde 401  401
+  OK   BR13c los dos 401 no guardaron nada  2 guardadas
+  OK   BR14 con la clave correcta responde 200 y ok true  200 {'ok': True, 'recibidas': 1, 'nuevas': 0}
+  OK   BR14b responde rapido con recibidas y nuevas
+  OK   BR15 un lote sin nada valido responde 400 con el motivo  400
+  OK   BR15b el cuaderno sigue anotando  {'estado': 'anotado'}
+  OK   BR15c cualquier otro POST sigue dando 404  404
+  OK   BR16 el molde de claves trae brio_token  ['cryptopanic_token', 'brio_token']
+  OK   BR17 lo que manda Brio no se comparte
+  OK   BR17b la clave tampoco se comparte
+
+== estrategias nuevas ==
+  OK   VA1 la rejilla mantiene la exposicion entre 0 y 1  min=0.30 max=0.70
+  OK   VA2 la rejilla compra al caer y vende al subir  cae 0.50->0.70 | sube 0.50->0.30
+  OK   VA3 la rejilla no mira el futuro
+  OK   VA4 rotacion se queda afuera si va peor que sus pares
+  OK   VA4b rotacion entra si va mejor que sus pares
+  OK   VA5 multiescala no entra si una escala discrepa
+  OK   VA5b multiescala entra si las tres acuerdan
+  OK   VA6 el DCA nunca vende y llega a lo sumo a 1  final=0.10
+  OK   VA6b el DCA compra su primer aporte en el primer rebalanceo  w0=0.050
+
+== cartera en papel (S11) ==
+  OK   P1 S11 entra si dia, semana y mes suben
+  OK   P1b S11 no entra si una escala discrepa
+  OK   P1c S11 sin dato valido se queda afuera
+  OK   P2 S11 adentro abre posicion en papel  comprar
+  OK   P2b la posicion queda escrita en disco
+  OK   P3 la posicion sobrevive al recargar
+  OK   P3b recuerda la ultima vela procesada
+  OK   P4 S11 afuera cierra la posicion  vender
+  OK   P4b el cierre queda en el historial  S11: se perdio la confirmacion
+  OK   P5 el stop loss cierra la posicion  stop loss
+  OK   P5b la perdida del cierre suma al freno del dia  perdida_dia=17.11
+  OK   P6 sin confirmacion no abre posicion  quieto
+  OK   P7 el resumen cuenta operaciones y capital  ops=1 capital=1001.95
+  OK   P7b el resumen dice cuantos dias lleva en papel
+  OK   P8 S11 aprobada habilita el papel  S11 aprobó: +69.2 % promedio, le gana a comprar-y-sostener en 4 de 6 mercados
+  OK   P8b S11 no aprobada deja el bot apagado  S11 no aprobó el corte (+69.2 % promedio, gana en 4 de 6): el bot se queda apagado
+  OK   P8c sin prueba de ventaja el bot no opera
+
+== ordenes inteligentes (C1) ==
+  OK   L1 orden limite queda pendiente  llena=False
+  OK   L1b limite pendiente no descuenta efectivo  1000.00
+  OK   L1c limite pendiente no cuenta como posicion  {'t': 1700000000000, 'capital': 1000.0, 'en_posicion': 0}
+  OK   L2 limite no se llena si no toca el precio  low=96 > limite=95
+  OK   L3 limite se llena al tocar el precio  entrada=95.0
+  OK   L3b al llenarse descuenta el efectivo  20.00
+  OK   L3c entrada_ts es el momento del llenado
+  OK   T1 trailing sube el stop  stop=107.8000 inicial=98.5000
+  OK   T2 trailing sigue subiendo  stop=109.7600
+  OK   T3 trailing nunca baja el stop  stop=109.7600
+  OK   T4 trailing stop cierra la posicion  trailing stop
+  OK   T4b el cierre dice trailing stop  trailing stop
+  OK   T4c trailing stop aseguro ganancia  95.65
+  OK   TP1 prepara dos objetivos  [[103.0, 4.895104895104896, 'take profit 1'], [106.0, None, 'take profit 2']]
+  OK   TP2 vende la primera parte  take profit 1
+  OK   TP2b la primera parte es la mitad  q=4.8951
+  OK   TP2c queda la otra mitad abierta  queda=4.8951
+  OK   TP3 vende el resto y cierra  take profit 2
+  OK   TP3b la segunda parte es el resto  q=4.8951
+  OK   TP4 la contabilidad cierra exacta  efectivo=42.0538 suma_pnl=42.0538
+  OK   TP4b las dos partes ganaron  [13.69, 28.36]
+  OK   TPS1 tras la parte, el stop cierra el resto  stop loss
+  OK   TPS2 el cierre final es stop loss  stop loss
+  OK   TPS3 la contabilidad cierra exacta con stop  efectivo=5.3773 suma_pnl=5.3773
+
+== cartera en papel a mano (C2/C3/C4) ==
+  OK   CM1 orden a mercado abre posicion
+  OK   CM1b queda escrita en disco
+  OK   CM2 la posicion sobrevive al recargar
+  OK   CM3 detalle tiene las cuatro partes  ['inicio', 'capital_por_mercado', 'resumen', 'mercados', 'historial', 'curva']
+  OK   CM3b resumen cuenta la posicion abierta  1
+  OK   CM4 cerrar a mano cierra la posicion
+  OK   CM4b el cierre va al historial  cerrada a mano
+  OK   CM5 rechaza moneda no permitida  moneda no permitida
+  OK   CM6 orden limite queda pendiente
+  OK   CM6b el limite se llena al bajar al precio
+  OK   CM7 acepta take profit en partes
+  OK   CM7b las dos partes se vendieron  2
+  OK   CM8 rechaza parametros absurdos sin cambiar la cuenta  stop_loss debe ser un numero finito entre 0.001 y 0.5
+  OK   CM9 el stop loss cierra y registra perdida  stop loss
+
+== cierre de cartera: regresiones ==
+  OK   CF1 vende todos los objetivos tocados en una vela
+  OK   CF2 objetivos simultaneos conservan contabilidad
+  OK   CF3 cerrar limite sin llenar no crea dinero
+  OK   CF4 limite y stop en la misma vela protegen la cuenta
+  OK   CF5 salto de precio no inventa venta al stop
+  OK   CF6 la orden registra su hora real
+  OK   CF7 ignora maximo y minimo previos de vela abierta
+  OK   CF8 P/L vivo descuenta entrada y salida
+  OK   CF9 sin red conserva valor invertido
+  OK   CF10 saldo y detalle sin red coinciden
+  OK   CF11 curva guarda varios movimientos de la misma hora
+  OK   CF12 persistencia conserva curva e historial
+  OK   CF13 rechaza numero no finito
+  OK   CF13 rechaza tipo desconocido
+  OK   CF13 rechaza objetivos mal formados
+  OK   CF13 rechaza objetivos desordenados
+  OK   CF13 rechaza porciones excesivas
+  OK   CF13 rechaza booleano como monto
+  OK   CF14 cuenta vacia sin capital inventado
+  OK   CF15 archivo roto no reinicia saldo
+  OK   CF16 no ejecuta con cache vencida
+  OK   CF17 identifica vela todavia abierta
+  OK   CF18 rechaza cotizacion invalida
+  OK   CF19 una vela anterior al tick no dispara el trailing retroactivamente
+  OK   CF20 el tick siguiente si ejecuta el trailing
+  OK   CF21 cerrar a mano respeta el stop anterior
+  OK   CF22 historial incluye orden pendiente sin cobro
+  OK   CF23 cancelacion persiste sin afectar saldo ni operaciones
+
+TODO OK

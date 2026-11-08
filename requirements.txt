@@ -1,0 +1,12 @@
+# Helios — dependencias verificadas (no inventadas).
+# Versiones comprobadas con importlib.metadata en la máquina usada para las
+# pruebas de esta demo (macOS, Python 3.9). ta y pandas coinciden con la PC
+# Windows de la demo; el resto puede tener minors más nuevos allí (ver
+# CONTINUAR-AQUI.md). Re-verificar con pip antes de fijar en producción.
+ta==0.11.0
+ccxt==4.5.64
+numpy==2.0.2
+pandas==2.3.3
+scikit-learn==1.6.1
+scipy==1.13.1
+joblib==1.5.3
