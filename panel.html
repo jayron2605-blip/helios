@@ -282,8 +282,11 @@ canvas{display:block;width:100%}
   background:linear-gradient(90deg,var(--dn) 0%,var(--naranja) 25%,var(--yel) 45%,#7cc24a 70%,var(--up) 100%)}
 .fng .track i{position:absolute;top:-4px;width:3px;height:13px;background:var(--tx);border-radius:2px;transition:left .6s ease}
 
-.paraque{display:flex;align-items:center;gap:12px;padding:12px 18px;border:1px solid var(--bd);border-radius:20px;margin:10px 16px 0;
-  background:var(--card);font-size:13px;color:var(--md);line-height:1.5;flex:0 0 auto;box-shadow:var(--sombra)}
+.paraque{display:flex;align-items:center;gap:12px;padding:12px 18px;border:1px solid var(--bd);border-radius:20px;margin:0 0 12px 0;
+  background:var(--card);font-size:13px;color:var(--md);line-height:1.5;box-shadow:var(--sombra)}
+.paraque #pqTexto{flex:1;min-width:0}
+.paraque .pqCerrar{flex:0 0 auto;min-width:44px;min-height:44px;width:44px;height:44px;border-radius:999px;border:1px solid var(--bd2);background:var(--card2);color:var(--md);font-size:20px;line-height:1;cursor:pointer}
+.paraque .pqCerrar:hover{color:var(--tx);border-color:var(--azul)}
 .paraque b{color:var(--azul);background:rgba(47,127,255,.13);border:1px solid rgba(47,127,255,.4);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   white-space:nowrap;padding:5px 12px;border-radius:var(--pill);font-weight:700}
 @media(max-width:900px){.paraque{flex-direction:column;align-items:flex-start;gap:3px;padding:7px 10px}}
@@ -862,6 +865,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
       <div class="chip warn" id="estado">CONECTANDO</div>
       <div class="grow"></div>
       <div class="acc">
+        <button id="btnAyuda" type="button" title="Mostrar para qué sirve" aria-label="Mostrar para qué sirve" style="min-width:44px;min-height:44px;border-radius:999px">?</button>
         <button id="btnTema" title="Tema (T)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg><span id="lblTema">CLARO</span></button>
         <button id="btnPantalla" title="Pantalla completa (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </div>
@@ -871,9 +875,8 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 
     <div class="tape"><div class="run" id="cinta"></div></div>
 
-    <div class="paraque" id="paraque"><b id="pqTitulo">—</b><span id="pqTexto">—</span></div>
-
     <div class="scroll">
+      <div class="paraque" id="paraque"><b id="pqTitulo">—</b><span id="pqTexto">—</span><button class="pqCerrar" id="pqCerrar" type="button" title="Ocultar para qué sirve" aria-label="Ocultar para qué sirve">×</button></div>
 
       <!-- ================= PANEL ================= -->
       <section class="view on" id="v-panel"><div class="wrap">
@@ -1518,7 +1521,7 @@ function irA(v){
   Array.prototype.forEach.call(document.querySelectorAll('.view'), function(s){ s.classList.toggle('on', s.id==='v-'+v); });
   Array.prototype.forEach.call(document.querySelectorAll('.rail button[data-v]'), function(b){ b.classList.toggle('on', b.dataset.v===v || (b.dataset.v==='mas' && VISTAS_MAS.indexOf(v)>=0)); });
   var barra = document.getElementById('paraque');
-  if(barra && PARA_QUE[v]){
+  if(barra && PARA_QUE[v] && !PREF.paraqueOculto){
     barra.style.display = 'flex';
     document.getElementById('pqTitulo').textContent = 'Para qué sirve';
     document.getElementById('pqTexto').textContent = PARA_QUE[v];
@@ -1544,6 +1547,22 @@ Array.prototype.forEach.call(document.querySelectorAll('#masFondo .masItem'), fu
 });
 document.getElementById('masCerrar').onclick = cerrarMas;
 document.getElementById('masFondo').addEventListener('click', function(e){ if(e.target===this) cerrarMas(); });
+
+/* Para qué sirve: se desplaza con la pantalla (ya no queda pegado arriba) y se puede ocultar con la ×. El botón ? de arriba lo vuelve a mostrar. */
+document.getElementById('pqCerrar').onclick = function(){
+  PREF.paraqueOculto = true; salvarPref();
+  var barra = document.getElementById('paraque'); if(barra) barra.style.display = 'none';
+};
+document.getElementById('btnAyuda').onclick = function(){
+  PREF.paraqueOculto = false; salvarPref();
+  var barra = document.getElementById('paraque');
+  if(barra && PARA_QUE[PREF.vista]){
+    document.getElementById('pqTitulo').textContent = 'Para qué sirve';
+    document.getElementById('pqTexto').textContent = PARA_QUE[PREF.vista];
+    barra.style.display = 'flex';
+    var sc = document.querySelector('.scroll'); if(sc) sc.scrollTop = 0;
+  }
+};
 
 function pintarKpis(){
   var ms = mercadosActivos(), verde = ms.filter(function(x){return x.cambio>0}).length;
@@ -2485,7 +2504,7 @@ function pintarAyuda(){
 }
 
 /* ==================== preferencias, tema, pantalla ==================== */
-var PREF = { tema:'oscuro', vista:'panel' };
+var PREF = { tema:'oscuro', vista:'panel', paraqueOculto:false };
 try{ var guardado = JSON.parse(localStorage.getItem('helios.pref')||'{}');
      Object.keys(PREF).forEach(function(k){ if(guardado[k]!==undefined) PREF[k]=guardado[k]; }); }catch(e){}
 function salvarPref(){ try{ localStorage.setItem('helios.pref', JSON.stringify(PREF)); }catch(e){} }
