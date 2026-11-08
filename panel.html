@@ -866,6 +866,57 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 #v-cartera #caBuscar{border-radius:16px;min-height:48px;padding:12px 14px;font-size:16px}
 #v-cartera #caCurva{background:var(--card2);border:1px solid var(--bd);border-radius:16px}
 </style>
+
+<style>
+/* ---------- SIMPLE CLIENTE (demo 2026-11-08): los dos temas, con color ---------- */
+:root{--bg:#0b0e11;--bg2:#10141a;--card:#181a20;--card2:#1e2026;--bd:#2b3139;--bd2:#3a414d;
+  --azul:#f0b90b;--azul2:#c99400;--cy:#f0b90b;--up:#0ecb81;--dn:#f6465d;
+  --sel:rgba(240,185,11,.14);--sel-bd:rgba(240,185,11,.5)}
+body[data-tema="claro"]{--bg:#ffffff;--bg2:#f8fafc;--card:#ffffff;--card2:#eef0f3;--bd:#dde4ec;--bd2:#c9d4e0;
+  --tx:#0a0b0d;--md:#4d5f70;--azul:#0052ff;--azul2:#0667d0;--cy:#0052ff;--up:#098551;--dn:#cf202f;
+  --sel:rgba(0,82,255,.12);--sel-bd:rgba(0,82,255,.5)}
+body[data-tema="claro"] .btn-primario{background:var(--azul);color:#fff}
+/* Sin textos de explicacion: solo quedan los mensajes de estado de la orden */
+.note{display:none!important}
+#caOrdenMsg,#caEstado{display:block!important}
+/* Panel simple: fuera los dos botones de comparacion y el pie largo */
+#v-panel .seg.big{display:none}
+#v-panel .foot{display:none}
+#v-panel .card:has(#cmpTabla){display:none}
+/* Grafico a lo ancho, sin doble marco */
+#v-grafico .card{padding:0;background:transparent;border:0;box-shadow:none}
+#v-grafico .chartbox{border:0;background:transparent}
+#chartBig{border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;height:420px}
+#v-grafico .legend{display:none}
+/* Cartera: saldo grande arriba, orden clara */
+#caResumen .stat{padding:2px 4px}
+#caResumen .stat .vl{font-size:30px;white-space:nowrap}
+#caColocar{min-height:56px;font-size:18px;border-radius:16px}
+/* Ajustes: solo preferencias reales, fuera la ayuda larga */
+#v-ajustes .row.split{display:none}
+/* Boton de tema bien visible, con el color principal */
+#btnTema{border-color:var(--azul);color:var(--azul)}
+#ajTema button.on,#ajParaque button.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+body[data-tema="claro"] #ajTema button.on,body[data-tema="claro"] #ajParaque button.on{color:#fff}
+@media(max-width:900px){
+  .card{padding:12px}
+  .scroll{padding:8px}
+  #v-panel .split3{display:none}
+  #v-panel .split .card:last-child{display:none}
+  #chartBig{height:360px}
+  #chartRsi{display:none}
+  #v-cartera .card:has(#caRiesgoNatural){display:none}
+  #v-cartera .card:has(#caHistorial){display:none}
+  #cajaLista th:nth-child(5),#cajaLista td:nth-child(5),
+  #cajaLista th:nth-child(7),#cajaLista td:nth-child(7),
+  #cajaLista th:nth-child(9),#cajaLista td:nth-child(9),
+  #cajaLista th:nth-child(10),#cajaLista td:nth-child(10){display:none}
+  table:has(#caPosiciones) th:nth-child(2),#caPosiciones td:nth-child(2),
+  table:has(#caPosiciones) th:nth-child(6),#caPosiciones td:nth-child(6),
+  table:has(#caPosiciones) th:nth-child(7),#caPosiciones td:nth-child(7),
+  table:has(#caPosiciones) th:nth-child(8),#caPosiciones td:nth-child(8){display:none}
+}
+</style>
 </head>
 <body>
 <div class="app">
@@ -1056,8 +1107,8 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <div id="chartBig"></div>
           </div>
           <div style="display:flex;gap:10px;margin-top:12px">
-            <button class="btn btn-verde" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↗ Comprar en Cartera</button>
-            <button class="btn btn-rojo" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↘ Vender en Cartera</button>
+            <button class="btn btn-verde" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↗ Comprar</button>
+            <button class="btn btn-rojo" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↘ Vender</button>
           </div>
           <div class="note">Los dos botones abren la Cartera de práctica con dinero ficticio; acá no se ejecuta ninguna orden.</div>
           <div id="chartRsi" style="height:110px;margin-top:12px"></div>
@@ -1235,7 +1286,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         </div>
 
         <div class="row split">
-          <div class="card"><h3>Nueva orden en papel</h3>
+          <div class="card"><h3>Comprar</h3>
             <div class="note">Elegí moneda y frenos; el tamaño se calcula solo. Todo es plata falsa.</div>
             <div class="formgrid">
               <label>Moneda<select id="caMoneda"></select></label>
@@ -1252,7 +1303,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
               </div>
               <div class="note m" style="margin:8px 0">Si ponés Objetivo 2, vende la mitad en el primero y el resto en el segundo. Trailing en 0 = apagado.</div>
             </details>
-            <button class="btn btn-verde" id="caColocar" style="font-weight:700">Colocar orden en papel</button>
+            <button class="btn btn-verde" id="caColocar" style="font-weight:700">Comprar</button>
             <div class="note" id="caOrdenMsg" style="margin-top:8px"></div>
           </div>
 
