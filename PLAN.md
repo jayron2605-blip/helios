@@ -390,12 +390,14 @@ pruebas automatizadas y verificación de navegador; una categoría no sustituye 
   desconexiones más largas. Todo esto sigue siendo práctica, no ejecución real.
 
 ### D. Código abierto y más exchanges → PARCIAL
-- **D1 Usar `ta` de verdad → FALTA.** `ta` 0.11.0 instalado pero **sin importar** en el código
-  (verificado: ningún `import ta`). RSI/ATR siguen a mano. Falta MACD, Bollinger, ADX, VWAP en el
-  gráfico y `requirements.txt` con las versiones exactas.
-- **D2 Usar `ccxt` de verdad → FALTA.** `ccxt` 4.5.92 instalado pero **sin importar**. `exchange.py`
-  habla con Binance a mano (HMAC). Falta Binance/Bybit/OKX/Kraken con la misma forma y selector en
-  Ajustes. Las claves siguen siendo solo para operar, nunca para retirar.
+- **D1 Usar `ta` de verdad → HECHO (2026-11-08, rama `demo-cliente`).** `bot/indicadores.py`
+  importa `ta==0.11.0`: MACD(12,26,9), Bollinger(20,2), ADX(14), VWAP móvil de 14 velas, RSI(14),
+  ATR(14). `GET /api/indicadores` con 500 velas públicas y estados ok/cache/stale; capas en el
+  gráfico con timeout de 15 s y calentamiento sin ceros. `requirements.txt` con pines de Mac
+  (Python 3.9.6); en Windows 3.14 no coinciden y no se instalan a ciegas.
+- **D2 Usar `ccxt` de verdad → FALTA, EXCLUIDO DE LA DEMO.** Decisión del dueño (prompt demo
+  2026-11-08): hoy no se integra multi-exchange; `ccxt` queda listado sin usar. No aplicar el
+  stash D1+D2 por este motivo.
 - **D3 Grid S9 MIT atribuido → HECHO.** Reescrito en `ventaja.py`, atribuido a
   `jordantete/grid_trading_bot` (MIT). Pruebas VA1–VA3 pasan. No se copió el repo entero.
 - **D4 No copiar GPL/AGPL → HECHO como regla.** Freqtrade/OctoBot/backtesting.py solo se estudian y
@@ -440,14 +442,17 @@ pruebas automatizadas y verificación de navegador; una categoría no sustituye 
   ningún número. Pruebas después de cada vista: TODO OK, 177. Capturas
   360/390/1440px en `~/workspace/preview-helios-v2/`. Falta la prueba con
   datos reales y toque en teléfono físico (ver F3).
-- **F3 Probar en 360px y 390px → PARCIAL.** Cartera y su navegación probadas el 2026-11-08
-  en emulación móvil de Chrome con toque; no fue un teléfono físico. La mejora de
-  interfaz se verificó con servidor local (200), sintaxis JS y pruebas 177 TODO OK;
-  las capturas en 360/390px con Chromium headless quedan registradas en el reporte
-  de la rama; si no salieron, se marca FALTA, no HECHO. Falta auditar las otras vistas
-  con toque real.
-- **F4 Abrir desde el teléfono por web → FALTA.** Depende de E2. Dejar por escrito cómo abrirlo en
-  la misma red y cómo desde internet cuando esté publicado.
+- **F3 Probar en 360px y 390px → PARCIAL.** 2026-11-08, `demo-cliente`: barrido de las 9 vistas
+  en Chromium emulado (360/390/1440) con datos públicos reales, 72 comprobaciones H (favoritos,
+  comparador, bot, on-chain, lab, cartera en papel con cuenta temporal, cuaderno/CSV, estados
+  sin CDN, noticias honestas). **Sigue faltando el teléfono físico con toque real**; no se
+  marca HECHO por emulación.
+- **F4 Abrir desde el teléfono por web → HECHO EN CÓDIGO Y VERIFICADO AISLADO (2026-11-08,
+  `demo-cliente`).** LAN autorizada por el dueño, internet NO. `_post_rechazado()` acepta sólo
+  Host loopback/IP/nombre del propio equipo y Origin igual al Host; aplicado a bot, cuaderno y
+  cartera; Brio conserva Bearer. 21 comprobaciones con cuenta temporal: POST por IP LAN real
+  200, ajenos/rebinding 403. Guía y `Abrir panel LAN.bat` en README. Falta confirmación desde
+  teléfono físico (F3). E2/E4 (internet) siguen sin aprobar.
 
 ### G. Cuentas, demo y pago → FALTA (todo)
 G1 modo demo con plata falsa, sin claves ni pago. G2 cuentas por cliente (hoy Helios es para una sola
@@ -455,11 +460,15 @@ persona en una PC; para vender es obligatorio). G3 plan gratis/pago por escrito,
 que no funciona. G4 ayuda en español simple con video o capturas reales del panel, sin números
 inventados. Si no se puede todo en esta tanda, se deja por escrito qué queda y por qué, no se finge.
 
-### H. Reportes y que no haya errores → FALTA
-H1 reporte por mes (ganancia/pérdida, operaciones, cuántas ganó, peor caída, vs comprar-y-sostener) en
-CSV y PDF si se puede. H2 registro de todo (cada orden, cada freno que salta, cada error) con fecha y
-hora, legible sin abrir el código. H3 sin errores: pruebas después de cada cambio, en computadora y en
-teléfono, sin botones muertos ni pantallas vacías.
+### H. Reportes y que no haya errores → PARCIAL (2026-11-08, `demo-cliente`)
+H1 reporte unificado (P/L + operaciones + peor caída) **FALTA, explícitamente pendiente**:
+existen exportaciones por vista; no se fingió un reporte nuevo. H2 registro: cuaderno,
+decisiones e historial de cartera existen. H3: corregidos anotar (éxito sólo tras confirmar
+HTTP), CSV del cuaderno con escape completo, textos Comprar/Vender (ambos navegan a Cartera
+de práctica, ahora lo dicen), intervalos en una fila a 360/390, estados vacíos de noticias
+según fuentes reales, timeout universal de 20 s en `pedir()` del navegador y guarda del CDN
+(sin internet el panel vive y lo explica). 72 comprobaciones de navegador emulado + 177 TODO
+OK. Falta toque físico (F3) y auditoría de todos los controles en dispositivo real.
 
 ### Orden de ejecución (del prompt, sin saltarse nada)
 1. Leer + pruebas → **HECHO**. 2. Este PLAN → **HECHO**. 3. Parte A. 4. Parte B (papel con S11; los
@@ -492,7 +501,7 @@ las comprobaciones anteriores conservan su fecha y la auditoría global aún fal
 
 **Exchanges e indicadores:**
 - **FALTA** — Cambiar de exchange entre Binance, Bybit, OKX y Kraken funciona. (D2; `ccxt` instalado pero sin usar.)
-- **FALTA** — MACD, Bollinger, ADX y VWAP se ven en el gráfico. (D1; `ta` instalado pero sin usar.)
+- **HECHO (2026-11-08, `demo-cliente`)** — MACD, Bollinger, ADX y VWAP se ven en el gráfico. (D1: `bot/indicadores.py` con `ta`; verificado en Chromium con 500 velas reales de Binance; `verificar_relevo.py` lo acredita en Mac.)
 - **HECHO** — Grid S9 funciona en la prueba. (2026-11-07: pruebas VA1–VA3 en `TODO OK` y S9 en `ventaja.py`; es backtest, no requiere navegador.)
 
 **Noticias y Brio:**
@@ -506,17 +515,17 @@ las comprobaciones anteriores conservan su fecha y la auditoría global aún fal
 - **HECHO EN CÓDIGO / FALTA TOQUE REAL** — Panel en teléfono a 360px: Cartera probada en emulación táctil Chrome el 2026-11-08, sin desborde de página y botones ≥44 px; la mejora de interfaz 2026-11-08 (rama `ui-mejora-interfaz`) deja tablas con scroll, botones a 44px y gráficos con altura móvil en todas las vistas, pero no se probó con toque en teléfono físico (F3).
 - **HECHO EN CÓDIGO / FALTA TOQUE REAL** — Panel en teléfono a 390px: lo mismo que a 360px (F3).
 - **HECHO EN CÓDIGO / FALTA TOQUE REAL** — Menú abajo funciona, favoritos, comparador y simulador funcionan con toque. (Favoritos/comparador/simulador verificados en navegador de escritorio el 2026-11-07, commit 23542b1; menú abajo ahora con texto corto y botones de 52px en la mejora 2026-11-08; NO probados con toque en teléfono; F2/F3.)
-- **FALTA** — Se puede abrir desde el teléfono por web, no solo desde la PC. (F4; depende de E2, servidor solo en `127.0.0.1`.)
+- **HECHO EN CÓDIGO / FALTA TELÉFONO FÍSICO** — Se puede abrir desde el teléfono por web en la misma WiFi. (F4, 2026-11-08 `demo-cliente`: Origin/Host locales validados, 21 comprobaciones aisladas con POST por IP LAN real; guía en README; internet sigue sin aprobar.)
 
 **Cuentas y demo:**
 - **FALTA** — Entrar con cuenta, ver solo lo mío. (G2; hoy es single-user.)
-- **FALTA** — Modo demo con plata falsa funciona sin claves. (G1.)
+- **HECHO como demo actual** — Modo demo con plata falsa funciona sin claves. (G1: banner "Modo demo — dinero falso", cartera ficticia y S11 en papel; verificado 2026-11-08 en `demo-cliente`.)
 - **FALTA (parcial)** — Ayuda en español simple, con capturas reales. (La vista Ajustes tiene ayuda en español `panel.html:1810`; falta video/capturas reales; G4.)
 
 **Reportes y sin errores:**
 - **FALTA** — Reporte por mes, con ganancia, operaciones y peor caída, y se baja en CSV. (H1.)
 - **HECHO** — `python bot/pruebas.py` sale `TODO OK`, con más de 90 pruebas. (2026-11-08: **177 comprobaciones OK**, contadas en la salida; base original de este plan: 90.)
-- **FALTA (parcial)** — No hay botones muertos, ni pantallas vacías, ni números inventados. (Revisión parcial hecha; falta auditoría completa de botones y prueba en teléfono; H3.)
+- **PARCIAL (2026-11-08, `demo-cliente`)** — No hay botones muertos, ni pantallas vacías, ni números inventados. (72 comprobaciones H en emulación + 21 F4 + RSS reales; falta teléfono físico y recorrido completo de todos los controles; H3.)
 
 ## 11. Lo que el dueño tiene que decidir — no lo decide el agente solo
 
@@ -537,3 +546,26 @@ las comprobaciones anteriores conservan su fecha y la auditoría global aún fal
    no reintentar el push en este cierre parcial de C.
 
 Si una de estas decisiones no está, ese trabajo queda marcado como pendiente, no se inventa.
+
+## 12. Demo para el cliente (2026-11-08, rama `demo-cliente`)
+
+Objetivo: prototipo demo honesto para reunión con cliente (comunidad de trading). Mensaje:
+"esta es la aplicación que podemos tener; podemos trabajar juntos, pero necesito que inviertas".
+Dinero real, exchanges, cuentas y pago sólo después, con decisión explícita.
+
+Estado por vista (verificación de esta tanda; detalle y guion en `ENTREGA-DEMO.md`):
+
+| Vista | Funcional hoy | Verificado cómo | Pendiente |
+|---|---|---|---|
+| Panel | asistente, precios, favoritos, comparador | navegador emulado + datos públicos reales; asistente real sin persistir | toque físico |
+| Gráfico | velas reales, EMAs, RSI, MACD/Boll/ADX/VWAP, escenarios | 500 velas Binance + capas alineadas (relevo Mac) y emulación Windows | controles completos en físico |
+| El bot | estado punto+palabra, PARAR/Reanudar, scorecard S11 | POST interruptor con APAGADO temporal (F4); estado real leído | ensayo 30 días NO autorizado |
+| Cuaderno | lectura NUL-tolerante, Anotar, CSV con escape | navegador: éxito sólo tras HTTP, fallo avisado, CSV round-trip | export en físico |
+| On-chain | cadenas/protocolos/stablecoins/red/exchanges | APIs públicas reales en navegador | repaso en físico |
+| Laboratorio | backtest local + simulador | 33.000 velas locales, números sin CDN también | repaso en físico |
+| Noticias | RSS reales + puerta Brio con clave | CoinDesk/Cointelegraph/Decrypt respondieron; estados vacíos honestos | Brio sin URL pública (E2/E4 excluidos) |
+| Cartera | órdenes papel, P/L, curva, CSV, calculadora | UI completa con cuenta temporal por LAN y loopback | físico |
+| Ajustes | tema/ayuda persistidos por navegador+origen | relevo Mac + emulación | persistencia no garantizada si storage falla |
+
+Reglas que siguen: `SOLO_PRUEBA=True`, banner demo, LAN sí / internet no, sin secretos en Git,
+sin merge a master, commit/push sólo con autorización del dueño.

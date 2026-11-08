@@ -1,6 +1,13 @@
 # CONTINUAR AQUÍ — estado al cerrar la parte C
 
-> **Relevo más reciente: 2026-11-08, rama `demo-cliente`.** Antes de usar este
+> **Estado más reciente: 2026-11-08, cierre de la DEMO para el cliente (rama `demo-cliente`,
+> sin commitear todavía).** Leer [ENTREGA-DEMO.md](ENTREGA-DEMO.md) antes que este archivo:
+> tiene qué quedó funcional, qué se verificó (177 OK / TODO OK, F4 21 chequeos LAN aislados,
+> H 72 chequeos en navegador emulado, RSS real) y qué falta (F3 teléfono físico, las 79
+> comprobaciones de `verificar_relevo.py` que sólo corren en la Mac, reporte unificado H1).
+> El stash de D1+D2 sigue intacto: NO aplicarlo ni borrarlo.
+
+> **Relevo anterior: 2026-11-08, rama `demo-cliente`.** Antes de usar este
 > antecedente, leer [RELEVO-DEMO-CLIENTE.md](RELEVO-DEMO-CLIENTE.md): contiene el
 > estado de la rama y su publicación autorizada, las pruebas del punto de pausa y los pendientes
 > de la demo. No reiniciar D desde cero ni aplicar el stash de D1+D2.

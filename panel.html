@@ -791,7 +791,7 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
   #v-grafico .overlay .px{font-size:36px}
   #v-grafico .overlay .chg{font-size:13px}
   #v-grafico #tf2{flex-wrap:nowrap;gap:4px}
-  #v-grafico #tf2 button{flex:1 1 0;min-width:0;min-height:36px;padding:8px 4px;font-size:12px}
+  #v-grafico #tf2 button{flex:1 1 0;min-width:0;min-height:36px;padding:8px 4px;font-size:12px;white-space:nowrap}
   #v-grafico #capas button{min-height:44px}
 }
 /* ---------- bot: vista EL BOT (rediseño v2, estilo teléfono redondo) ---------- */
@@ -1038,9 +1038,10 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <div id="chartBig"></div>
           </div>
           <div style="display:flex;gap:10px;margin-top:12px">
-            <button class="btn btn-verde" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↗ Comprar</button>
-            <button class="btn btn-rojo" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↘ Vender</button>
+            <button class="btn btn-verde" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↗ Comprar en Cartera</button>
+            <button class="btn btn-rojo" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↘ Vender en Cartera</button>
           </div>
+          <div class="note">Los dos botones abren la Cartera de práctica con dinero ficticio; acá no se ejecuta ninguna orden.</div>
           <div id="chartRsi" style="height:110px;margin-top:12px"></div>
           <div id="chartMacd" style="height:110px;margin-top:12px;display:none"></div>
           <div id="chartAdx" style="height:110px;margin-top:12px;display:none"></div>
@@ -1355,6 +1356,7 @@ var BASE = LOCAL ? null : '/api';
 var URL_BIN = 'https://api.binance.com/api/v3/klines';
 var URL_DEPTH = 'https://api.binance.com/api/v3/depth';
 var URL_GEO = 'https://api.coingecko.com/api/v3/coins/markets';
+var HAY_LIB = typeof LightweightCharts !== 'undefined';
 
 function url(tipo, params){
   if(tipo === 'mercados') return LOCAL ? URL_GEO + '?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h' : BASE + '/mercados';
@@ -1386,10 +1388,19 @@ function pedir(tipo, params, opciones){
   var destino = url(tipo, params);
   if(destino === null) return Promise.resolve({ estado:'local', datos:null });
   var t0 = performance.now();
-  return fetch(destino, opciones).then(function(r){
+  var op = opciones || {}, plazo = null;
+  if(!op.signal){
+    // tope universal: sin red, ningún pedido queda colgado para siempre
+    var control = new AbortController();
+    op = Object.assign({}, op, {signal:control.signal});
+    plazo = setTimeout(function(){ control.abort(); }, 20000);
+  }
+  function limpiar(){ if(plazo) clearTimeout(plazo); }
+  return fetch(destino, op).then(function(r){
+    limpiar();
     if(!r.ok) throw new Error('HTTP ' + r.status + ' en ' + tipo);
     return r.json();
-  }).then(function(j){
+  }, function(e){ limpiar(); throw e; }).then(function(j){
     latencias[tipo] = Math.round(performance.now() - t0);
     fuentes[tipo] = Date.now();
     if(LOCAL) return { estado:'ok', datos:j };
@@ -1869,6 +1880,7 @@ function opcionGrafico(alto){
 }
 function montar(){
   var el = document.getElementById('chart');
+  if(!HAY_LIB){ el.innerHTML = '<div class="note">La librería de gráficos no cargó (hace falta internet). El resto del panel sigue funcionando.</div>'; return; }
   grafico = LightweightCharts.createChart(el, opcionGrafico());
   serieVelas = grafico.addCandlestickSeries({ upColor:'#0ecb81', downColor:'#f6465d', borderVisible:false, wickUpColor:'#0ecb81', wickDownColor:'#f6465d' });
   serieVol = grafico.addHistogramSeries({ priceFormat:{type:'volume'}, priceScaleId:'v' });
@@ -1906,6 +1918,7 @@ function pintarGrafico(){
 var bigListo = false, sincronizando = false;
 function montarGrande(){
   if(bigListo){ redibujarGrande(); return; }
+  if(!HAY_LIB){ document.getElementById('gNota').textContent = 'La librería de gráficos no cargó (CDN). Sin ella no se dibujan velas ni indicadores; el resto de la vista sí.'; return; }
   big = LightweightCharts.createChart(document.getElementById('chartBig'), opcionGrafico());
   bigVelas = big.addCandlestickSeries({ upColor:'#0ecb81', downColor:'#f6465d', borderVisible:false, wickUpColor:'#0ecb81', wickDownColor:'#f6465d' });
   bigVol = big.addHistogramSeries({ priceFormat:{type:'volume'}, priceScaleId:'v' });
@@ -2072,7 +2085,8 @@ Array.prototype.forEach.call(document.querySelectorAll('#capas button'), functio
 
 function pintarMarcos(){
   var marcos = [['15m','15 min'],['30m','30 min'],['1h','1 hora'],['4h','4 horas'],['1d','1 día'],['1w','1 semana']];
-  var html = marcos.map(function(m){ return '<button class="'+(m[0]===estado.intervalo?'on':'')+'" onclick="marcoTime(\''+m[0]+'\')">'+m[1]+'</button>'; }).join('');
+  var corto = window.matchMedia && matchMedia('(max-width: 620px)').matches;
+  var html = marcos.map(function(m){ return '<button class="'+(m[0]===estado.intervalo?'on':'')+'" onclick="marcoTime(\''+m[0]+'\')">'+(corto && m[0]==='1w' ? '1 sem' : m[1])+'</button>'; }).join('');
   document.getElementById('tf').innerHTML = html;
   document.getElementById('tf2').innerHTML = html;
 }
@@ -2351,11 +2365,15 @@ function pintarNoticias(){
       }).join(' · ')
     : 'Sin respuesta de las fuentes todavía.');
   if(!lista.length){
-    caja.innerHTML = '<div class="note">' + (todo.length
-      ? 'No hay noticias en este filtro en este momento.'
-      : (ntn.datos.actualizado
-          ? 'Las fuentes están respondiendo pero todavía no hay noticias guardadas (&lt;48 h). Volvé en un rato.'
-          : 'Todavía no hay noticias guardadas. Si está sin internet, el panel las trae cuando vuelva; tocá Actualizar ahora.')) + '</div>';
+    var vacio;
+    if(todo.length) vacio = 'No hay noticias en este filtro en este momento.';
+    else if(Object.keys(f).length){
+      vacio = Object.keys(f).some(function(k){ return String(f[k]).indexOf('error') < 0; })
+        ? 'Alguna fuente respondió en la última lectura (detalle arriba), pero todavía no hay noticias guardadas (&lt;48 h). Volvé en un rato.'
+        : 'Las fuentes no respondieron en la última lectura. Revisá la conexión y tocá Actualizar ahora.';
+    } else if(ntn.datos.actualizado) vacio = 'Todavía no hay noticias guardadas (&lt;48 h). Volvé en un rato o tocá Actualizar ahora.';
+    else vacio = 'Todavía no hay noticias guardadas. Si está sin internet, el panel las trae cuando vuelva; tocá Actualizar ahora.';
+    caja.innerHTML = '<div class="note">' + vacio + '</div>';
     return;
   }
   caja.innerHTML = lista.map(function(n){
@@ -2554,14 +2572,20 @@ function anotar(forzar){
   if(!forzar && clave===ultimaAnotada && Date.now()-ultimoMomentoAnotado < 60000) return;
   ultimaAnotada = clave; ultimoMomentoAnotado = Date.now();
   if(LOCAL){
-    var viejas = JSON.parse(localStorage.getItem('cuaderno')||'[]');
-    viejas.unshift(f); localStorage.setItem('cuaderno', JSON.stringify(viejas.slice(0,MAX_CACHE_LOCAL)));
-    pintarLog(viejas.slice(0,40).map(function(x){ return [x.fecha,x.hora,x.mercado,x.precio,x.tendencia,x.agitacion,x.fuerza,x.rango24h,x.coincidencias,x.escenarios,x.veredicto]; }));
+    try{
+      var viejas = JSON.parse(localStorage.getItem('cuaderno')||'[]');
+      viejas.unshift(f); localStorage.setItem('cuaderno', JSON.stringify(viejas.slice(0,MAX_CACHE_LOCAL)));
+      pintarLog(viejas.slice(0,40).map(function(x){ return [x.fecha,x.hora,x.mercado,x.precio,x.tendencia,x.agitacion,x.fuerza,x.rango24h,x.coincidencias,x.escenarios,x.veredicto]; }));
+      if(forzar) avisarOk('Lectura anotada en este navegador.');
+    }catch(e){ ultimaAnotada = ''; avisar('El navegador no permitió guardar la lectura.'); }
   } else {
-    fetch('/api/cuaderno',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(f)}).then(traerLog)
-      .catch(function(){ avisar('El cuaderno no se pudo escribir en el disco.'); });
+    fetch('/api/cuaderno',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(f)})
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(j){ if(j.estado !== 'anotado') throw new Error(j.estado || 'rechazado');
+        if(forzar) avisarOk('Lectura anotada en el cuaderno.');
+        return traerLog(); })
+      .catch(function(){ ultimaAnotada = ''; avisar('El cuaderno no se pudo escribir en el disco.'); });
   }
-  if(forzar) avisarOk('Lectura anotada en el cuaderno.');
 }
 function traerLog(){
   if(LOCAL) return;
@@ -2584,11 +2608,12 @@ function pintarLog(filas){
   }).join('');
 }
 function bajarCsv(){
+  var cab = ['fecha','hora','mercado','precio','tendencia','agitacion','fuerza','rango24h','coincidencias','escenarios','veredicto'];
   if(!LOCAL){ pedir('cuaderno','').then(function(r){ var d=r.datos||{};
-    descargar((d.cabecera||[]).join(',')+'\n'+(d.filas||[]).map(function(x){return x.join(',')}).join('\n'),'cuaderno.csv'); }); return; }
-  var filas = JSON.parse(localStorage.getItem('cuaderno')||'[]');
-  var cab = 'fecha,hora,mercado,precio,tendencia,agitacion,fuerza,rango24h,coincidencias,escenarios,veredicto';
-  descargar(cab+'\n'+filas.map(function(x){ return [x.fecha,x.hora,x.mercado,x.precio,x.tendencia,x.agitacion,x.fuerza,x.rango24h,x.coincidencias,x.escenarios,x.veredicto].join(','); }).join('\n'),'cuaderno.csv');
+    descargar(csvDe(d.cabecera && d.cabecera.length ? d.cabecera : cab, d.filas||[]),'cuaderno.csv'); })
+    .catch(function(){ avisar('No se pudo leer el cuaderno para exportar.'); }); return; }
+  var filas = JSON.parse(localStorage.getItem('cuaderno')||'[]').map(function(x){ return cab.map(function(k){ return x[k]; }); });
+  descargar(csvDe(cab, filas),'cuaderno.csv');
 }
 function descargar(texto, nombre){
   var a = document.createElement('a');
@@ -3174,6 +3199,7 @@ function labCfg(){
 }
 function labMontarGrafico(){
   if(lab.grafico) return;
+  if(!HAY_LIB){ document.getElementById('labCurva').innerHTML = '<div class="note">La curva necesita la librería de gráficos (CDN). Los números de abajo sí se calculan.</div>'; return; }
   lab.grafico = LightweightCharts.createChart(document.getElementById('labCurva'), {
     height:300, layout:{ background:{type:'solid',color:paleta().fondo}, textColor:paleta().texto, fontSize:10 },
     grid:{ vertLines:{color:paleta().grilla}, horzLines:{color:paleta().grilla} },
@@ -3188,9 +3214,11 @@ function labCorrer(){
   if(!lab.datos) return;
   var cfg = labCfg(), r = labBacktest(lab.datos, cfg);
   labMontarGrafico();
-  lab.serieBot.setData(r.curva.map(function(v,i){ return { time:Math.floor(r.t[i]/1000), value:v }; }));
-  lab.serieBh.setData(r.bh.map(function(v,i){ return { time:Math.floor(r.t[i]/1000), value:v }; }));
-  lab.grafico.timeScale().fitContent();
+  if(lab.grafico){
+    lab.serieBot.setData(r.curva.map(function(v,i){ return { time:Math.floor(r.t[i]/1000), value:v }; }));
+    lab.serieBh.setData(r.bh.map(function(v,i){ return { time:Math.floor(r.t[i]/1000), value:v }; }));
+    lab.grafico.timeScale().fitContent();
+  }
   var gana = r.retorno > r.bhRetorno;
   document.getElementById('labMetricas').innerHTML = [
     ['Operaciones', r.operaciones.toLocaleString('en-US')],

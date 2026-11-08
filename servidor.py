@@ -481,14 +481,27 @@ class Atencion(BaseHTTPRequestHandler):
         if camino == "/api/noticias/recibir":
             return self._recibir_brio()
         if camino == "/api/bot/apagar":
+            if self._post_rechazado():
+                return
             return self._bot_interruptor(True)
         if camino == "/api/bot/prender":
+            if self._post_rechazado():
+                return
             return self._bot_interruptor(False)
         if camino in ("/api/cartera/orden", "/api/cartera/cerrar"):
             return self._cartera_post(camino)
         if camino != "/api/cuaderno":
             return self._json({"estado": "no_existe"}, 404)
-        largo = int(self.headers.get("Content-Length") or 0)
+        if self._post_rechazado():
+            return
+        if self.headers.get_content_type() != "application/json":
+            return self._json({"estado": "se_requiere_json"}, 415)
+        try:
+            largo = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            largo = -1
+        if largo < 0 or largo > 64 * 1024:
+            return self._json({"estado": "cuerpo_grande"}, 413)
         try:
             cuerpo = json.loads(self.rfile.read(largo).decode("utf-8"))
             fila = [str(cuerpo.get(k, ""))[:64] for k in
@@ -532,10 +545,32 @@ class Atencion(BaseHTTPRequestHandler):
             salida["errores"] = errores
         return self._json(salida)
 
+    def _post_rechazado(self):
+        """Freno de origen para los POST del panel (Brio no pasa por acá: usa clave).
+
+        El Host tiene que ser loopback o un nombre/IP de este equipo: un dominio
+        ajeno apuntado a nuestra IP (DNS rebinding) queda rechazado. Si el
+        navegador manda Origin, debe ser exactamente el http://Host:puerto con el
+        que abrió el panel; una página de otro sitio no puede ordenar, cerrar,
+        anotar ni tocar el bot. Sin Origin (curl, scripts de prueba) se deja pasar
+        porque el Host ya es local y un navegador ajeno siempre manda Origin.
+        """
+        host = self.headers.get("Host") or ""
+        nombre = urllib.parse.urlsplit("http://" + host).hostname or ""
+        if nombre not in hosts_locales():
+            self._json({"estado": "host_rechazado"}, 403)
+            return True
+        origen = self.headers.get("Origin")
+        if origen and origen != "http://" + host:
+            self._json({"estado": "origen_rechazado"}, 403)
+            return True
+        return False
+
     def _bot_interruptor(self, apagar):
         """Boton de parada del panel: escribe o borra el archivo APAGADO que el
         bot ya chequea (exchange.apachado). Es solo papel: SOLO_PRUEBA sigue en
-        True, asi que prender nunca habilita dinero real. Escucha solo en 127.0.0.1.
+        True, asi que prender nunca habilita dinero real. El POST pasa por el
+        freno de origen local (_post_rechazado).
         """
         import exchange
         ruta = exchange.RUTA_APAGADO
@@ -548,12 +583,11 @@ class Atencion(BaseHTTPRequestHandler):
         return self._json({"estado": "ok", "apagado": False})
 
     def _cartera_post(self, camino):
-        """Ordenes en papel (C1). Solo 127.0.0.1, plata falsa, precios reales.
-        Valida la moneda y el cuerpo; nunca toca dinero real (SOLO_PRUEBA sigue True)."""
+        """Ordenes en papel (C1). POST del panel local o LAN, plata falsa, precios reales.
+        Valida origen, moneda y cuerpo; nunca toca dinero real (SOLO_PRUEBA sigue True)."""
         import cartera
-        origen = self.headers.get("Origin")
-        if origen and origen not in (f"http://127.0.0.1:{PUERTO}", f"http://localhost:{PUERTO}"):
-            return self._json({"estado": "origen_rechazado"}, 403)
+        if self._post_rechazado():
+            return
         if self.headers.get_content_type() != "application/json":
             return self._json({"estado": "se_requiere_json"}, 415)
         try:
@@ -612,6 +646,26 @@ def ip_local():
             s.close()
     except Exception:
         return "127.0.0.1"
+
+
+def hosts_locales():
+    """Nombres e IP con los que este equipo puede servir el panel (loopback y LAN).
+
+    Se recalcula en cada POST porque la IP puede cambiar al reconectar la WiFi.
+    Sólo entran direcciones del propio equipo; un Host de dominio ajeno no entra.
+    """
+    nombres = {"127.0.0.1", "localhost", "::1"}
+    try:
+        equipo = socket.gethostname()
+        nombres.add(equipo.lower())
+        for _, _, _, _, direccion in socket.getaddrinfo(equipo, None):
+            nombres.add(direccion[0].lower())
+    except OSError:
+        pass
+    nombres.add(ip_local().lower())
+    if HOST not in ("0.0.0.0", "::", ""):
+        nombres.add(HOST.lower())
+    return nombres
 
 
 def main():

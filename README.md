@@ -15,6 +15,7 @@ gráfico usa una librería por CDN).
 | Archivo | Qué hace |
 |---|---|
 | `Abrir panel.bat` | Levanta el servidor local y abre el terminal en el navegador |
+| `Abrir panel LAN.bat` | Igual, pero visible para teléfonos en la misma WiFi (sólo red local) |
 | `Entrenar.bat` | Baja el histórico de velas y entrena el modelo con walk-forward |
 | `Bot en papel.bat` | Cada 15 minutos mira el mercado, decide y anota |
 | `Probar el motor.bat` | Corre las 177 pruebas del motor, de los frenos, del candado y de las noticias |
@@ -118,10 +119,43 @@ identifica la valoración guardada. Un salto de precio puede superar la pérdida
 La calculadora trabaja en USD o pesos, sin convertir monedas. La curva suma el capital inicial de
 cada moneda usada a toda la serie, para que agregar una moneda no parezca una ganancia.
 
-Verificado el 2026-11-08: **177 comprobaciones, TODO OK**; Cartera en Chrome a 1440 px y emulación
-móvil táctil a 360/390 px, incluidas órdenes, cancelaciones, filtros, CSV, errores de conexión y tema.
-No equivale a auditar todas las vistas ni a probar un teléfono físico. Para continuar el proyecto,
-leer `CONTINUAR-AQUI.md`: siguiente parte D; ensayo S11 de 30 días pendiente de autorización.
+Verificado el 2026-11-08 (rama `demo-cliente`): **177 comprobaciones, TODO OK**; F4 con 21
+comprobaciones aisladas (POST por IP LAN real aceptados, orígenes ajenos y DNS rebinding 403,
+Brio 401 sin clave); H con 72 comprobaciones en Chromium emulado a 360/390/1440 px (cuaderno,
+CSV con escape, anotar sin éxito falso, favoritos, comparador, bot, on-chain, lab, cartera en
+papel con cuenta temporal, estados sin CDN y fuentes de noticias honestas); RSS reales
+CoinDesk/Cointelegraph/Decrypt respondieron con noticias y enlaces reales. **No equivale a
+teléfono físico (F3 pendiente)** ni a correr `verificar_relevo.py` (79) en esta PC: sus pines
+son de Mac/Python 3.9 y acá hay Python 3.14; esa suite debe correrse en la Mac. Estado por
+vista y guion de reunión en `ENTREGA-DEMO.md`.
+
+## Abrir desde el teléfono (misma WiFi, autorizado para la demo)
+
+1. En la PC que va a correr el servidor, doble clic a `Abrir panel LAN.bat` (o
+   `set HELIOS_HOST=0.0.0.0` y `python servidor.py`). La terminal imprime
+   `http://<IP-de-esa-PC>:8765/`; esa IP es la que sirve, no la de otra máquina que sólo comparta archivos.
+2. El teléfono en la **misma WiFi** abre esa URL. Si Windows pregunta por el firewall, permitir
+   sólo en **red privada** y sólo si el dueño lo autoriza; nunca abrir el puerto en el router,
+   nunca túneles ni internet público. Escuchar en `0.0.0.0` NO limita solo a la WiFi privada:
+   escucha todas las interfaces IPv4 de la PC.
+3. Seguridad de los POST: el servidor sólo acepta Host loopback o nombres/IP del propio equipo
+   (bloquea dominios ajenos apuntados a la IP, DNS rebinding) y, si el navegador manda `Origin`,
+   exige que sea exactamente el mismo `http://Host:puerto` del panel. Una página de otro sitio
+   recibe 403 al intentar ordenar, cerrar, anotar o tocar el bot. Brio conserva su clave Bearer.
+4. Verificado con servidor de prueba y cuenta temporal: lectura y POST de Cartera por la IP LAN
+   real funcionan; orígenes ajenos 403. **Falta confirmarlo desde un teléfono físico (F3).**
+5. Al terminar, cerrar la ventana del `.bat`. El bind predeterminado sin la variable sigue siendo
+   `127.0.0.1` (sólo esa PC).
+
+## Guion de demo de 2 minutos (español simple)
+
+1. **Panel:** "Lee datos públicos y te explica el estado del mercado; no predice ganancias".
+2. **Gráfico:** "Estas son velas reales e indicadores; las acciones son de práctica".
+3. **Cartera:** "El dinero es ficticio; se registran comisiones, ganancias y pérdidas".
+4. **El bot:** "S11 es una regla con ventaja histórica medida, no garantía futura; sigue en papel".
+
+No prometer ganancias, operación continua, publicación, exchanges reales ni pagos. El banner
+"Modo demo — dinero falso" queda visible todo el tiempo.
 
 ## El asistente
 
