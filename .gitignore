@@ -18,6 +18,8 @@ bot/avisos_pendientes.txt
 bot/contador_dia.json
 bot/posiciones.json
 bot/posiciones.json.tmp
+bot/cartera_manual.json
+bot/cartera_manual.json.tmp
 
 # El cuaderno y el registro son la contabilidad de tus decisiones: tuya, no del repo
 cuaderno.csv

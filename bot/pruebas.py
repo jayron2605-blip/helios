@@ -755,5 +755,60 @@ suma_pnl = sum(o.pnl_neto for o in b.operaciones)
 check("TPS3 la contabilidad cierra exacta con stop", abs(ganado_efectivo - suma_pnl) < 1e-6,
       f"efectivo={ganado_efectivo:.4f} suma_pnl={suma_pnl:.4f}")
 
+print("\n== cartera en papel a mano (C2/C3/C4) ==")
+import cartera as _cartera
+def _cm_velas(closes, ini=0):
+    return [{"t": base + (ini + i) * 3_600_000, "o": p, "h": p * 1.001,
+             "l": p * 0.999, "c": p} for i, p in enumerate(closes)]
+
+cm = _cartera.CarteraManual(ruta=os.path.join(tmp, "cartera_manual.json"))
+ok, det = cm.colocar_orden("BTCUSDT", _cm_velas([100.0, 100.0]), {"stop_loss": 0.015, "take_profit": 0.03})
+cm.salvar()
+check("CM1 orden a mercado abre posicion", ok and det["posicion"] is not None and det["posicion"]["llena"],
+      "" if ok else str(det))
+check("CM1b queda escrita en disco", os.path.exists(cm.ruta))
+cm2 = _cartera.CarteraManual(ruta=cm.ruta)
+check("CM2 la posicion sobrevive al recargar", cm2.estado["mercados"]["BTCUSDT"]["posicion"] is not None)
+d = cm2.detalle({"BTCUSDT": 100.0})
+check("CM3 detalle tiene las cuatro partes", all(k in d for k in ("resumen", "mercados", "historial", "curva")),
+      str(list(d.keys())))
+check("CM3b resumen cuenta la posicion abierta", d["resumen"]["en_posicion"] == 1, str(d["resumen"]["en_posicion"]))
+okc, detc = cm2.cerrar("BTCUSDT", _cm_velas([101.0], ini=2))
+cm2.salvar()
+check("CM4 cerrar a mano cierra la posicion", okc and cm2.estado["mercados"]["BTCUSDT"]["posicion"] is None)
+check("CM4b el cierre va al historial", len(cm2.estado["mercados"]["BTCUSDT"]["operaciones"]) == 1,
+      cm2.estado["mercados"]["BTCUSDT"]["operaciones"][0]["motivo_salida"])
+okm, detm = cm2.colocar_orden("FAKECOIN", _cm_velas([100.0, 100.0]), {})
+check("CM5 rechaza moneda no permitida", not okm, str(detm))
+
+cml = _cartera.CarteraManual(ruta=os.path.join(tmp, "cartera_lim.json"))
+okl, detl = cml.colocar_orden("ETHUSDT", _cm_velas([100.0, 100.0]),
+                              {"tipo": "limite", "precio_limite": 95.0, "stop_loss": 0.015, "take_profit": 0.03})
+check("CM6 orden limite queda pendiente", okl and detl["posicion"]["llena"] is False)
+cml.procesar("ETHUSDT", _cm_velas([96.0, 94.5], ini=2))
+check("CM6b el limite se llena al bajar al precio", cml.estado["mercados"]["ETHUSDT"]["posicion"]["llena"] is True)
+
+cmtp = _cartera.CarteraManual(ruta=os.path.join(tmp, "cartera_tp.json"))
+okt, dett = cmtp.colocar_orden("SOLUSDT", _cm_velas([100.0, 100.0]),
+                               {"stop_loss": 0.015, "take_profits": [[0.5, 0.03], [0.5, 0.06]]})
+check("CM7 acepta take profit en partes", okt and len(dett["posicion"]["tp_pendientes"]) == 2)
+cmtp.procesar("SOLUSDT", _cm_velas([104.0, 107.0], ini=2))
+ops_sol = cmtp.estado["mercados"]["SOLUSDT"]["operaciones"]
+check("CM7b las dos partes se vendieron", len(ops_sol) == 2 and cmtp.estado["mercados"]["SOLUSDT"]["posicion"] is None,
+      str(len(ops_sol)))
+
+cmv = _cartera.CarteraManual(ruta=os.path.join(tmp, "cartera_val.json"))
+okv, detv = cmv.colocar_orden("BNBUSDT", _cm_velas([100.0, 100.0]),
+                              {"stop_loss": 99.0, "take_profit": -5.0, "trailing_stop": "basura"})
+check("CM8 acota valores absurdos sin romper", okv and 0 < detv["posicion"]["stop"] < 100.0,
+      f"stop={detv['posicion']['stop']:.3f}" if okv else str(detv))
+
+cms = _cartera.CarteraManual(ruta=os.path.join(tmp, "cartera_stop.json"))
+cms.colocar_orden("XRPUSDT", _cm_velas([100.0, 100.0]), {"stop_loss": 0.015, "take_profit": 0.5})
+cms.procesar("XRPUSDT", _cm_velas([97.0], ini=2))
+ops_xrp = cms.estado["mercados"]["XRPUSDT"]["operaciones"]
+check("CM9 el stop loss cierra y registra perdida", len(ops_xrp) == 1 and ops_xrp[0]["pnl_neto"] < 0,
+      ops_xrp[0]["motivo_salida"] if ops_xrp else "sigue abierta")
+
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)

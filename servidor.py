@@ -199,6 +199,32 @@ def recortar_estables(datos):
              "mecanismo": s.get("pegMechanism"), "precio": s.get("price")} for s in orden]
 
 
+def cartera_velas(sim):
+    """Velas de 1h recientes para marcar la cartera en papel a precio real. Usa el cache."""
+    url = f"{BINANCE}/api/v3/klines?symbol={sim}&interval=1h&limit=120"
+    datos, _ = pedir(url, "velas:" + sim + "1h", CACHE_SEG["velas"])
+    if not isinstance(datos, list):
+        return []
+    return [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]),
+             "l": float(k[3]), "c": float(k[4])} for k in datos if len(k) >= 5]
+
+
+def cartera_actual():
+    """Cartera en papel (C2/C3): resuelve las posiciones abiertas contra el precio
+    real y devuelve resumen, posiciones con P/L vivo, historial y curva de capital."""
+    import cartera
+    c = cartera.CarteraManual()
+    precios = {}
+    for sim, m in list(c.estado["mercados"].items()):
+        if m.get("posicion") is not None:
+            velas = cartera_velas(sim)
+            if velas:
+                c.procesar(sim, velas)
+                precios[sim] = velas[-1]["c"]
+    c.salvar()
+    return c.detalle(precios)
+
+
 class Atencion(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -360,6 +386,12 @@ class Atencion(BaseHTTPRequestHandler):
         if ruta.path == "/api/cerebro":
             return self._json({"estado": "ok", "datos": leer_json("bot/estado_cerebro.json")})
 
+        if ruta.path == "/api/cartera":
+            try:
+                return self._json({"estado": "ok", "datos": cartera_actual()})
+            except Exception as error:
+                return self._json({"estado": "error:" + type(error).__name__, "datos": None})
+
         if ruta.path == "/api/puntaje":
             h = (parametros.get("horizonte") or ["24"])[0]
             h = h if h in ("1", "24") else "24"
@@ -400,6 +432,8 @@ class Atencion(BaseHTTPRequestHandler):
             return self._bot_interruptor(True)
         if camino == "/api/bot/prender":
             return self._bot_interruptor(False)
+        if camino in ("/api/cartera/orden", "/api/cartera/cerrar"):
+            return self._cartera_post(camino)
         if camino != "/api/cuaderno":
             return self._json({"estado": "no_existe"}, 404)
         largo = int(self.headers.get("Content-Length") or 0)
@@ -460,6 +494,38 @@ class Atencion(BaseHTTPRequestHandler):
         if os.path.exists(ruta):
             os.remove(ruta)
         return self._json({"estado": "ok", "apagado": False})
+
+    def _cartera_post(self, camino):
+        """Ordenes en papel (C1). Solo 127.0.0.1, plata falsa, precios reales.
+        Valida la moneda y el cuerpo; nunca toca dinero real (SOLO_PRUEBA sigue True)."""
+        import cartera
+        try:
+            largo = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            largo = -1
+        if largo < 0 or largo > 64 * 1024:
+            return self._json({"estado": "cuerpo_grande"}, 413)
+        try:
+            cuerpo = json.loads(self.rfile.read(largo).decode("utf-8"))
+        except Exception:
+            return self._json({"estado": "cuerpo_invalido"}, 400)
+        if not isinstance(cuerpo, dict):
+            return self._json({"estado": "cuerpo_invalido"}, 400)
+        sim = str(cuerpo.get("simbolo") or "").upper()
+        if sim not in cartera.SIMBOLOS:
+            return self._json({"estado": "rechazado", "detalle": "moneda no permitida"}, 400)
+        velas = cartera_velas(sim)
+        if not velas:
+            return self._json({"estado": "error", "detalle": "no se pudo leer el precio real"}, 502)
+        c = cartera.CarteraManual()
+        if camino == "/api/cartera/orden":
+            ok, det = c.colocar_orden(sim, velas, cuerpo)
+        else:
+            ok, det = c.cerrar(sim, velas)
+        if not ok:
+            return self._json({"estado": "rechazado", "detalle": det}, 400)
+        c.salvar()
+        return self._json({"estado": "ok", "detalle": det})
 
 
 def calentar_noticias():
