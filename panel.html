@@ -883,15 +883,34 @@ body[data-tema="claro"] .btn-primario{background:var(--azul);color:#fff}
 #v-panel .seg.big{display:none}
 #v-panel .foot{display:none}
 #v-panel .card:has(#cmpTabla){display:none}
-/* Grafico a lo ancho, sin doble marco */
-#v-grafico .card{padding:0;background:transparent;border:0;box-shadow:none}
+/* Grafico a lo ancho, sin doble marco: solo la tarjeta del grafico queda sin marco;
+   las tarjetas de Cinta y Estadisticas conservan su tarjeta */
+#v-grafico>.wrap>.card:first-child{padding:0;background:transparent;border:0;box-shadow:none}
 #v-grafico .chartbox{border:0;background:transparent}
 #chartBig{border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;height:420px}
-#v-grafico .legend{display:none}
+#v-grafico .legend{display:none!important}
+/* Sin la linea de fuentes bajo el grafico: en la demo simple sobra */
+#v-grafico .fe{display:none!important}
+/* Precio sin brillo verde: el verde es solo para ganancia/compra */
+#v-grafico .overlay .px{text-shadow:none}
+/* Intervalo activo con el color principal del tema (amarillo en oscuro, azul en claro),
+   no verde: el verde es solo para ganancia/compra */
+#v-grafico #tf2 button.on{background:var(--azul);border-color:var(--azul);color:#1a1405;box-shadow:none}
+body[data-tema="claro"] #v-grafico #tf2 button.on{color:#fff}
 /* Cartera: saldo grande arriba, orden clara */
 #caResumen .stat{padding:16px 18px}
 #caResumen .stat .vl{font-size:30px;white-space:nowrap}
+#caResumen .stat:first-child .vl{font-size:34px}
+#caResumen .stat .lb{white-space:normal;line-height:1.4}
+#caResumen .stat .dl.g,#caResumen .stat .dl.r{display:inline-block;padding:3px 10px;border-radius:999px;font-weight:700}
+#caResumen .stat .dl.g{background:rgba(14,203,129,.14);color:var(--up)}
+#caResumen .stat .dl.r{background:rgba(246,70,93,.14);color:var(--dn)}
 #caColocar{min-height:56px;font-size:18px;border-radius:16px}
+/* Cartera: formulario Comprar grande y claro (sin tocar la logica) */
+#v-cartera .formgrid label{font-size:11px;letter-spacing:.08em}
+#v-cartera .formgrid input,#v-cartera .formgrid select{min-height:52px;font-size:16px;border-radius:14px}
+#v-cartera #caMoneda{min-height:56px;font-size:18px;font-weight:700;border-color:var(--sel-bd)}
+#v-cartera #caActualizar{width:100%;margin:8px 0;min-height:48px}
 /* Ajustes: solo preferencias reales, fuera la ayuda larga */
 #v-ajustes .row.split{display:none}
 /* Boton de tema bien visible, con el color principal */
@@ -904,9 +923,30 @@ body[data-tema="claro"] #ajTema button.on,body[data-tema="claro"] #ajParaque but
   #v-panel .split3{display:none}
   #v-panel .split .card:last-child{display:none}
   #chartBig{height:360px}
-  #chartRsi{display:none}
+  /* Grafico: los subcharts no se ven en telefono aunque el JS les ponga
+     display:block en linea (RSI viene activado por defecto) */
+  #v-grafico #chartRsi,#v-grafico #chartMacd,#v-grafico #chartAdx{display:none!important}
+  /* El grafico sangra hasta el borde de la pantalla (compensa el padding 8px de .scroll);
+     la cabecera y los botones Comprar/Vender quedan con el margen normal */
+  #v-grafico .chartbox{margin-left:-8px;margin-right:-8px}
+  /* Cabecera: simbolo y Opciones en la primera fila, intervalos a todo lo ancho debajo */
+  #v-grafico #tf2{flex:1 1 100%;order:3}
+  /* Opciones del grafico compactas en telefono */
+  #v-grafico .avanzadas summary{min-height:40px;padding:6px 12px;font-size:12px}
   #v-cartera .card:has(#caRiesgoNatural){display:none}
   #v-cartera .card:has(#caHistorial){display:none}
+  #v-cartera .card:has(#caCurva){display:none}
+  /* Cartera en telefono: la tabla de posiciones cabe sin scroll horizontal.
+     Solo quedan Moneda, Entrada, Precio ahora, P/L vivo y Cerrar (las demas
+     columnas ya se ocultan arriba); el min-width:620px global la obligaba
+     a desbordar aunque solo quedaran 5 columnas. */
+  #v-cartera .scrolly{padding:6px 6px}
+  #v-cartera .scrolly table{min-width:0;width:100%}
+  #v-cartera .scrolly th{padding:7px 3px;font-size:9px;letter-spacing:.02em;white-space:normal;line-height:1.3}
+  #v-cartera .scrolly td{padding:7px 3px;font-size:11px}
+  #v-cartera .scrolly td.txt{white-space:normal;min-width:0}
+  #v-cartera .caCerrar{min-height:44px;padding:6px 5px;font-size:11px}
+  #v-cartera .formgrid{grid-template-columns:minmax(0,1fr)}
   #cajaLista th:nth-child(5),#cajaLista td:nth-child(5),
   #cajaLista th:nth-child(7),#cajaLista td:nth-child(7),
   #cajaLista th:nth-child(9),#cajaLista td:nth-child(9),
@@ -915,6 +955,65 @@ body[data-tema="claro"] #ajTema button.on,body[data-tema="claro"] #ajParaque but
   table:has(#caPosiciones) th:nth-child(6),#caPosiciones td:nth-child(6),
   table:has(#caPosiciones) th:nth-child(7),#caPosiciones td:nth-child(7),
   table:has(#caPosiciones) th:nth-child(8),#caPosiciones td:nth-child(8){display:none}
+}
+</style>
+<style>
+/* ---------- PANEL (solo #v-panel, telefono 360px): inicio estilo Robinhood/Coinbase ---------- */
+@media(max-width:900px){
+  /* Lo que sobra, fuera tambien aqui (el bloque SIMPLE CLIENTE ya lo oculta; se reafirma) */
+  #v-panel .seg.big{display:none}
+  #v-panel .foot{display:none}
+  #v-panel .card:has(#cmpTabla){display:none}
+  #v-panel .split3{display:none}
+  #v-panel .row.split .card:last-child{display:none}
+  /* Asistente arriba: estado en 1 linea + 1 frase (max 2 lineas), sin marco */
+  #v-panel .asis{border:0;background:transparent;box-shadow:none;border-radius:0;margin-bottom:6px}
+  #v-panel .asisTop{border-bottom:0}
+  #v-panel .asisEstado{padding:2px 4px 6px 12px;border-bottom:0}
+  #v-panel .asisEstado .big{font-size:30px}
+  #v-panel #asisMotivos{display:none}
+  #v-panel .asisTexto{padding:0 4px 2px}
+  #v-panel .asisTexto ul{gap:0}
+  #v-panel #asisQuePasa li:nth-child(n+2){display:none}
+  #v-panel #asisQuePasa li{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14px;line-height:1.45;padding-left:0}
+  #v-panel #asisQuePasa li::before{display:none}
+  /* Riesgo fuera en telefono; veredicto del bot compacto, sin letra chica */
+  #v-panel .asisBottom{padding:0;gap:8px;background:transparent}
+  #v-panel .asisBottom .riesgo{display:none}
+  #v-panel .veredictoBot{padding:12px 14px;border-radius:16px}
+  #v-panel .veredictoBot .txt{font-size:13px;line-height:1.5}
+  #v-panel .veredictoBot .txt>span[style]{display:none}
+  /* Titular: 2 lineas max, sin marco ni detalle largo */
+  #v-panel .head{border:0;background:transparent;box-shadow:none;border-radius:0;padding:4px 4px 0;margin-bottom:10px}
+  #v-panel .head h2{font-size:20px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  #v-panel #detalle{display:none}
+  /* KPIs: solo los 4 primeros, numeros chicos en 2x2 */
+  #v-panel #kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:12px}
+  #v-panel #kpis .stat:nth-child(n+5){display:none}
+  #v-panel #kpis .stat{padding:10px 12px;border-radius:14px}
+  #v-panel #kpis .stat .vl{font-size:19px}
+  #v-panel #kpis .stat .lb{font-size:9.5px;margin-bottom:4px}
+  #v-panel #kpis .stat .dl{display:none}
+  /* Grafico a lo ancho, sin marco de tarjeta ni leyenda */
+  #v-panel .row.split .card:first-child{padding:0;background:transparent;border:0;box-shadow:none}
+  #v-panel .row.split .card:first-child h3{padding:0 4px}
+  #v-panel #chart{height:220px}
+  #v-panel .legend{display:none}
+  #v-panel .tf{padding:0 4px}
+  #v-panel .tf button{min-height:40px;padding:8px 13px;font-size:13px}
+  /* Seguimiento: sin marco, 5 filas visibles, solo nombre, precio y % 24 h */
+  #v-panel .card:has(#cajaLista){padding:0;background:transparent;border:0;box-shadow:none;margin-bottom:8px}
+  #v-panel .card:has(#cajaLista)>div:first-child{padding:0 4px}
+  #v-panel #cajaLista{height:196px;border:0;border-radius:0;background:transparent}
+  #v-panel .vlist table{min-width:0;width:100%}
+  #cajaLista th:nth-child(2),#cajaLista td:nth-child(2),
+  #cajaLista th:nth-child(5),#cajaLista td:nth-child(5),
+  #cajaLista th:nth-child(7),#cajaLista td:nth-child(7),
+  #cajaLista th:nth-child(8),#cajaLista td:nth-child(8),
+  #cajaLista th:nth-child(9),#cajaLista td:nth-child(9),
+  #cajaLista th:nth-child(10),#cajaLista td:nth-child(10){display:none}
+  #v-panel .vlist table td{padding:7px 6px;font-size:13px}
+  #v-panel .vlist table td.txt b{font-size:13px}
 }
 </style>
 </head>
@@ -1107,8 +1206,8 @@ body[data-tema="claro"] #ajTema button.on,body[data-tema="claro"] #ajParaque but
             <div id="chartBig"></div>
           </div>
           <div style="display:flex;gap:10px;margin-top:12px">
-            <button class="btn btn-verde" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↗ Comprar</button>
-            <button class="btn btn-rojo" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↘ Vender</button>
+            <button class="btn btn-verde" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">Comprar</button>
+            <button class="btn btn-rojo" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">Vender</button>
           </div>
           <div class="note">Los dos botones abren la Cartera de práctica con dinero ficticio; acá no se ejecuta ninguna orden.</div>
           <div id="chartRsi" style="height:110px;margin-top:12px"></div>
@@ -2161,7 +2260,9 @@ Array.prototype.forEach.call(document.querySelectorAll('#capas button'), functio
 function pintarMarcos(){
   var marcos = [['15m','15 min'],['30m','30 min'],['1h','1 hora'],['4h','4 horas'],['1d','1 día'],['1w','1 semana']];
   var corto = window.matchMedia && matchMedia('(max-width: 620px)').matches;
-  var html = marcos.map(function(m){ return '<button class="'+(m[0]===estado.intervalo?'on':'')+'" onclick="marcoTime(\''+m[0]+'\')">'+(corto && m[0]==='1w' ? '1 sem' : m[1])+'</button>'; }).join('');
+  /* En telefono, etiquetas cortas (15m, 30m, 1h, 4h, 1d, 1w) para que las 6
+     pastillas quepan en una sola fila sin recortarse; los valores no cambian. */
+  var html = marcos.map(function(m){ return '<button class="'+(m[0]===estado.intervalo?'on':'')+'" onclick="marcoTime(\''+m[0]+'\')">'+(corto ? m[0] : m[1])+'</button>'; }).join('');
   document.getElementById('tf').innerHTML = html;
   document.getElementById('tf2').innerHTML = html;
 }
