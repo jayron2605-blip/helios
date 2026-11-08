@@ -594,13 +594,19 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
         <div class="card" style="margin-bottom:12px">
           <h3>Estado del bot <span class="pill" id="botModo" style="margin-left:8px">—</span><span class="fe" data-fe="cerebro"></span></h3>
           <div class="note" id="botSub">Sin datos del bot todavía.</div>
-          <div class="row c4" id="botFrenos"></div>
+          <div class="row c4" id="botPapel" style="margin-top:10px"></div>
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <button class="btn" id="botParar" style="background:var(--dn);color:#fff;font-weight:700;padding:12px 22px;font-size:15px">■ PARAR EL BOT</button>
+            <button class="btn" id="botPrender" style="padding:12px 18px">Reanudar (sólo papel)</button>
+            <span class="note m" id="botPararTxt" style="margin:0"></span>
+          </div>
+          <div class="row c4" id="botFrenos" style="margin-top:12px"></div>
           <div class="note" style="margin-top:10px" id="botAvisos"></div>
         </div>
         <div class="row split">
           <div class="card"><h3>Qué decide ahora mismo</h3>
-            <div class="note">El modelo mira las últimas 24 velas de cada mercado y dice si ve más probable subir o bajar.</div>
-            <table><thead><tr><th>Mercado</th><th>Precio</th><th>Prob. subir</th><th>Decisión</th><th>Posición</th></tr></thead><tbody id="botSenales"></tbody></table>
+            <div class="note">Opera <b>S11</b>: entra sólo cuando el día, la semana y el mes suben a la vez. La probabilidad de subir del modelo S1 se muestra sólo como comparación; no decide la operación. Todo es en <b>papel</b>, con precios reales.</div>
+            <div class="scrolly"><table><thead><tr><th>Mercado</th><th>Precio</th><th>S11 día/sem/mes</th><th>Prob. S1</th><th>Decisión</th><th>Posición</th></tr></thead><tbody id="botSenales"></tbody></table></div>
           </div>
           <div class="card"><h3>Prueba walk-forward<span class="fe" data-fe="puntaje"></span></h3>
             <div class="note">Entrenado sólo con datos anteriores a cada mes de prueba. Comisión del 0,1 % por lado descontada.</div>
@@ -834,7 +840,7 @@ var FUENTE_DE = {
   mercados:'CoinGecko', chispas:'CoinGecko', mundo:'CoinGecko · alternative.me',
   velas:'Binance', libro:'Binance', extra:'Binance Futuros', historial:'Binance (histórico local)',
   onchain:'DefiLlama · mempool.space · CoinGecko', miedo_hist:'alternative.me',
-  noticias:'RSS · Brio', asistente:'Binance (calculado)', cerebro:'modelo local',
+  noticias:'RSS · Brio', asistente:'Binance (calculado)', cerebro:'bot en papel (S11)',
   puntaje:'prueba walk-forward', ventaja:'prueba de ventaja', decisiones:'registro local',
   cuaderno:'cuaderno local'
 };
@@ -1376,36 +1382,55 @@ function pintarBot(c, s){
   if(c && c.modo){
     modo.textContent = c.modo;
     modo.className = 'pill ' + (c.modo==='APAGADO'?'warn':(c.modo==='PRUEBA'?'ok':'bad'));
-    document.getElementById('botSub').innerHTML = 'Horizonte <b>'+c.horizonte+' velas</b> · umbral <b>'+c.umbral+'</b> · '
-      + (c.ventaja ? '<b class="y">'+c.ventaja+'</b>' : '');
+    document.getElementById('botSub').innerHTML = 'Estrategia <b>'+escHtml(c.estrategia||'S11')+'</b> · '
+      + (c.ventaja ? '<b class="y">'+escHtml(c.ventaja)+'</b>' : '')
+      + ' · <b>modo prueba fijo</b>: nunca mueve dinero real.';
+    var pp = c.papel || {};
+    document.getElementById('botPapel').innerHTML = [
+      ['P/L en papel', (pp.pnl_neto>=0?'+':'')+dol(pp.pnl_neto||0), cls(pp.pnl_neto||0), 'sobre '+dol(pp.capital_inicial||0)+' iniciales'],
+      ['Capital simulado', dol(pp.capital_total||0), '', (pp.en_posicion||0)+' de '+(pp.mercados||0)+' mercados en posición'],
+      ['Días en papel', String(pp.dias_en_papel||0), '', 'desde el primer arranque'],
+      ['Operaciones', String(pp.operaciones||0), '', (pp.ganadoras||0)+' ganadoras']
+    ].map(function(f){
+      return '<div class="card stat"><div class="lb">'+f[0]+'</div><div class="'+f[2]+'" style="font-family:var(--mono);font-size:18px">'+f[1]+'</div><div class="dl">'+f[3]+'</div></div>';
+    }).join('');
     document.getElementById('botSenales').innerHTML = (c.mercados||[]).map(function(m){
-      var b = Math.round(m.prob_suba*100);
-      var col = m.prob_suba>=c.umbral ? 'var(--up)' : (m.prob_suba<=1-c.umbral ? 'var(--dn)' : '#2b3a4d');
+      var s11 = m.s11||{};
+      function pctS(v){ return (v===null||v===undefined) ? '—' : ((v>=0?'+':'')+(v*100).toFixed(1)+'%'); }
+      var chip = '<span class="pill '+(s11.dentro?'ok':'')+'" style="font-size:10px">'+(s11.dentro?'adentro':'afuera')+'</span>';
+      var tres = '<span class="m" style="font-size:10px">'+pctS(s11.r24)+' / '+pctS(s11.r168)+' / '+pctS(s11.r720)+'</span>';
+      var pos = m.posicion_abierta;
+      var posTxt = pos ? (pos.cantidad+' @ '+fmt(pos.entrada_precio)) : '—';
       return '<tr><td class="txt" style="color:var(--tx);font-weight:600">'+m.simbolo+'</td><td>'+fmt(m.precio)+'</td>'
-        + '<td><div style="background:#1a222d;border-radius:3px;height:15px;position:relative;min-width:92px">'
-        + '<div style="width:'+b+'%;height:15px;border-radius:3px;background:'+col+'"></div>'
-        + '<span style="position:absolute;left:6px;top:1px;font-size:10px;color:#fff">'+b+' %</span></div></td>'
-        + '<td class="txt m">'+m.accion+'</td><td class="m">'+(m.posicion_abierta?m.posicion_abierta.cantidad:'—')+'</td></tr>';
-    }).join('') || '<tr><td colspan="5" class="m">sin mercados</td></tr>';
+        + '<td>'+chip+'<br>'+tres+'</td>'
+        + '<td class="m">'+Math.round((m.prob_suba||0)*100)+' %</td>'
+        + '<td class="txt m">'+escHtml(m.accion)+'</td><td class="m" style="font-size:11px">'+posTxt+'</td></tr>';
+    }).join('') || '<tr><td colspan="6" class="m">sin mercados</td></tr>';
     document.getElementById('botFrenos').innerHTML = [
       ['Modo de prueba', 'FIJO', 'No se puede apagar: el programa no tiene forma de mandar una orden real'],
       ['Claves de exchange', 'no hacen falta', 'Se ignoran aunque estén cargadas'],
-      ['Archivo APAGADO', 'bot/APAGADO', 'Si existe en la carpeta, todo se detiene'],
-      ['Ventaja demostrada', 'scorecard', c.permite_operar ? 'sí' : 'no: por eso está apagado']
+      ['Archivo APAGADO', c.apagado?'PRESENTE':'ausente', c.apagado?'El bot está parado por el archivo APAGADO':'Si existe en la carpeta, todo se detiene'],
+      ['Ventaja S11', 'ventaja.json', c.permite_operar ? 'aprobó: por eso opera en papel' : 'no aprobó: por eso está apagado']
     ].map(function(f){
       return '<div class="card stat"><div class="lb">freno · '+f[0]+'</div><div style="font-family:var(--mono);font-size:12.5px;color:var(--md)">'+f[1]+'</div><div class="dl">'+f[2]+'</div></div>';
     }).join('');
+    pintarBotInterruptor(c.apagado);
     var av = c.avisos || {};
     document.getElementById('botAvisos').innerHTML =
       '<b>Avisos al teléfono:</b> ' + (av.mandados ? ('<b class="g">' + av.mandados + ' mandados</b>')
         : ('<b class="y">' + (av.por_que || 'todavía no se configuró el envío') + '</b>'))
       + (av.nuevos && av.nuevos.length ? (' · esta vuelta se encolaron ' + av.nuevos.length + ' cambios') : '')
       + '. El bot avisa cuando un mercado cambia de banda, cuando salta un freno y cuando cambia de modo.';
-    document.getElementById('botExplica').innerHTML = '<b>Por qué está apagado:</b> el programa lee su propia prueba con datos viejos antes de hacer nada. '
-      + 'Si no le gana a comprar-y-sostener, se queda apagado y lo dice. '
-      + '<b>No es un defecto: es el producto.</b> Un programa que opera sin ventaja demostrada es una máquina de pagar comisiones. '
-      + 'Y esto no es un bot que mueva dinero: está en <b>modo prueba fijo</b>, sin forma de mandar una orden real.';
-  } else { modo.textContent = 'SIN MODELO'; modo.className='pill'; }
+    document.getElementById('botExplica').innerHTML = c.modo==='PRUEBA'
+      ? '<b>Por qué está en prueba:</b> S11 le ganó a comprar-y-sostener en la mayoría de los mercados de la prueba histórica, así que opera en papel con precios reales. '
+        + escHtml(c.ventaja||'') + '. <b>No mueve dinero real:</b> modo prueba fijo. Lo que falta es correrlo en papel unos 30 días y que el dueño lo apruebe por escrito antes de pensar en plata real.'
+      : '<b>Por qué está apagado:</b> ' + escHtml(c.ventaja||'no hay ventaja demostrada') + '. Un programa que opera sin ventaja demostrada es una máquina de pagar comisiones. '
+        + '<b>No es un defecto: es el producto.</b> Y nunca mueve dinero real: modo prueba fijo.';
+  } else {
+    modo.textContent = 'SIN DATOS'; modo.className='pill';
+    document.getElementById('botSub').textContent = 'Todavía no corrió el cerebro. Abrí "Bot en papel.bat" o corré cerebro.py para generar el estado.';
+    pintarBotInterruptor(false);
+  }
 
   if(s && s.detalle){
     var filas = Object.keys(s.detalle).map(function(k){
@@ -1423,6 +1448,40 @@ function pintarBot(c, s){
       + s.simbolos_que_le_ganan_al_silencioso + ' de '+s.simbolos.length+'</b>. '
       + '<b>La prueba del modelo no predijo el futuro:</b> usó sólo datos anteriores a cada mes evaluado.</div>';
   }
+}
+
+function pintarBotInterruptor(apagado){
+  var parar = document.getElementById('botParar');
+  var prender = document.getElementById('botPrender');
+  var txt = document.getElementById('botPararTxt');
+  if(!parar || !prender || !txt) return;
+  if(LOCAL){
+    parar.style.display = 'none'; prender.style.display = 'none';
+    txt.innerHTML = 'Abrí el panel con <b>Abrir panel.bat</b> para usar el botón de parada.';
+    return;
+  }
+  parar.style.display = apagado ? 'none' : '';
+  prender.style.display = apagado ? '' : 'none';
+  txt.innerHTML = apagado
+    ? '<b class="y">El bot está parado (archivo APAGADO).</b> Reanudar sólo vuelve al papel; nunca habilita dinero real.'
+    : 'Parar crea el archivo <b>bot/APAGADO</b>: en la próxima vuelta el bot deja de abrir posiciones y cierra las que tenga.';
+  parar.onclick = function(){ botInterruptor(true); };
+  prender.onclick = function(){ botInterruptor(false); };
+}
+function botInterruptor(apagar){
+  var txt = document.getElementById('botPararTxt');
+  txt.innerHTML = '…';
+  fetch(BASE + (apagar ? '/bot/apagar' : '/bot/prender'), {method:'POST'})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(){
+      pedir('cerebro','').then(function(r){
+        var d = (r && r.datos) || {};
+        d.apagado = apagar;
+        if(apagar) d.modo = 'APAGADO';
+        pintarBot(d, ultScorecard);
+      }).catch(function(){});
+    })
+    .catch(function(e){ txt.innerHTML = '<b class="r">No se pudo: '+escHtml(e.message)+'</b>'; });
 }
 
 /* ==================== el asistente ==================== */

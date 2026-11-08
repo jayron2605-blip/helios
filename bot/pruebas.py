@@ -580,5 +580,95 @@ check("VA6 el DCA nunca vende y llega a lo sumo a 1",
 check("VA6b el DCA compra su primer aporte en el primer rebalanceo",
       abs(_w_dca[0] - 0.05) < 1e-9, f"w0={_w_dca[0]:.3f}")
 
+# P) la cartera en papel guiada por S11: abre, persiste, cierra y registra el freno
+print("\n== cartera en papel (S11) ==")
+import papel as _papel
+import cerebro as _cerebro
+
+_tp = tempfile.mkdtemp(prefix="helios_papel_")
+_ruta_pos = os.path.join(_tp, "posiciones.json")
+_base_p = 1_700_000_000_000
+
+
+def _vela_p(i, o, h, l, c):
+    return {"t": _base_p + i * 3_600_000, "o": o, "h": h, "l": l, "c": c}
+
+
+check("P1 S11 entra si dia, semana y mes suben", _papel.senal_s11(0.01, 0.02, 0.03) is True)
+check("P1b S11 no entra si una escala discrepa", _papel.senal_s11(0.01, -0.02, 0.03) is False)
+check("P1c S11 sin dato valido se queda afuera",
+      _papel.senal_s11(float("nan"), 0.02, 0.03) is False and _papel.senal_s11(None, 0.02, 0.03) is False)
+
+_c2 = _papel.CarteraPapel(ruta=_ruta_pos)
+_b2, _acc2 = _c2.procesar("BTCUSDT", [_vela_p(0, 100, 100.5, 99.5, 100)], True)
+check("P2 S11 adentro abre posicion en papel", _b2.posicion is not None and _acc2 == "comprar", _acc2)
+_c2.salvar()
+check("P2b la posicion queda escrita en disco", os.path.exists(_ruta_pos))
+
+_c3 = _papel.CarteraPapel(ruta=_ruta_pos)
+check("P3 la posicion sobrevive al recargar",
+      _c3.estado["mercados"]["BTCUSDT"]["posicion"] is not None)
+check("P3b recuerda la ultima vela procesada",
+      _c3.estado["mercados"]["BTCUSDT"]["ultimo_ts"] == _base_p)
+
+_b4, _acc4 = _c3.procesar("BTCUSDT", [_vela_p(0, 100, 100.5, 99.5, 100),
+                                     _vela_p(1, 100, 101, 99, 100.5)], False)
+check("P4 S11 afuera cierra la posicion", _b4.posicion is None and _acc4 == "vender", _acc4)
+check("P4b el cierre queda en el historial", len(_b4.operaciones) == 1,
+      _b4.operaciones[0].motivo_salida if _b4.operaciones else "")
+_c3.salvar()
+
+# el stop loss cierra antes que la salida S11, y la perdida suma al freno del dia
+_contador_p = exchange.Exchange({})
+_contador_real_p = exchange.RUTA_CONTADOR
+exchange.RUTA_CONTADOR = os.path.join(_tp, "contador_p.json")
+_c5 = _papel.CarteraPapel(ruta=os.path.join(_tp, "pos5.json"), contador=_contador_p)
+_c5.procesar("BTCUSDT", [_vela_p(0, 100, 100.5, 99.5, 100)], True)
+_b5, _ = _c5.procesar("BTCUSDT", [_vela_p(0, 100, 100.5, 99.5, 100),
+                                 _vela_p(1, 100, 100, 98.0, 98.2)], False)
+check("P5 el stop loss cierra la posicion", _b5.posicion is None and len(_b5.operaciones) == 1,
+      _b5.operaciones[0].motivo_salida if _b5.operaciones else "")
+check("P5b la perdida del cierre suma al freno del dia",
+      _contador_p._estado_dia()["perdida_usd"] > 0,
+      f"perdida_dia={_contador_p._estado_dia()['perdida_usd']:.2f}")
+exchange.RUTA_CONTADOR = _contador_real_p
+
+_c6 = _papel.CarteraPapel(ruta=os.path.join(_tp, "pos6.json"))
+_b6, _acc6 = _c6.procesar("BTCUSDT", [_vela_p(0, 100, 100.5, 99.5, 100)], False)
+check("P6 sin confirmacion no abre posicion", _b6.posicion is None and _acc6 == "quieto", _acc6)
+
+_r7 = _c3.resumen()
+check("P7 el resumen cuenta operaciones y capital",
+      _r7["operaciones"] >= 1 and _r7["mercados"] == 1 and _r7["capital_total"] > 0,
+      f"ops={_r7['operaciones']} capital={_r7['capital_total']}")
+check("P7b el resumen dice cuantos dias lleva en papel",
+      "dias_en_papel" in _r7 and _r7["dias_en_papel"] >= 0)
+
+# el gate de cerebro lee S11 de ventaja.json (no el scorecard de S1)
+_raiz_real_p = _cerebro.RAIZ
+_cerebro.RAIZ = _tp
+os.makedirs(os.path.join(_tp, "resultados"), exist_ok=True)
+
+
+def _s11_json(aprueba):
+    return {"estrategias": [{"estrategia": "S11 confirmacion dia+semana+mes", "aprueba": aprueba,
+                             "retorno_promedio": 0.692, "le_gana_al_benchmark_en": 4,
+                             "mercados": {s: {} for s in
+                                          ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"]}}]}
+
+
+with open(os.path.join(_tp, "resultados", "ventaja.json"), "w", encoding="utf-8") as f:
+    json.dump(_s11_json(True), f)
+_puede8, _por8, _fila8 = _cerebro.ventaja_s11()
+check("P8 S11 aprobada habilita el papel", _puede8 is True and _fila8 is not None, _por8)
+with open(os.path.join(_tp, "resultados", "ventaja.json"), "w", encoding="utf-8") as f:
+    json.dump(_s11_json(False), f)
+_puede8b, _por8b, _ = _cerebro.ventaja_s11()
+check("P8b S11 no aprobada deja el bot apagado", _puede8b is False, _por8b)
+os.remove(os.path.join(_tp, "resultados", "ventaja.json"))
+_puede8c, _, _ = _cerebro.ventaja_s11()
+check("P8c sin prueba de ventaja el bot no opera", _puede8c is False)
+_cerebro.RAIZ = _raiz_real_p
+
 print("\n" + ("TODO OK" if not fallos else "FALLOS: " + ", ".join(fallos)))
 sys.exit(1 if fallos else 0)

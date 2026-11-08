@@ -396,6 +396,10 @@ class Atencion(BaseHTTPRequestHandler):
         camino = urllib.parse.urlparse(self.path).path
         if camino == "/api/noticias/recibir":
             return self._recibir_brio()
+        if camino == "/api/bot/apagar":
+            return self._bot_interruptor(True)
+        if camino == "/api/bot/prender":
+            return self._bot_interruptor(False)
         if camino != "/api/cuaderno":
             return self._json({"estado": "no_existe"}, 404)
         largo = int(self.headers.get("Content-Length") or 0)
@@ -441,6 +445,21 @@ class Atencion(BaseHTTPRequestHandler):
         if errores:
             salida["errores"] = errores
         return self._json(salida)
+
+    def _bot_interruptor(self, apagar):
+        """Boton de parada del panel: escribe o borra el archivo APAGADO que el
+        bot ya chequea (exchange.apachado). Es solo papel: SOLO_PRUEBA sigue en
+        True, asi que prender nunca habilita dinero real. Escucha solo en 127.0.0.1.
+        """
+        import exchange
+        ruta = exchange.RUTA_APAGADO
+        if apagar:
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write("Parado desde el panel el %s\n" % time.strftime("%Y-%m-%d %H:%M:%S"))
+            return self._json({"estado": "ok", "apagado": True})
+        if os.path.exists(ruta):
+            os.remove(ruta)
+        return self._json({"estado": "ok", "apagado": False})
 
 
 def calentar_noticias():

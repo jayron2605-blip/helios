@@ -61,7 +61,7 @@ def cerrar_circulo(precios_ahora):
         mov = (despues / antes - 1) * 100
         fila[8] = "%.6g" % despues
         accion = fila[5]
-        if accion.startswith("no opera") or accion == "quieto":
+        if accion.startswith("no opera") or accion.startswith("quieto"):
             veredicto = "no se hizo nada"
         elif mov > 0.5:
             veredicto = "acerto (subio %.1f %%)" % mov
