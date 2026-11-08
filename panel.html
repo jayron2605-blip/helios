@@ -64,10 +64,11 @@ em,i{font-style:normal}
   cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:.14s}
 .rail button[data-v="mas"]{display:none}
 .rail button:hover{color:var(--tx);background:var(--raise)}
-.rail button.on{color:var(--cy);background:var(--sel)}
+.rail button.on{color:var(--azul);background:rgba(47,127,255,.14)}
+.rail button.on svg{background:rgba(47,127,255,.16);border-radius:12px;padding:3px;box-sizing:border-box}
 .rail button.on::before{content:"";position:absolute;left:-10px;top:9px;height:22px;width:3px;
   background:var(--cy);border-radius:0 3px 3px 0}
-.rail svg{width:19px;height:19px}
+.rail svg{width:20px;height:20px;stroke-linecap:round;stroke-linejoin:round}
 .rlbl{display:none}
 .rail .grow{flex:1}
 
@@ -185,24 +186,24 @@ td.txt{font-family:var(--sans)}
 #botModo{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:5px 10px}
 #botModo::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
 .pill.brio{border-color:rgba(139,92,246,.5);color:var(--vi);background:rgba(139,92,246,.08)}
-.pill.ok{border-color:rgba(14,203,129,.45);color:var(--up)}
+.pill.ok{border-color:rgba(14,203,129,.45);color:var(--up);background:rgba(14,203,129,.14)}
 .pill.warn{border-color:rgba(240,185,11,.5);color:var(--yel)}
-.pill.bad{border-color:rgba(246,70,93,.45);color:var(--dn)}
+.pill.bad{border-color:rgba(246,70,93,.45);color:var(--dn);background:rgba(246,70,93,.14)}
 .btn{background:var(--card2);border:1px solid var(--bd2);color:var(--tx);font-size:14px;font-weight:700;
   padding:12px 22px;min-height:48px;border-radius:var(--pill);cursor:pointer;transition:.15s;margin-right:6px}
 .btn:hover{border-color:var(--cy);color:var(--cy)}
 .btn:active{transform:translateY(1px)}
 /* Boton principal: azul, texto blanco, solo para la accion principal de cada tarjeta. */
-.btn-primario{background:linear-gradient(135deg,#3b8bff,var(--azul2));border-color:var(--azul2);color:#fff}
+.btn-primario{background:linear-gradient(135deg,#14d68a,#2f7fff);border-color:#2f7fff;color:#fff;box-shadow:0 8px 20px rgba(47,127,255,.35)}
 .btn-primario:hover{filter:brightness(1.15);color:#fff}
 /* Boton de peligro: rojo, solo para apagar / cerrar. */
 .btn-peligro{background:var(--dn);border-color:var(--dn);color:#fff}
 .btn-peligro:hover{filter:brightness(1.12);color:#fff}
 /* Comprar: verde pastilla con texto oscuro (contraste alto). Vender / cerrar:
    rojo pastilla con texto blanco. Asi son en la referencia de telefono. */
-.btn-verde{background:#14d68a;border-color:#14d68a;color:#052e1f}
+.btn-verde{background:linear-gradient(135deg,#1ee79a,#0ecb81);border-color:#0ecb81;color:#052e1f;box-shadow:0 8px 20px rgba(14,203,129,.35)}
 .btn-verde:hover{filter:brightness(1.08);color:#052e1f}
-.btn-rojo{background:#e8384f;border-color:#e8384f;color:#fff}
+.btn-rojo{background:linear-gradient(135deg,#ff5b6e,#e8384f);border-color:#e8384f;color:#fff;box-shadow:0 8px 20px rgba(246,70,93,.35)}
 .btn-rojo:hover{filter:brightness(1.12);color:#fff}
 .bar{height:3px;background:var(--raise);border-radius:var(--pill);overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;border-radius:var(--pill);transition:width .5s ease}
@@ -333,12 +334,13 @@ body[data-tema="claro"] .dot.on{color:#fff}
 @media(max-width:900px){
   body{overflow:auto}
   .app{grid-template-columns:minmax(0,1fr);grid-template-rows:1fr auto;height:100vh}
-  .rail{flex-direction:row;order:2;border-right:0;border-top:1px solid var(--bd);min-width:0;
-    padding:4px 2px 6px;justify-content:space-around;gap:2px}
+  .rail{flex-direction:row;order:2;border:1px solid var(--bd);min-width:0;margin:0 10px 12px;border-radius:28px;background:var(--card);box-shadow:0 8px 24px rgba(0,0,0,.35);
+    padding:6px 8px;justify-content:space-around;gap:2px}
   .rail .mark{display:none}
   .rail .grow{display:none}
-  .rail button{flex:1 1 0;min-width:0;height:56px;flex-direction:column;gap:3px;border-radius:14px}
-  .rail button svg{width:22px;height:22px}
+  .rail button{flex:1 1 0;min-width:0;height:60px;flex-direction:column;gap:3px;border-radius:20px}
+  .rail button svg{width:24px;height:24px}
+  .rail button.on svg{padding:4px}
   .rail button[data-v="cuaderno"],.rail button[data-v="onchain"],.rail button[data-v="lab"],
   .rail button[data-v="noticias"],.rail button[data-v="ajustes"]{display:none}
   .rail button[data-v="mas"]{display:flex}
@@ -750,22 +752,24 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 @media(max-width:900px){
   #v-panel .asisEstado .big{font-size:32px}
   #v-panel .overlay .px{font-size:26px}
-  #v-panel .stat .vl{font-size:26px}
+  #v-panel .stat .vl{font-size:30px}
   #v-panel .head{padding:18px}
 }
 
 /* ---------- v2 GRÁFICO (sólo #v-grafico): redondeo y legibilidad ---------- */
 #v-grafico .card{border-radius:var(--r3)}
-#v-grafico #chartBig{border-radius:var(--r2);overflow:hidden;background:var(--bg2);border:1px solid var(--bd)}
+#v-grafico #chartBig{border-radius:22px;overflow:hidden;background:linear-gradient(180deg,rgba(47,127,255,.09),var(--bg2) 45%);border:1px solid var(--bd);box-shadow:0 10px 30px rgba(0,0,0,.25)}
 #v-grafico #chartRsi{border-radius:16px;overflow:hidden;background:var(--bg2);border:1px solid var(--bd)}
-#v-grafico .overlay .px{font-size:34px;font-weight:700}
-#v-grafico .overlay .chg{font-size:14px}
+#v-grafico .overlay .px{font-size:42px;font-weight:800;letter-spacing:-.03em;text-shadow:0 0 28px rgba(14,203,129,.35)}
+#v-grafico .overlay .chg{display:inline-block;font-size:14px;padding:6px 12px;border-radius:999px;margin-top:6px;border:1px solid transparent}
+#v-grafico .overlay .chg.g{background:rgba(14,203,129,.18);color:var(--up);border-color:rgba(14,203,129,.45)}
+#v-grafico .overlay .chg.r{background:rgba(246,70,93,.18);color:var(--dn);border-color:rgba(246,70,93,.45)}
 #v-grafico .ohlc{font-size:11px;background:var(--card);border:1px solid var(--bd);border-radius:var(--pill);padding:5px 10px}
-#v-grafico #tf2 button{min-height:40px;padding:10px 16px;font-size:13px}
-#v-grafico #tf2 button.on{background:var(--azul);border-color:var(--azul);color:#fff}
+#v-grafico #tf2 button{min-height:36px;padding:8px 13px;font-size:12px;border-radius:999px}
+#v-grafico #tf2 button.on{background:linear-gradient(135deg,#1ee79a,#0ecb81);border-color:#0ecb81;color:#052e1f;box-shadow:0 6px 16px rgba(14,203,129,.35)}
 #v-grafico #capas{flex-wrap:wrap}
 #v-grafico #capas button{min-height:40px;padding:10px 15px}
-#v-grafico #capas button.on{background:var(--sel);color:var(--cy);box-shadow:inset 0 0 0 1px var(--sel-bd)}
+#v-grafico #capas button.on{background:var(--azul);color:#fff;box-shadow:0 6px 16px rgba(47,127,255,.35)}
 #v-grafico .legend{font-size:11px;color:var(--md);gap:12px}
 #v-grafico .legend i{width:16px;height:3px;border-radius:var(--pill)}
 #v-grafico .legend b{color:var(--tx)}
@@ -778,9 +782,11 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 #v-grafico #stats .kv .v.g{color:var(--up)}
 #v-grafico #stats .kv .v.r{color:var(--dn)}
 @media(max-width:900px){
-  #v-grafico .overlay .px{font-size:30px}
+  #v-grafico .overlay .px{font-size:36px}
   #v-grafico .overlay .chg{font-size:13px}
-  #v-grafico #tf2 button,#v-grafico #capas button{min-height:44px}
+  #v-grafico #tf2{flex-wrap:nowrap;gap:4px}
+  #v-grafico #tf2 button{flex:1 1 0;min-width:0;min-height:36px;padding:8px 4px;font-size:12px}
+  #v-grafico #capas button{min-height:44px}
 }
 /* ---------- bot: vista EL BOT (rediseño v2, estilo teléfono redondo) ---------- */
 /* Pastilla de modo: punto de color + palabra. Apagado gris, encendido verde, peligro rojo. */
@@ -842,17 +848,17 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 <div class="app">
   <nav class="rail">
     <div class="mark">H</div>
-    <button class="on" data-v="panel" title="Panel (1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span class="rlbl">Panel</span></button>
-    <button data-v="grafico" title="Gráfico (2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 3 5-8"/></svg><span class="rlbl">Gráfico</span></button>
-    <button data-v="bot" title="El bot (3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 13h.01M15 13h.01M9 17h6"/></svg><span class="rlbl">Bot</span></button>
-    <button data-v="cuaderno" title="Cuaderno (4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4a2 2 0 012-2h12v20H6a2 2 0 01-2-2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg><span class="rlbl">Cuaderno</span></button>
-    <button data-v="onchain" title="On-chain (5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg><span class="rlbl">On-chain</span></button>
-    <button data-v="lab" title="Laboratorio (6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v6L4.5 19a2 2 0 001.7 3h11.6a2 2 0 001.7-3L14 9V3"/><path d="M7 15h10"/></svg><span class="rlbl">Lab</span></button>
-    <button data-v="cartera" title="Cartera (9)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M16 12h.01M3 9h18"/></svg><span class="rlbl">Cartera</span></button>
-    <button data-v="noticias" title="Noticias (8)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M7 9h6M7 13h10M7 16h10"/><path d="M15 9h2"/></svg><span class="rlbl">Noticias</span></button>
-    <button data-v="mas" title="Más vistas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg><span class="rlbl">Más</span></button>
+    <button class="on" data-v="panel" title="Panel (1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2.2" fill="currentColor" fill-opacity=".9" stroke="none"/><rect x="13.5" y="3.5" width="7" height="4.5" rx="2.2"/><rect x="13.5" y="10.5" width="7" height="10" rx="2.2"/><rect x="3.5" y="13" width="7" height="7.5" rx="2.2"/></svg><span class="rlbl">Panel</span></button>
+    <button data-v="grafico" title="Gráfico (2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10" width="3.6" height="6" rx="1.2" fill="currentColor" stroke="none"/><path d="M6.3 7v3M6.3 16v2.5"/><rect x="10.2" y="6.5" width="3.6" height="5" rx="1.2"/><path d="M12 4v2.5M12 11.5V14"/><rect x="15.9" y="11" width="3.6" height="7" rx="1.2" fill="currentColor" fill-opacity=".45" stroke="none"/><path d="M17.7 8v3M17.7 18v2"/></svg><span class="rlbl">Gráfico</span></button>
+    <button data-v="bot" title="El bot (3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.5V5.5"/><circle cx="12" cy="4" r="1.3" fill="currentColor" stroke="none"/><rect x="5" y="8.5" width="14" height="11" rx="5"/><path d="M5 12.5H3.2M20.8 12.5H19"/><circle cx="9.2" cy="13.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.8" cy="13.2" r="1.1" fill="currentColor" stroke="none"/><path d="M9.5 16.8h5"/></svg><span class="rlbl">Bot</span></button>
+    <button data-v="cuaderno" title="Cuaderno (4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="3" width="13" height="18" rx="2.5"/><path d="M15.5 3v4.2l1.6-1.1 1.6 1.1V3" fill="currentColor" fill-opacity=".25" stroke="none"/><path d="M9.5 11.5h5M9.5 15h3.5"/></svg><span class="rlbl">Cuaderno</span></button>
+    <button data-v="onchain" title="On-chain (5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5" fill="currentColor" fill-opacity=".3" stroke="none"/><circle cx="12" cy="18" r="2.5"/><path d="M8.2 7.3l2.6 8.2M15.8 7.3l-2.6 8.2M8.5 6h7"/></svg><span class="rlbl">On-chain</span></button>
+    <button data-v="lab" title="Laboratorio (6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h4"/><path d="M11 3v5.2L6.6 17a2.6 2.6 0 002.3 3.8h6.2A2.6 2.6 0 0017.4 17L13 8.2V3"/><path d="M8.3 14.5h7.4"/><path d="M8.2 15.8L7.2 18a1.9 1.9 0 001.7 2.8h6.2a1.9 1.9 0 001.7-2.8l-1-2.2z" fill="currentColor" fill-opacity=".25" stroke="none"/><circle cx="14.5" cy="17.5" r=".9" fill="currentColor" stroke="none"/></svg><span class="rlbl">Lab</span></button>
+    <button data-v="cartera" title="Cartera (9)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="9" height="5" rx="1.8" fill="currentColor" fill-opacity=".25" stroke="none"/><path d="M4.5 8A2.5 2.5 0 017 5.5h10A2.5 2.5 0 0119.5 8v9a3 3 0 01-3 3h-9a3 3 0 01-3-3z"/><circle cx="16.5" cy="13.5" r="1.3" fill="currentColor" stroke="none"/></svg><span class="rlbl">Cartera</span></button>
+    <button data-v="noticias" title="Noticias (8)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M16 4v3.5h3.5"/><path d="M8 10.5h6M8 14h8"/><circle cx="16.2" cy="17" r="1" fill="currentColor" stroke="none"/></svg><span class="rlbl">Noticias</span></button>
+    <button data-v="mas" title="Más vistas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="12" r="1.9" fill="currentColor" fill-opacity=".45" stroke="none"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.9" fill="currentColor" fill-opacity=".45" stroke="none"/></svg><span class="rlbl">Más</span></button>
     <div class="grow"></div>
-    <button data-v="ajustes" title="Ajustes (7)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7.7 1.6 1.6 0 01-1.8 1.5h-.2a2 2 0 110-4 1.6 1.6 0 00-.7-2.7 1.6 1.6 0 00-.7.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 004 12.6a1.6 1.6 0 01-1.5-1.8v-.2a2 2 0 114 0 1.6 1.6 0 002.7.7 1.6 1.6 0 00.7-.4l.1-.1A2 2 0 1112.8 4.3l-.1.1a1.6 1.6 0 001.8 2.7h.2a2 2 0 110 4 1.6 1.6 0 00-.7.7z"/></svg><span class="rlbl">Ajustes</span></button>
+    <button data-v="ajustes" title="Ajustes (7)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/><circle cx="10" cy="7" r="2.3" fill="var(--card)" stroke="currentColor"/><circle cx="15" cy="12" r="2.3" fill="currentColor" fill-opacity=".3" stroke="none"/><circle cx="9" cy="17" r="2.3" fill="var(--card)" stroke="currentColor"/></svg><span class="rlbl">Ajustes</span></button>
   </nav>
 
   <div class="main">
@@ -1019,7 +1025,11 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
             <div class="ohlc" id="gOhlc"></div>
             <div id="chartBig"></div>
           </div>
-          <div id="chartRsi" style="height:110px;margin-top:6px"></div>
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button class="btn btn-verde" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↗ Comprar</button>
+            <button class="btn btn-rojo" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">↘ Vender</button>
+          </div>
+          <div id="chartRsi" style="height:110px;margin-top:12px"></div>
           <span class="fe" data-fe="velas,extra"></span>
           <div class="legend">
             <span><i style="background:var(--yel)"></i>EMA 20</span>
@@ -1308,11 +1318,11 @@ body[data-tema="claro"] .ntn .titular{color:var(--tx)}
 <div class="masFondo" id="masFondo">
   <div class="masHoja" role="dialog" aria-label="Más vistas">
     <div class="masTitulo">Más</div>
-    <button class="masItem" data-v="cuaderno"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4a2 2 0 012-2h12v20H6a2 2 0 01-2-2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg><span><b>Cuaderno</b><i>La libreta con cada lectura del programa</i></span></button>
-    <button class="masItem" data-v="onchain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg><span><b>On-chain</b><i>El tamaño real de la industria, no solo el precio</i></span></button>
-    <button class="masItem" data-v="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v6L4.5 19a2 2 0 001.7 3h11.6a2 2 0 001.7-3L14 9V3"/><path d="M7 15h10"/></svg><span><b>Lab</b><i>Probá una regla simple contra casi tres años de precios</i></span></button>
-    <button class="masItem" data-v="noticias"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M7 9h6M7 13h10M7 16h10"/><path d="M15 9h2"/></svg><span><b>Noticias</b><i>Qué pasó en cripto y qué hizo el precio después</i></span></button>
-    <button class="masItem" data-v="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7.7 1.6 1.6 0 01-1.8 1.5h-.2a2 2 0 110-4 1.6 1.6 0 00-.7-2.7 1.6 1.6 0 00-.7.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 004 12.6a1.6 1.6 0 01-1.5-1.8v-.2a2 2 0 114 0 1.6 1.6 0 002.7.7 1.6 1.6 0 00.7-.4l.1-.1A2 2 0 1112.8 4.3l-.1.1a1.6 1.6 0 001.8 2.7h.2a2 2 0 110 4 1.6 1.6 0 00-.7.7z"/></svg><span><b>Ajustes</b><i>Cómo se usa cada cosa y de dónde sale cada dato</i></span></button>
+    <button class="masItem" data-v="cuaderno"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="3" width="13" height="18" rx="2.5"/><path d="M15.5 3v4.2l1.6-1.1 1.6 1.1V3" fill="currentColor" fill-opacity=".25" stroke="none"/><path d="M9.5 11.5h5M9.5 15h3.5"/></svg><span><b>Cuaderno</b><i>La libreta con cada lectura del programa</i></span></button>
+    <button class="masItem" data-v="onchain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5" fill="currentColor" fill-opacity=".3" stroke="none"/><circle cx="12" cy="18" r="2.5"/><path d="M8.2 7.3l2.6 8.2M15.8 7.3l-2.6 8.2M8.5 6h7"/></svg><span><b>On-chain</b><i>El tamaño real de la industria, no solo el precio</i></span></button>
+    <button class="masItem" data-v="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h4"/><path d="M11 3v5.2L6.6 17a2.6 2.6 0 002.3 3.8h6.2A2.6 2.6 0 0017.4 17L13 8.2V3"/><path d="M8.3 14.5h7.4"/><path d="M8.2 15.8L7.2 18a1.9 1.9 0 001.7 2.8h6.2a1.9 1.9 0 001.7-2.8l-1-2.2z" fill="currentColor" fill-opacity=".25" stroke="none"/><circle cx="14.5" cy="17.5" r=".9" fill="currentColor" stroke="none"/></svg><span><b>Lab</b><i>Probá una regla simple contra casi tres años de precios</i></span></button>
+    <button class="masItem" data-v="noticias"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M16 4v3.5h3.5"/><path d="M8 10.5h6M8 14h8"/><circle cx="16.2" cy="17" r="1" fill="currentColor" stroke="none"/></svg><span><b>Noticias</b><i>Qué pasó en cripto y qué hizo el precio después</i></span></button>
+    <button class="masItem" data-v="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/><circle cx="10" cy="7" r="2.3" fill="var(--card)" stroke="currentColor"/><circle cx="15" cy="12" r="2.3" fill="currentColor" fill-opacity=".3" stroke="none"/><circle cx="9" cy="17" r="2.3" fill="var(--card)" stroke="currentColor"/></svg><span><b>Ajustes</b><i>Cómo se usa cada cosa y de dónde sale cada dato</i></span></button>
     <button class="masCerrar" id="masCerrar">Cerrar</button>
   </div>
 </div>
