@@ -19,6 +19,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(
 
 BINANCE = "https://api.binance.com"
 FUTUROS = "https://fapi.binance.com"
+# api.binance.com responde 451 desde direcciones de EE.UU. (donde está, por
+# ejemplo, el servidor de Virginia). Este espejo oficial de solo-datos-publicos
+# sirve lo mismo y no bloquea: es el plan B automático de pedir().
+ESPEJO = "https://data-api.binance.vision"
 GECKO = "https://api.coingecko.com"
 MIEDO = "https://api.alternative.me/fng/?limit=1"
 LLAMA = "https://api.llama.fi"
@@ -40,19 +44,31 @@ def pedir(url, clave, segundos):
         guardado = CACHE.get(clave)
         if guardado and ahora - guardado[0] < segundos:
             return guardado[1], "cache"
+    datos, estado = _traer_json(url, clave)
+    if datos is None and BINANCE in url:
+        # Binance bloquea las direcciones de servidores de EE.UU. (error 451).
+        # Su espejo público de datos NO bloquea y sirve exactamente lo mismo.
+        datos, estado = _traer_json(url.replace(BINANCE, ESPEJO), clave + ":espejo")
+        if datos is not None:
+            estado = "espejo:" + estado
+    if datos is None:
+        return None, estado
+    with BLOQUEO:
+        CACHE[clave] = (ahora, datos)
+    return datos, estado
+
+
+def _traer_json(url, clave):
     peticion = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     try:
         with urllib.request.urlopen(peticion, timeout=20) as respuesta:
-            datos = json.loads(respuesta.read().decode("utf-8"))
+            return json.loads(respuesta.read().decode("utf-8")), "ok"
     except Exception as error:
         with BLOQUEO:
             guardado = CACHE.get(clave)
         if guardado:
             return guardado[1], "stale:" + type(error).__name__
         return None, "error:" + type(error).__name__
-    with BLOQUEO:
-        CACHE[clave] = (ahora, datos)
-    return datos, "ok"
 
 
 ASISTENTE_CACHE = {}
@@ -220,9 +236,7 @@ def _velas_del_exchange(simbolo, intervalo, limite=1000):
             return None
         url = (f"{BINANCE}/api/v3/klines?symbol={simbolo}"
                f"&interval={intervalo}&limit={int(limite)}")
-        datos = json.loads(urllib.request.urlopen(
-            urllib.request.Request(url, headers={"User-Agent": USER_AGENT}),
-            timeout=20).read())
+        datos, _estado = pedir(url, "historial:" + clave, 60)
         if not isinstance(datos, list) or not datos:
             return None
         paquete = {"t": [int(k[0]) for k in datos],

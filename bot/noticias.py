@@ -360,13 +360,24 @@ def procesar(ahora_ms, crudas, contador=None):
 
 
 # ---------- el movimiento REAL del precio despues de la noticia ----------
+# api.binance.com responde 451 desde direcciones de EE.UU. El espejo publico
+# de Binance sirve las mismas velas y no bloquea: plan B si el primero falla.
+BINANCE_URL = "https://api.binance.com"
+BINANCE_ESPEJO = "https://data-api.binance.vision"
+
+
 def _velas_de_hora(simbolo, momento_ms, ahora_ms):
     bucket = int(momento_ms // 3600000) * 3600000
-    url = (f"https://api.binance.com/api/v3/klines?symbol={simbolo}"
-           f"&interval=1h&startTime={bucket}&limit=2")
-    try:
-        velas = json.loads(_traer(url, 10))
-    except Exception:
+    ruta = (f"/api/v3/klines?symbol={simbolo}"
+            f"&interval=1h&startTime={bucket}&limit=2")
+    velas = None
+    for base in (BINANCE_URL, BINANCE_ESPEJO):
+        try:
+            velas = json.loads(_traer(base + ruta, 10))
+            break
+        except Exception:
+            continue
+    if velas is None:
         return None
     if (not isinstance(velas, list) or len(velas) < 2
             or int(velas[0][0]) != bucket
