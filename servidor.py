@@ -359,7 +359,10 @@ class Atencion(BaseHTTPRequestHandler):
                     {"15m", "30m", "1h", "4h", "1d", "1w"}):
                 return self._json({"estado": "rechazado", "datos": None}, 400)
             url = f"{BINANCE}/api/v3/klines?symbol={simbolo}&interval={intervalo}&limit={limite}"
-            datos, estado = pedir(url, "velas:" + simbolo + intervalo, CACHE_SEG["velas"])
+            # el limite va en la clave: si no, un pedido de 5 velas deja cacheado
+            # un grafico de 5 y el de 500 sale vacio durante 45 segundos
+            datos, estado = pedir(url, "velas:" + simbolo + intervalo + ":" + str(limite),
+                                  CACHE_SEG["velas"])
             return self._json({"estado": estado, "datos": datos})
 
         if ruta.path == "/api/libro":
@@ -469,7 +472,8 @@ class Atencion(BaseHTTPRequestHandler):
                     {"15m", "30m", "1h", "4h", "1d", "1w"}):
                 return self._json({"estado": "rechazado", "datos": None}, 400)
             url = f"{BINANCE}/api/v3/klines?symbol={simbolo}&interval={intervalo}&limit=500"
-            datos, estado = pedir(url, "velas:" + simbolo + intervalo, CACHE_SEG["velas"])
+            datos, estado = pedir(url, "velas:" + simbolo + intervalo + ":500",
+                                  CACHE_SEG["velas"])
             if not isinstance(datos, list) or not datos:
                 return self._json({"estado": estado, "datos": None})
             try:
