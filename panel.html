@@ -3105,7 +3105,7 @@ function anotar(forzar){
 }
 function traerLog(){
   if(LOCAL) return;
-  pedir('cuaderno','').then(function(r){
+  return pedir('cuaderno','').then(function(r){
     var d = r.datos; if(!d || !d.filas) return;
     var columnas = ['fecha','hora','mercado','precio','tendencia','agitacion','fuerza','rango24h','coincidencias','escenarios','veredicto'];
     pintarLog(d.filas.map(function(f){
@@ -4232,17 +4232,28 @@ carteraInit();
 aplicarTema();
 irA(PREF.vista || 'panel');
 // Cada bloque carga por su cuenta: si uno falla, los demás se muestran igual.
-// Antes iban encadenados y una caída de los mercados dejaba la pantalla vacía.
+// blindado: una función que devuelva undefined o lance al instante ya no corta
+// a las siguientes (pasaba con el registro, y dejaba sin asistente ni cintas).
 function arrancar(){
-  traerMercados().catch(function(e){
-    avisar('No se pudo leer la lista de mercados: '+e.message+'. Probá R para actualizar.');
-  });
-  traerVelas().catch(function(){});
-  traerLog().catch(function(){});
-  traerBot();
-  traerAsistente().catch(function(){});
-  traerChispas();
-  traerMundo();
+  function paso(nombre, fn){
+    try{
+      var p = fn();
+      if(p && typeof p.catch === 'function'){
+        p.catch(function(e){
+          if(nombre === 'mercados'){
+            avisar('No se pudo leer la lista de mercados: ' + (e && e.message) + '. Probá R.');
+          }
+        });
+      }
+    }catch(e){ /* un paso roto no puede frenar a los demás */ }
+  }
+  paso('mercados', traerMercados);
+  paso('velas', traerVelas);
+  paso('registro', traerLog);
+  paso('bot', traerBot);
+  paso('asistente', traerAsistente);
+  paso('chispas', traerChispas);
+  paso('mundo', traerMundo);
 }
 arrancar();
 setInterval(function(){
