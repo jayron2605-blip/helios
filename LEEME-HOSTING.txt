@@ -1,0 +1,76 @@
+Helios — cómo subirlo a un hosting real
+=======================================
+
+Qué es esto
+-----------
+La rama "demo-cliente" completa, sin la carpeta de git, sin las 79 MB de velas
+y sin ninguna clave. Pesa 1,2 MB. Se sube tal cual.
+
+
+Lo primero: NO es una página web común
+--------------------------------------
+Helios es un programa de Python que hace de servidor. El panel (panel.html) pide
+los datos a ese servidor. Si subís solo el HTML a un hosting de páginas
+estáticas, vas a ver el panel VACÍO, sin precios y sin noticias.
+
+Dónde SÍ funciona:
+  - VPS o servidor propio (DigitalOcean, Hetzner, Contabo, un Ubuntu cualquiera)
+  - Railway, Render, Fly.io, PythonAnywhere (hosting que ejecuta Python)
+  - Cualquier hosting con "Python app" o "WSGI/ASGI" en el panel de control
+
+Dónde NO funciona:
+  - Netlify, Vercel (modo estático), GitHub Pages: no ejecutan Python
+  - Hosting compartido solo PHP (cPanel sin Python): no ejecutan Python
+
+
+Cómo se arranca
+---------------
+Comando:      python servidor.py
+Ese es el único comando. El servidor toma el puerto de la variable PORT que
+asigna el hosting, y escucha en todas las interfaces solo cuando está en uno.
+En tu PC sigue abriéndose en 127.0.0.1:8765 y abre el navegador solo.
+
+Si tu hosting pide un archivo de arranque, usá el Procfile que está en esta
+carpeta (ya viene escrito).
+
+No hace falta instalar nada: el servidor usa solo Python. El requirements.txt
+tiene dos librerías OPCIONALES para las líneas extra del gráfico.
+
+
+Qué se ve y qué no en el hosting
+--------------------------------
+Funciona completo:
+  Panel, Gráfico (sin las líneas MACD/Bollinger), Cuaderno, Cartera,
+  On-chain, Noticias y Ajustes. Todos con datos reales en vivo.
+
+Funciona con menos historia:
+  Laboratorio. En tu PC prueba con 33.599 velas; en el hosting pide las últimas
+  1.000 al exchange. Los números son reales, pero de un período más corto.
+
+No funciona en el hosting:
+  - "Bot en papel": necesita un reloj que lo despierte cada 15 minutos. Eso es
+    un proceso aparte, no el panel. En el hosting el panel muestra el estado
+    guardado, que va a estar vacío.
+  - Los escenarios del gráfico y las decisiones del bot que se calculan con las
+    velas guardadas en tu PC.
+
+Nada de esto es un error: es lo que se puede hacer sin subir 79 MB de datos ni
+dejar un proceso corriendo 24 horas. Si querés el Laboratorio completo y el bot
+en papel andando en el hosting, hay que subir las velas y correr el bot como
+proceso aparte. Eso es otro trabajo, y se puede hacer.
+
+
+Lo que NUNCA se sube
+--------------------
+  bot/claves.json        claves de exchange (no existe todavía)
+  bot/telegram.json      token del bot de Telegram
+  bot/noticias.json      clave de CryptoPanic (opcional)
+
+No están en esta carpeta. Si algún día los creás en el servidor, hacelo por la
+consola del hosting, nunca por el administrador de archivos ni en un repo.
+
+
+Un aviso para la demo
+---------------------
+El programa está en modo prueba fijo: NO puede mandar órdenes reales ni mover
+dinero, aunque alguien cargue claves. Eso no cambia en el hosting.

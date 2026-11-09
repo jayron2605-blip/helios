@@ -1,12 +1,11 @@
-# Helios — dependencias verificadas (no inventadas).
-# Versiones comprobadas con importlib.metadata en la máquina usada para las
-# pruebas de esta demo (macOS, Python 3.9). ta y pandas coinciden con la PC
-# Windows de la demo; el resto puede tener minors más nuevos allí (ver
-# CONTINUAR-AQUI.md). Re-verificar con pip antes de fijar en producción.
-ta==0.11.0
-ccxt==4.5.64
-numpy==2.0.2
-pandas==2.3.3
-scikit-learn==1.6.1
-scipy==1.13.1
-joblib==1.5.3
+# Dependencias SOLO para el panel en un hosting.
+#
+# El servidor del panel (servidor.py, bot/asistente.py, bot/noticias.py) usa
+# únicamente la biblioteca estándar de Python: no necesita instalar NADA para
+# funcionar. Verificado: arranca sin un solo paquete externo.
+#
+# Estas dos son opcionales y sirven solo para las líneas extra del gráfico
+# (MACD, Bollinger, ADX, VWAP). Si el hosting no las instala, el panel anda
+# igual: solo muestra el gráfico sin esas líneas.
+pandas>=2.0
+ta>=0.11

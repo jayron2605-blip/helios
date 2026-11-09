@@ -1,0 +1,518 @@
+{
+  "veredicto": {
+    "gana_alguno_al_quieto": true,
+    "aprobadas": [
+      "S11 confirmacion dia+semana+mes"
+    ],
+    "frase": "La prueba aprobó S11 confirmacion dia+semana+mes: en el mismo tramo para todas, rindió +69.2 % de promedio contra -0.8 % de comprar-y-sostener, le gana en 4 de 6 mercados y baja la caída máxima de 69.9 % a 27.6 % (la mejora en 6 de 6). Para no engañarse con el promedio: la mediana por mercado es +31.6 %, el mejor mercado (XRPUSDT) rindió +225.5 % y el peor (BNBUSDT) +3.3 %. Es una regla simple de tendencia, no una garantía: el bot sigue en papel y SOLO_PRUEBA en True hasta que el dueño apruebe lo que sigue."
+  },
+  "momento": 1794089118305,
+  "mercados": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "DOGEUSDT"
+  ],
+  "comision_por_lado": 0.001,
+  "deslizamiento": 0.0005,
+  "objetivo_vol_diario": 0.03,
+  "tope_de_exposicion": 1.5,
+  "velas": 201594,
+  "filas_evaluadas": 100767,
+  "ojo_tramo": "El tramo evaluado es el mismo para todas las estrategias y para la vara: desde donde el walk-forward empieza a evaluar hasta el final. En este periodo comprar-y-sostener rindio -0.8 % de promedio. Si el tramo es alcista, cualquier estrategia que baje la exposicion pierde contra la vara por definicion; por eso se mira tambien la caida maxima, que es lo unico que el control de riesgo puede mejorar sin adivinar la direccion.",
+  "agitacion_se_predice": {
+    "error_modelo": 0.002632,
+    "error_sigue_igual": 0.002718,
+    "error_promedio": 0.019547,
+    "mejora_vs_sigue_igual_pct": 3.18,
+    "rho_spearman": 0.9892,
+    "veredicto": "si, el modelo le gana al 'sigue igual'"
+  },
+  "estrategias": [
+    {
+      "estrategia": "S0 comprar y sostener",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": 0.0513,
+          "caida_max": 0.5374
+        },
+        "ETHUSDT": {
+          "retorno": -0.3052,
+          "caida_max": 0.6915
+        },
+        "SOLUSDT": {
+          "retorno": -0.496,
+          "caida_max": 0.7873
+        },
+        "BNBUSDT": {
+          "retorno": 0.1025,
+          "caida_max": 0.6039
+        },
+        "XRPUSDT": {
+          "retorno": 0.8934,
+          "caida_max": 0.7223
+        },
+        "DOGEUSDT": {
+          "retorno": -0.2932,
+          "caida_max": 0.8534
+        }
+      },
+      "retorno_promedio": -0.0079,
+      "desde_1000_total": 5953,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 0,
+      "caida_media": 0.6993,
+      "caida_peor": 0.8534,
+      "baja_la_caida_en": 0
+    },
+    {
+      "estrategia": "S1 modelo de direccion",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": -0.4313,
+          "caida_max": 0.5717
+        },
+        "ETHUSDT": {
+          "retorno": -0.1409,
+          "caida_max": 0.5269
+        },
+        "SOLUSDT": {
+          "retorno": -0.8368,
+          "caida_max": 0.859
+        },
+        "BNBUSDT": {
+          "retorno": -0.4224,
+          "caida_max": 0.5497
+        },
+        "XRPUSDT": {
+          "retorno": -0.7391,
+          "caida_max": 0.7739
+        },
+        "DOGEUSDT": {
+          "retorno": -0.6863,
+          "caida_max": 0.7834
+        }
+      },
+      "retorno_promedio": -0.5428,
+      "desde_1000_total": 2743,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 1,
+      "aprueba": false,
+      "caida_media": 0.6774,
+      "caida_peor": 0.859,
+      "baja_la_caida_en": 3
+    },
+    {
+      "estrategia": "S2 direccion + filtro de estado",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": -0.3472,
+          "caida_max": 0.5084
+        },
+        "ETHUSDT": {
+          "retorno": -0.1919,
+          "caida_max": 0.5065
+        },
+        "SOLUSDT": {
+          "retorno": -0.879,
+          "caida_max": 0.889
+        },
+        "BNBUSDT": {
+          "retorno": -0.4205,
+          "caida_max": 0.5349
+        },
+        "XRPUSDT": {
+          "retorno": -0.831,
+          "caida_max": 0.8535
+        },
+        "DOGEUSDT": {
+          "retorno": -0.8223,
+          "caida_max": 0.8536
+        }
+      },
+      "retorno_promedio": -0.582,
+      "desde_1000_total": 2508,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 1,
+      "aprueba": false,
+      "caida_media": 0.691,
+      "caida_peor": 0.889,
+      "baja_la_caida_en": 3
+    },
+    {
+      "estrategia": "S3 solo bandas extremas",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": -0.3048,
+          "caida_max": 0.5295
+        },
+        "ETHUSDT": {
+          "retorno": -0.2386,
+          "caida_max": 0.5744
+        },
+        "SOLUSDT": {
+          "retorno": -0.5246,
+          "caida_max": 0.6377
+        },
+        "BNBUSDT": {
+          "retorno": -0.4655,
+          "caida_max": 0.536
+        },
+        "XRPUSDT": {
+          "retorno": -0.6346,
+          "caida_max": 0.6948
+        },
+        "DOGEUSDT": {
+          "retorno": -0.6153,
+          "caida_max": 0.7417
+        }
+      },
+      "retorno_promedio": -0.4639,
+      "desde_1000_total": 3217,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 1,
+      "aprueba": false,
+      "caida_media": 0.619,
+      "caida_peor": 0.7417,
+      "baja_la_caida_en": 6
+    },
+    {
+      "estrategia": "S4 exposicion apuntada a agitacion",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": -0.4084,
+          "caida_max": 0.6784
+        },
+        "ETHUSDT": {
+          "retorno": -0.4535,
+          "caida_max": 0.6989
+        },
+        "SOLUSDT": {
+          "retorno": -0.597,
+          "caida_max": 0.754
+        },
+        "BNBUSDT": {
+          "retorno": 0.0638,
+          "caida_max": 0.5768
+        },
+        "XRPUSDT": {
+          "retorno": -0.2832,
+          "caida_max": 0.7206
+        },
+        "DOGEUSDT": {
+          "retorno": -0.6468,
+          "caida_max": 0.8401
+        }
+      },
+      "retorno_promedio": -0.3875,
+      "desde_1000_total": 3675,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 0,
+      "aprueba": false,
+      "caida_media": 0.7115,
+      "caida_peor": 0.8401,
+      "baja_la_caida_en": 4
+    },
+    {
+      "estrategia": "S5 agitacion + sesgo de tendencia",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": -0.7046,
+          "caida_max": 0.7949
+        },
+        "ETHUSDT": {
+          "retorno": -0.6805,
+          "caida_max": 0.7612
+        },
+        "SOLUSDT": {
+          "retorno": -0.7088,
+          "caida_max": 0.7867
+        },
+        "BNBUSDT": {
+          "retorno": -0.4484,
+          "caida_max": 0.5812
+        },
+        "XRPUSDT": {
+          "retorno": -0.4675,
+          "caida_max": 0.7455
+        },
+        "DOGEUSDT": {
+          "retorno": -0.7132,
+          "caida_max": 0.846
+        }
+      },
+      "retorno_promedio": -0.6205,
+      "desde_1000_total": 2277,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 0,
+      "aprueba": false,
+      "caida_media": 0.7526,
+      "caida_peor": 0.846,
+      "baja_la_caida_en": 3
+    },
+    {
+      "estrategia": "S6 agitacion, sin apalancar, diario",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": 0.013,
+          "caida_max": 0.5352
+        },
+        "ETHUSDT": {
+          "retorno": -0.2543,
+          "caida_max": 0.6235
+        },
+        "SOLUSDT": {
+          "retorno": -0.4411,
+          "caida_max": 0.6679
+        },
+        "BNBUSDT": {
+          "retorno": 0.2244,
+          "caida_max": 0.5135
+        },
+        "XRPUSDT": {
+          "retorno": -0.055,
+          "caida_max": 0.6614
+        },
+        "DOGEUSDT": {
+          "retorno": -0.5297,
+          "caida_max": 0.8104
+        }
+      },
+      "retorno_promedio": -0.1738,
+      "desde_1000_total": 4957,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 3,
+      "aprueba": false,
+      "caida_media": 0.6353,
+      "caida_peor": 0.8104,
+      "baja_la_caida_en": 6
+    },
+    {
+      "estrategia": "S7 agitacion, sin apalancar, semanal",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": 0.0509,
+          "caida_max": 0.5375
+        },
+        "ETHUSDT": {
+          "retorno": -0.2898,
+          "caida_max": 0.6768
+        },
+        "SOLUSDT": {
+          "retorno": -0.464,
+          "caida_max": 0.7435
+        },
+        "BNBUSDT": {
+          "retorno": 0.1905,
+          "caida_max": 0.546
+        },
+        "XRPUSDT": {
+          "retorno": -0.0132,
+          "caida_max": 0.7185
+        },
+        "DOGEUSDT": {
+          "retorno": -0.2176,
+          "caida_max": 0.8031
+        }
+      },
+      "retorno_promedio": -0.1239,
+      "desde_1000_total": 5257,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 4,
+      "aprueba": false,
+      "caida_media": 0.6709,
+      "caida_peor": 0.8031,
+      "baja_la_caida_en": 5
+    },
+    {
+      "estrategia": "S8 agitacion, tope 0.8, semanal",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": 0.0749,
+          "caida_max": 0.4536
+        },
+        "ETHUSDT": {
+          "retorno": -0.1834,
+          "caida_max": 0.5849
+        },
+        "SOLUSDT": {
+          "retorno": -0.3477,
+          "caida_max": 0.6525
+        },
+        "BNBUSDT": {
+          "retorno": 0.1407,
+          "caida_max": 0.4956
+        },
+        "XRPUSDT": {
+          "retorno": 0.1519,
+          "caida_max": 0.6115
+        },
+        "DOGEUSDT": {
+          "retorno": -0.0826,
+          "caida_max": 0.7147
+        }
+      },
+      "retorno_promedio": -0.041,
+      "desde_1000_total": 5754,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 5,
+      "aprueba": false,
+      "caida_media": 0.5855,
+      "caida_peor": 0.7147,
+      "baja_la_caida_en": 6
+    },
+    {
+      "estrategia": "S9 rejilla de precios (grid)",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": -0.0518,
+          "caida_max": 0.3932
+        },
+        "ETHUSDT": {
+          "retorno": -0.281,
+          "caida_max": 0.4945
+        },
+        "SOLUSDT": {
+          "retorno": -0.41,
+          "caida_max": 0.6325
+        },
+        "BNBUSDT": {
+          "retorno": -0.2247,
+          "caida_max": 0.4339
+        },
+        "XRPUSDT": {
+          "retorno": -0.1733,
+          "caida_max": 0.5857
+        },
+        "DOGEUSDT": {
+          "retorno": -0.6187,
+          "caida_max": 0.8108
+        }
+      },
+      "retorno_promedio": -0.2933,
+      "desde_1000_total": 4240,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 2,
+      "aprueba": false,
+      "caida_media": 0.5584,
+      "caida_peor": 0.8108,
+      "baja_la_caida_en": 6
+    },
+    {
+      "estrategia": "S10 rotacion: solo la mas fuerte que sus pares",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": -0.4863,
+          "caida_max": 0.5876
+        },
+        "ETHUSDT": {
+          "retorno": -0.1534,
+          "caida_max": 0.632
+        },
+        "SOLUSDT": {
+          "retorno": -0.2246,
+          "caida_max": 0.5574
+        },
+        "BNBUSDT": {
+          "retorno": -0.0726,
+          "caida_max": 0.583
+        },
+        "XRPUSDT": {
+          "retorno": 0.1392,
+          "caida_max": 0.4633
+        },
+        "DOGEUSDT": {
+          "retorno": -0.3866,
+          "caida_max": 0.811
+        }
+      },
+      "retorno_promedio": -0.1974,
+      "desde_1000_total": 4816,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 2,
+      "aprueba": false,
+      "caida_media": 0.6057,
+      "caida_peor": 0.811,
+      "baja_la_caida_en": 5
+    },
+    {
+      "estrategia": "S11 confirmacion dia+semana+mes",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": 0.0441,
+          "caida_max": 0.2383
+        },
+        "ETHUSDT": {
+          "retorno": 0.5873,
+          "caida_max": 0.2204
+        },
+        "SOLUSDT": {
+          "retorno": 0.0441,
+          "caida_max": 0.3272
+        },
+        "BNBUSDT": {
+          "retorno": 0.0333,
+          "caida_max": 0.2646
+        },
+        "XRPUSDT": {
+          "retorno": 2.255,
+          "caida_max": 0.2951
+        },
+        "DOGEUSDT": {
+          "retorno": 1.1885,
+          "caida_max": 0.3084
+        }
+      },
+      "retorno_promedio": 0.6921,
+      "desde_1000_total": 10152,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 4,
+      "aprueba": true,
+      "caida_media": 0.2757,
+      "caida_peor": 0.3272,
+      "baja_la_caida_en": 6
+    },
+    {
+      "estrategia": "S12 DCA semanal segun agitacion",
+      "mercados": {
+        "BTCUSDT": {
+          "retorno": 0.0541,
+          "caida_max": 0.5374
+        },
+        "ETHUSDT": {
+          "retorno": -0.2771,
+          "caida_max": 0.6915
+        },
+        "SOLUSDT": {
+          "retorno": -0.4866,
+          "caida_max": 0.7873
+        },
+        "BNBUSDT": {
+          "retorno": 0.0437,
+          "caida_max": 0.6039
+        },
+        "XRPUSDT": {
+          "retorno": 1.0347,
+          "caida_max": 0.7223
+        },
+        "DOGEUSDT": {
+          "retorno": -0.4516,
+          "caida_max": 0.8506
+        }
+      },
+      "retorno_promedio": -0.0138,
+      "desde_1000_total": 5917,
+      "ganadoras_de_benchmark": null,
+      "le_gana_al_benchmark_en": 4,
+      "aprueba": false,
+      "caida_media": 0.6988,
+      "caida_peor": 0.8506,
+      "baja_la_caida_en": 1
+    }
+  ],
+  "aprueban": [
+    "S11 confirmacion dia+semana+mes"
+  ]
+}

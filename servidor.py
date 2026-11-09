@@ -1,12 +1,17 @@
 import json, csv, io, os, time, urllib.parse, urllib.request, webbrowser, threading, sys, socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-PUERTO = 8765
+# En una PC normal el panel sólo se ve en 127.0.0.1:8765. En un hosting real la
+# plataforma asigna un puerto y espera que escuche en todas las interfaces, así
+# que se toma PORT del entorno y, si existe, se escucha en 0.0.0.0.
+EN_HOSTING = bool(os.environ.get("PORT"))
+PUERTO = int(os.environ.get("PORT") or os.environ.get("HELIOS_PORT") or 8765)
 # Por defecto el panel sólo se ve en esta PC (127.0.0.1). Para abrirlo desde un
 # teléfono en la MISMA WiFi, arrancar con HELIOS_HOST=0.0.0.0 (sólo red local;
 # nunca abrir el puerto 8765 en el router ni publicarlo a internet).
-HOST = os.environ.get("HELIOS_HOST", "127.0.0.1")
-RUTA_CUADERNO = "cuaderno.csv"
+HOST = os.environ.get("HELIOS_HOST", "0.0.0.0" if EN_HOSTING else "127.0.0.1")
+RAIZ = os.path.dirname(os.path.abspath(__file__))
+RUTA_CUADERNO = os.path.join(RAIZ, "cuaderno.csv")
 MAX_CUERPO_BRIO = 512 * 1024   # tope del POST de noticias: un lote de 50 noticias sobra
 
 # Para poder usar los modulos del bot (asistente, noticias) como biblioteca
@@ -80,13 +85,13 @@ def asistente_actual(simbolo="BTCUSDT", capital=None):
                 os.path.dirname(os.path.abspath(__file__)), "bot")))
         import asistente
         datos = asistente.analizar(clave, CAPITAL_ASISTENTE)
-        with open(os.path.join("bot", "asistente_estado.json"), "w", encoding="utf-8") as f:
+        with open(os.path.join(RAIZ, "bot", "asistente_estado.json"), "w", encoding="utf-8") as f:
             json.dump(datos, f, ensure_ascii=False, indent=2)
         with BLOQUEO:
             ASISTENTE_CACHE[clave] = (datos, ahora)
         return datos
     except Exception:
-        guardado = leer_json("bot/asistente_estado.json")
+        guardado = leer_json(os.path.join(RAIZ, "bot", "asistente_estado.json"))
         with BLOQUEO:
             ASISTENTE_CACHE[clave] = (guardado, ahora)
         return guardado
@@ -174,14 +179,19 @@ HISTORIAL_EN_MEMORIA = {}
 
 
 def velas_locales(simbolo, intervalo):
-    """Lee el historial que ya bajo el bot. No toca la red: 33.000 velas locales."""
+    """Historial para el Laboratorio.
+
+    Si el bot ya bajó las velas (33.000 en el disco), las usa: es instantáneo.
+    En un hosting no están, así que se piden las últimas mil al exchange público.
+    El panel no cambia: recibe las mismas columnas, sólo menos historia.
+    """
     clave = simbolo + intervalo
     with BLOQUEO:
         if clave in HISTORIAL_EN_MEMORIA:
             return HISTORIAL_EN_MEMORIA[clave]
-    ruta = os.path.join("bot", "datos", f"{simbolo}_{intervalo}.csv")
+    ruta = os.path.join(RAIZ, "bot", "datos", f"{simbolo}_{intervalo}.csv")
     if not os.path.exists(ruta):
-        return None
+        return _velas_del_exchange(simbolo, intervalo, 1000)
     with open(ruta, newline="", encoding="utf-8") as archivo:
         filas = list(csv.reader(archivo))[1:]
     t, o, h, l, c, v = [], [], [], [], [], []
@@ -195,6 +205,38 @@ def velas_locales(simbolo, intervalo):
     with BLOQUEO:
         HISTORIAL_EN_MEMORIA[clave] = paquete
     return paquete
+
+
+def _velas_del_exchange(simbolo, intervalo, limite=1000):
+    """Plan B sin disco: pide velas públicas al exchange. Nunca claves."""
+    clave = simbolo + intervalo + ":web"
+    with BLOQUEO:
+        guardado = HISTORIAL_EN_MEMORIA.get(clave)
+        if guardado:
+            return guardado[1]
+    try:
+        if not simbolo.replace("USDT", "").isalnum() or intervalo not in {
+                "15m", "30m", "1h", "4h", "1d", "1w"}:
+            return None
+        url = (f"{BINANCE}/api/v3/klines?symbol={simbolo}"
+               f"&interval={intervalo}&limit={int(limite)}")
+        datos = json.loads(urllib.request.urlopen(
+            urllib.request.Request(url, headers={"User-Agent": USER_AGENT}),
+            timeout=20).read())
+        if not isinstance(datos, list) or not datos:
+            return None
+        paquete = {"t": [int(k[0]) for k in datos],
+                   "open": [float(k[1]) for k in datos],
+                   "high": [float(k[2]) for k in datos],
+                   "low": [float(k[3]) for k in datos],
+                   "close": [float(k[4]) for k in datos],
+                   "volumen": [float(k[5]) for k in datos],
+                   "origen": "exchange"}
+        with BLOQUEO:
+            HISTORIAL_EN_MEMORIA[clave] = (time.time(), paquete)
+        return paquete
+    except Exception:
+        return None
 
 
 def recortar_protocolos(datos):
@@ -278,7 +320,7 @@ class Atencion(BaseHTTPRequestHandler):
 
         if ruta.path in ("/", "/panel", "/panel.html"):
             try:
-                with open("panel.html", "rb") as archivo:
+                with open(os.path.join(RAIZ, "panel.html"), "rb") as archivo:
                     cuerpo = archivo.read()
             except FileNotFoundError:
                 cuerpo = "<h1>Falta panel.html al lado de servidor.py</h1>".encode("utf-8")
@@ -436,7 +478,7 @@ class Atencion(BaseHTTPRequestHandler):
             return self._json({"estado": "ok", "datos": datos})
 
         if ruta.path == "/api/cerebro":
-            return self._json({"estado": "ok", "datos": leer_json("bot/estado_cerebro.json")})
+            return self._json({"estado": "ok", "datos": leer_json(os.path.join(RAIZ, "bot", "estado_cerebro.json"))})
 
         if ruta.path == "/api/cartera":
             try:
@@ -448,18 +490,18 @@ class Atencion(BaseHTTPRequestHandler):
             h = (parametros.get("horizonte") or ["24"])[0]
             h = h if h in ("1", "24") else "24"
             return self._json({"estado": "ok",
-                               "datos": leer_json(f"bot/resultados/scorecard_h{h}.json")})
+                               "datos": leer_json(os.path.join(RAIZ, "bot", "resultados", f"scorecard_h{h}.json"))})
 
         if ruta.path == "/api/cuaderno":
             return self._json({"estado": "ok", "datos": leer_cuaderno()})
 
         if ruta.path == "/api/ventaja":
             return self._json({"estado": "ok",
-                               "datos": leer_json("bot/resultados/ventaja.json")})
+                               "datos": leer_json(os.path.join(RAIZ, "bot", "resultados", "ventaja.json"))})
 
         if ruta.path == "/api/decisiones":
             return self._json({"estado": "ok",
-                               "datos": leer_csv_generico("bot/decisiones.csv")})
+                               "datos": leer_csv_generico(os.path.join(RAIZ, "bot", "decisiones.csv"))})
 
         if ruta.path == "/api/miedo_hist":
             datos, estado = pedir("https://api.alternative.me/fng/?limit=90",
@@ -678,7 +720,9 @@ def main():
     print("Cuaderno en:", RUTA_CUADERNO, "(se abre con el Bloc de notas)")
     print("Ctrl+C o cerrar esta ventana para parar.")
     threading.Thread(target=calentar_noticias, daemon=True).start()
-    threading.Timer(1.2, lambda: webbrowser.open(direccion)).start()
+    if not EN_HOSTING:
+        # en un hosting no hay navegador que abrir, y abrirlo rompe el arranque
+        threading.Timer(1.2, lambda: webbrowser.open(direccion)).start()
     try:
         servidor.serve_forever()
     except KeyboardInterrupt:

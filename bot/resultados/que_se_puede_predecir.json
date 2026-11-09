@@ -1,0 +1,10 @@
+{
+  "direccion_acierto": 0.5108,
+  "direccion_base": 0.528,
+  "direccion_ventaja": -0.0172,
+  "agitacion_nivel_spearman": 0.9849,
+  "agitacion_nivel_mejora": -0.1105,
+  "agitacion_cambio_spearman": 0.9857,
+  "agitacion_cambio_mejora": 0.0775,
+  "respuesta_corta": "la direccion no se puede predecir; la agitacion solo un poco, y nada mas si se pide como cambio, no como nivel"
+}

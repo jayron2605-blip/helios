@@ -2,7 +2,11 @@
 bot/datos/
 
 # Productos del entrenamiento (modelos, curvas, trades simulados): 13 MB
-bot/resultados/
+# Productos del entrenamiento: modelos y curvas (13 MB) no van
+bot/resultados/*
+# ...pero los resultados chicos SI: la demo en el hosting los muestra tal cual,
+# y sin ellos la vista del bot queda vacia (son 21 KB de numeros reales)
+!bot/resultados/*.json
 
 # Copias de seguridad locales
 _respaldo*/
@@ -44,3 +48,8 @@ noticias.json
 # Lo que empuja Brio: es contenido externo y puede pesar; se regenera solo
 bot/noticias_brio.json
 bot/noticias_brio.json.tmp
+
+# El interruptor de parada es de cada maquina, no del repositorio:
+# si se publica, toda copia nueva arranca con el bot apagado
+bot/APAGADO
+APAGADO
