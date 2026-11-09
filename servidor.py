@@ -44,30 +44,36 @@ def pedir(url, clave, segundos):
         guardado = CACHE.get(clave)
         if guardado and ahora - guardado[0] < segundos:
             return guardado[1], "cache"
-    datos, estado = _traer_json(url, clave)
+    datos, estado = _traer_json(url)
     if datos is None and BINANCE in url:
         # Binance bloquea las direcciones de servidores de EE.UU. (error 451).
         # Su espejo público de datos NO bloquea y sirve exactamente lo mismo.
-        datos, estado = _traer_json(url.replace(BINANCE, ESPEJO), clave + ":espejo")
+        # Se prueba siempre que el principal falle, aunque haya una copia vieja:
+        # si no, en el hosting la copia vieja no se renovaría nunca.
+        datos, estado = _traer_json(url.replace(BINANCE, ESPEJO))
         if datos is not None:
-            estado = "espejo:" + estado
+            estado = "espejo"
     if datos is None:
+        with BLOQUEO:
+            guardado = CACHE.get(clave)
+        if guardado:
+            return guardado[1], "viejo:" + tipo_de_error(estado)
         return None, estado
     with BLOQUEO:
         CACHE[clave] = (ahora, datos)
     return datos, estado
 
 
-def _traer_json(url, clave):
+def tipo_de_error(estado):
+    return estado.replace("error:", "") if estado else "desconocido"
+
+
+def _traer_json(url):
     peticion = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     try:
         with urllib.request.urlopen(peticion, timeout=20) as respuesta:
             return json.loads(respuesta.read().decode("utf-8")), "ok"
     except Exception as error:
-        with BLOQUEO:
-            guardado = CACHE.get(clave)
-        if guardado:
-            return guardado[1], "stale:" + type(error).__name__
         return None, "error:" + type(error).__name__
 
 
