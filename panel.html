@@ -2743,17 +2743,25 @@ function pintarRiesgo(capital){
     + ', la compra tendría que ser de ' + dol(tamano) + '. Si comprás más que eso, perdés más que eso.</span>';
 }
 
+var ESPERAS_ASISTENTE = [2000, 4000, 8000, 16000, 30000];
 function traerAsistente(simbolo, intento){
   if(LOCAL) return;
   intento = intento || 0;
   var pedido = simbolo || estado.simbolo || 'BTCUSDT';
+  function reintentar(){
+    // Un hosting gratuito tarda hasta un minuto en despertar: se insiste con
+    // espera creciente en vez de rendirse a los pocos segundos.
+    if(intento < ESPERAS_ASISTENTE.length){
+      setTimeout(function(){ traerAsistente(simbolo, intento + 1); }, ESPERAS_ASISTENTE[intento]);
+    } else {
+      document.getElementById('asisMotivos').textContent =
+        'No se pudo cargar el análisis todavía. Probá con R o recargá la página.';
+    }
+  }
   return pedir('asistente',{simbolo: pedido}).then(function(r){
     if(r && r.datos && !r.datos.error) pintarAsistente(r.datos);
-    else if(intento < 2) setTimeout(function(){ traerAsistente(simbolo, intento + 1); }, 2500);
-  }).catch(function(){
-    // en un hosting el primer pedido puede caer mientras el servidor despierta
-    if(intento < 2) setTimeout(function(){ traerAsistente(simbolo, intento + 1); }, 2500);
-  });
+    else reintentar();
+  }).catch(reintentar);
 }
 document.getElementById('asisCapital').addEventListener('input', function(e){
   pintarRiesgo(+e.target.value);
@@ -2942,7 +2950,8 @@ function marco(m){ estado.marco = m;
   document.getElementById('bFolleto').className = m==='folleto'?'on2':'';
   pintarHero(); }
 
-function traerMercados(){
+function traerMercados(intento){
+  intento = intento || 0;
   return pedir('mercados','').then(function(r){
     if(!r.datos) throw new Error('sin datos');
     estado.mercados = r.datos.map(function(c){
@@ -2955,6 +2964,13 @@ function traerMercados(){
     pintarKpis(); pintarHero(); pintarHeat(); pintarDispersin(); pintarLista();
     cmpLlenar(); cmpPintar();
     ok(r.estado);
+  }).catch(function(e){
+    // igual que el asistente: en un hosting el primer pedido puede caer
+    if(intento < 3){
+      return new Promise(function(res){ setTimeout(res, 2000 * (intento + 1)); })
+        .then(function(){ return traerMercados(intento + 1); });
+    }
+    throw e;
   });
 }
 function traerChispas(){
