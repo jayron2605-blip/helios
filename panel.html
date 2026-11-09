@@ -3040,8 +3040,10 @@ function traerBot(){
   traerVentaja(); traerDecisiones();
 }
 function recargar(){
-  traerMercados().then(traerVelas).then(traerLog).catch(function(e){ avisar('No se pudo actualizar: '+e.message); });
-  traerChispas(); traerMundo(); traerBot();
+  traerMercados().catch(function(e){ avisar('No se pudo actualizar la lista: '+e.message); });
+  traerVelas().catch(function(){});
+  traerLog().catch(function(){});
+  traerChispas(); traerMundo(); traerBot(); traerAsistente().catch(function(){});
   if(document.getElementById('v-cartera').classList.contains('on')) traerCartera();
 }
 
@@ -4207,10 +4209,20 @@ pintarAyuda();
 carteraInit();
 aplicarTema();
 irA(PREF.vista || 'panel');
-traerMercados().then(traerVelas).then(traerLog).then(traerBot).then(traerAsistente).catch(function(e){
-  avisar('No se pudo leer el mercado: '+e.message+'. Revisá la conexión y dale R.');
-});
-traerChispas(); traerMundo();
+// Cada bloque carga por su cuenta: si uno falla, los demás se muestran igual.
+// Antes iban encadenados y una caída de los mercados dejaba la pantalla vacía.
+function arrancar(){
+  traerMercados().catch(function(e){
+    avisar('No se pudo leer la lista de mercados: '+e.message+'. Probá R para actualizar.');
+  });
+  traerVelas().catch(function(){});
+  traerLog().catch(function(){});
+  traerBot();
+  traerAsistente().catch(function(){});
+  traerChispas();
+  traerMundo();
+}
+arrancar();
 setInterval(function(){
   traerVelas(); traerChispas(); traerMundo(); traerBot(); traerAsistente();
   if(document.getElementById('v-grafico').classList.contains('on')) traerExtra();

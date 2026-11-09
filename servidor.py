@@ -31,8 +31,8 @@ RED = "https://mempool.space/api"
 USER_AGENT = "HeliosPanel/0.1 (uso personal; sin clave de API)"
 
 CACHE = {}
-CACHE_SEG = {"mercados": 90, "velas": 45, "libro": 8, "extra": 15, "mundo": 300,
-             "cinta": 10, "chispas": 120, "cadenas": 300, "protocolos": 21600,
+CACHE_SEG = {"mercados": 300, "velas": 45, "libro": 8, "extra": 15, "mundo": 300,
+             "cinta": 180, "chispas": 300, "cadenas": 300, "protocolos": 21600,
              "estables": 3600, "tendencia": 300, "exchanges": 3600, "red": 60,
              "derivados": 900}
 BLOQUEO = threading.Lock()
@@ -129,6 +129,56 @@ def leer_csv_generico(ruta_relativa, limite=400):
         return None
     return {"cabecera": filas[0], "filas": filas[1:][-limite:][::-1],
             "total": max(0, len(filas) - 1)}
+
+
+def mercados_de_respaldo():
+    """Lista de mercados armada con el propio Binance, para cuando CoinGecko
+    rechaza por límite de uso. No trae capitalización ni nombres largos: el
+    panel los muestra como '—' en vez de dejar la pantalla vacía."""
+    datos, estado = pedir(f"{BINANCE}/api/v3/ticker/24hr", "ticker-todos", 120)
+    if not isinstance(datos, list) or not datos:
+        return None, estado
+    nombres = {}
+    caps = {}
+    with BLOQUEO:
+        chispas = CACHE.get("chispas")
+    if chispas and isinstance(chispas[1], list):
+        for c in chispas[1]:
+            simbolo = (c.get("symbol") or "").upper()
+            if simbolo:
+                nombres[simbolo] = c.get("name")
+                caps[simbolo] = c.get("market_cap")
+    filas = []
+    for t in datos:
+        par = t.get("symbol") or ""
+        if not par.endswith("USDT") or len(par) < 7:
+            continue
+        base = par[:-4]
+        if base.endswith(("UP", "DOWN", "BULL", "BEAR")) or "$" in base:
+            continue
+        try:
+            precio = float(t["lastPrice"])
+            cambio = float(t["priceChangePercent"])
+            alto = float(t["highPrice"])
+            bajo = float(t["lowPrice"])
+            volumen = float(t["quoteVolume"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if precio <= 0 or volumen < 1_000_000:
+            continue
+        filas.append({"symbol": base.lower(), "name": nombres.get(base) or base,
+                      "current_price": precio, "market_cap": caps.get(base),
+                      "total_volume": volumen,
+                      "high_24h": alto, "low_24h": bajo,
+                      "price_change_percentage_24h_in_currency": cambio,
+                      "price_change_percentage_7d_in_currency": None,
+                      "_volumen": volumen})
+    if not filas:
+        return None, estado
+    filas.sort(key=lambda f: f["_volumen"], reverse=True)
+    for f in filas:
+        f.pop("_volumen", None)
+    return filas[:250], "respaldo"
 
 
 def varios(peticiones):
@@ -355,6 +405,13 @@ class Atencion(BaseHTTPRequestHandler):
             url = (GECKO + "/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc"
                    "&per_page=250&page=1&sparkline=false&price_change_percentage=24h,7d")
             datos, estado = pedir(url, "mercados", CACHE_SEG["mercados"])
+            if not isinstance(datos, list) or not datos:
+                # CoinGecko gratis limita por IP y las IP de los hostings son
+                # compartidas: si rechaza, se arma la lista con el propio Binance.
+                respaldo, estado_r = mercados_de_respaldo()
+                if respaldo:
+                    return self._json({"estado": "respaldo:" + estado,
+                                       "datos": respaldo})
             return self._json({"estado": estado, "datos": datos})
 
         if ruta.path == "/api/velas":
