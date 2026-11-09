@@ -358,6 +358,9 @@ _claves_real, _brio_real = _noticias.RUTA_CLAVES, _noticias.RUTA_BRIO
 _noticias.RUTA_CLAVES = os.path.join(_dir_brio, "noticias.json")
 _noticias.RUTA_BRIO = os.path.join(_dir_brio, "noticias_brio.json")
 _noticias.ESTADO.pop("_brio", None)
+# La clave por entorno tiene prioridad: se aisla para que estas pruebas usen el
+# archivo temporal y no dependan de un BRIO_TOKEN real puesto en la maquina.
+_brio_env_real = os.environ.pop("BRIO_TOKEN", None)
 
 check("BR1 sin clave configurada la puerta queda cerrada",
       _noticias.token_brio_valido("cualquiera") is False and _noticias.brio_configurado() is False)
@@ -370,6 +373,25 @@ check("BR2 la clave correcta entra y la equivocada no",
       and _noticias.token_brio_valido(_clave_prueba + "x") is False
       and _noticias.token_brio_valido("") is False
       and _noticias.token_brio_valido(None) is False)
+
+# BR18/BR19: la clave puede venir del entorno (Render, disco efimero) y tiene
+# prioridad sobre el archivo. Se prueba sin dejar BRIO_TOKEN puesto despues.
+_clave_env = os.urandom(12).hex()
+os.environ["BRIO_TOKEN"] = _clave_env
+check("BR18 la clave del entorno manda: entra la suya y ya no la del archivo",
+      _noticias.token_brio_valido(_clave_env) is True
+      and _noticias.token_brio_valido(_clave_prueba) is False
+      and _noticias.brio_configurado() is True)
+os.environ["BRIO_TOKEN"] = "   "
+check("BR19 entorno en blanco cae a la clave del archivo",
+      _noticias.token_brio_valido(_clave_prueba) is True
+      and _noticias.brio_configurado() is True)
+os.environ.pop("BRIO_TOKEN", None)
+os.remove(_noticias.RUTA_CLAVES)
+check("BR19c sin entorno y sin archivo no hay clave configurada",
+      _noticias.brio_configurado() is False and _noticias.token_brio_valido("x") is False)
+with open(_noticias.RUTA_CLAVES, "w", encoding="utf-8") as _f:
+    json.dump({"brio_token": _clave_prueba}, _f)
 
 check("BR3 solo pasan enlaces http(s)",
       _noticias.url_segura("https://ejemplo.com/prueba") == "https://ejemplo.com/prueba"
@@ -525,6 +547,10 @@ check("BR17 lo que manda Brio no se comparte", "bot/noticias_brio.json" in _igno
 check("BR17b la clave tampoco se comparte", "bot/noticias.json" in _ignore_br)
 
 _noticias.RUTA_CLAVES, _noticias.RUTA_BRIO = _claves_real, _brio_real
+if _brio_env_real is None:
+    os.environ.pop("BRIO_TOKEN", None)
+else:
+    os.environ["BRIO_TOKEN"] = _brio_env_real
 _noticias.ESTADO.pop("_brio", None)
 
 # VA) las estrategias nuevas de ventaja: pesos acotados y sin mirar el futuro

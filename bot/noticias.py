@@ -461,11 +461,16 @@ def _cargar_config():
 
 # ---------- Brio empuja noticias a la app (Brio -> App, nunca al reves) ----------
 def _clave_brio():
+    # En Render el disco es efimero: la clave vive en la variable de entorno
+    # BRIO_TOKEN. En la PC del dueno puede seguir viviendo en noticias.json.
+    entorno = str(os.environ.get("BRIO_TOKEN") or "").strip()
+    if entorno:
+        return entorno
     return str((_cargar_config() or {}).get("brio_token") or "").strip()
 
 
 def brio_configurado():
-    """True si el dueno ya pego su clave en bot/noticias.json."""
+    """True si hay clave de Brio, ya sea en el entorno o en bot/noticias.json."""
     return bool(_clave_brio())
 
 
