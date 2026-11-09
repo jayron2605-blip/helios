@@ -2743,11 +2743,17 @@ function pintarRiesgo(capital){
     + ', la compra tendría que ser de ' + dol(tamano) + '. Si comprás más que eso, perdés más que eso.</span>';
 }
 
-function traerAsistente(simbolo){
+function traerAsistente(simbolo, intento){
   if(LOCAL) return;
-  return pedir('asistente',{simbolo: simbolo || estado.simbolo || 'BTCUSDT'}).then(function(r){
-    if(r && r.datos) pintarAsistente(r.datos);
-  }).catch(function(){});
+  intento = intento || 0;
+  var pedido = simbolo || estado.simbolo || 'BTCUSDT';
+  return pedir('asistente',{simbolo: pedido}).then(function(r){
+    if(r && r.datos && !r.datos.error) pintarAsistente(r.datos);
+    else if(intento < 2) setTimeout(function(){ traerAsistente(simbolo, intento + 1); }, 2500);
+  }).catch(function(){
+    // en un hosting el primer pedido puede caer mientras el servidor despierta
+    if(intento < 2) setTimeout(function(){ traerAsistente(simbolo, intento + 1); }, 2500);
+  });
 }
 document.getElementById('asisCapital').addEventListener('input', function(e){
   pintarRiesgo(+e.target.value);

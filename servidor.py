@@ -771,6 +771,15 @@ def calentar_noticias():
         pass
 
 
+def calentar_asistente():
+    """Deja el análisis del asistente listo. En un hosting el primer pedido
+    tarda varios segundos y el cliente vería la pantalla principal vacía."""
+    try:
+        asistente_actual("BTCUSDT")
+    except Exception:
+        pass
+
+
 def ip_local():
     """IPv4 de la red local sin enviar tráfico: el connect UDP sólo elige ruta."""
     try:
@@ -814,6 +823,7 @@ def main():
     print("Cuaderno en:", RUTA_CUADERNO, "(se abre con el Bloc de notas)")
     print("Ctrl+C o cerrar esta ventana para parar.")
     threading.Thread(target=calentar_noticias, daemon=True).start()
+    threading.Thread(target=calentar_asistente, daemon=True).start()
     if not EN_HOSTING:
         # en un hosting no hay navegador que abrir, y abrirlo rompe el arranque
         threading.Timer(1.2, lambda: webbrowser.open(direccion)).start()
