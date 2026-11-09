@@ -300,6 +300,36 @@ canvas{display:block;width:100%}
 .paraque b{color:var(--azul);background:rgba(47,127,255,.13);border:1px solid rgba(47,127,255,.4);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   white-space:nowrap;padding:5px 12px;border-radius:var(--pill);font-weight:700}
 @media(max-width:900px){.paraque{flex-direction:column;align-items:flex-start;gap:3px;padding:7px 10px}}
+
+/* ---------- modo limpio: sin textos, sólo datos ---------- */
+/* Jairon pidió quitar la cantidad de texto. Todo lo explicativo queda oculto
+   y se muestra con un solo botón "?" en la barra de arriba. Nada se borra. */
+body.limpio .paraque,
+body.limpio .note,
+body.limpio .sub,
+body.limpio .asisTexto,
+body.limpio .asisMotivos,
+body.limpio .riesgoTxt,
+body.limpio .veredictoBot .txt,
+body.limpio .head p,
+body.limpio .foot,
+body.limpio #detalle,
+body.limpio #botSub,
+body.limpio #botExplica,
+body.limpio .seg.big small,
+body.limpio .chipcito{display:none!important}
+body.limpio .asisBottom .lb{font-size:9px}
+body.limpio .card h3{margin-bottom:8px}
+body.limpio .asisTop{grid-template-columns:1fr}
+
+.asisNums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 20px;
+  border-top:1px solid var(--bd);align-items:center}
+.asisNums .box{text-align:center}
+.asisNums .n{display:block;font-family:var(--mono);font-size:22px;font-weight:600;color:var(--tx);line-height:1.1}
+.asisNums .n.g{color:var(--up)}.asisNums .n.r{color:var(--dn)}.asisNums .n.y{color:var(--yel)}
+.asisNums .l{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ft);margin-top:4px}
+body:not(.limpio) .asisNums{display:none}
+#btnInfo.on{border-color:var(--cy);color:var(--cy);background:rgba(0,209,255,.1)}
 </style>
 <style>
 /* ---------- capa 2: tema, oficio, responsive ---------- */
@@ -1389,6 +1419,11 @@ body[data-tema="claro"] #ajTema button.on,body[data-tema="claro"] #ajParaque but
               <ul id="asisQuePasa"><li>Cargando los datos del mercado…</li></ul>
             </div>
           </div>
+          <div class="asisNums" id="asisNums">
+            <div class="box"><span class="n" id="anStop">—</span><span class="l">corte</span></div>
+            <div class="box"><span class="n r" id="anPerdida">—</span><span class="l">perderías</span></div>
+            <div class="box"><span class="n y" id="anTocado">—</span><span class="l">veces tocado</span></div>
+          </div>
           <div class="asisBottom">
             <div class="riesgo">
               <div class="lb">Cuánto podés perder si entrás ahora</div>
@@ -1522,10 +1557,8 @@ body[data-tema="claro"] #ajTema button.on,body[data-tema="claro"] #ajParaque but
             <div id="chartBig"></div>
           </div>
           <div style="display:flex;gap:10px;margin-top:12px">
-            <button class="btn btn-verde" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">Comprar</button>
-            <button class="btn btn-rojo" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">Vender</button>
+            <button class="btn btn-verde" type="button" style="flex:1;min-height:52px;font-size:16px;white-space:nowrap" onclick="irA('cartera')">Operar en la cartera</button>
           </div>
-          <div class="note">Los dos botones abren la Cartera de práctica con dinero ficticio; acá no se ejecuta ninguna orden.</div>
           <div id="chartRsi" style="height:110px;margin-top:12px"></div>
           <div id="chartMacd" style="height:110px;margin-top:12px;display:none"></div>
           <div id="chartAdx" style="height:110px;margin-top:12px;display:none"></div>
@@ -1649,7 +1682,7 @@ body[data-tema="claro"] #ajTema button.on,body[data-tema="claro"] #ajParaque but
                 <option value="cruce">Cruce de promedios</option>
                 <option value="rsi">RSI sobreventa / sobrecompra</option>
                 <option value="contra">Contra la multitud (lo inverso del momentum)</option>
-                <option value="nada">No comprar nada (quedarse afuera)</option>
+        <option value="nada">No comprar nada (quedarse afuera)</option>
               </select></div>
               <details class="avanzadas"><summary>Ajustar la regla</summary>
                 <div style="display:flex;flex-direction:column;gap:11px">
@@ -2089,16 +2122,28 @@ document.getElementById('pqCerrar').onclick = function(){
   PREF.paraqueOculto = true; salvarPref();
   var barra = document.getElementById('paraque'); if(barra) barra.style.display = 'none';
 };
-document.getElementById('btnAyuda').onclick = function(){
-  PREF.paraqueOculto = false; salvarPref();
+function aplicarModo(){
+  document.body.classList.toggle('limpio', PREF.limpio !== false);
+  var boton = document.getElementById('btnAyuda');
+  if(boton) boton.classList.toggle('on', PREF.limpio === false);
   var barra = document.getElementById('paraque');
-  if(barra && PARA_QUE[PREF.vista]){
-    document.getElementById('pqTitulo').textContent = 'Para qué sirve';
-    document.getElementById('pqTexto').textContent = PARA_QUE[PREF.vista];
-    barra.style.display = 'flex';
-    var sc = document.querySelector('.scroll'); if(sc) sc.scrollTop = 0;
+  var mostrar = PREF.limpio === false && PARA_QUE[PREF.vista];
+  if(barra){
+    barra.style.display = mostrar ? 'flex' : 'none';
+    if(mostrar){
+      document.getElementById('pqTitulo').textContent = 'Para qué sirve';
+      document.getElementById('pqTexto').textContent = PARA_QUE[PREF.vista];
+    }
   }
-};
+}
+function alternarInfo(){
+  PREF.limpio = PREF.limpio === false;      // si estaba todo visible, se esconde
+  PREF.paraqueOculto = PREF.limpio !== false;
+  salvarPref();
+  aplicarModo();
+}
+
+document.getElementById('btnAyuda').onclick = alternarInfo;
 
 function pintarKpis(){
   var ms = mercadosActivos(), verde = ms.filter(function(x){return x.cambio>0}).length;
@@ -2711,6 +2756,14 @@ function pintarAsistente(a){
   document.getElementById('asisQuePasa').innerHTML = (a.que_pasa || [])
     .map(function(f){ return '<li>' + f + '</li>'; }).join('');
 
+  // los tres números que quedan a la vista cuando el texto está escondido
+  var r0 = a.riesgo || {};
+  document.getElementById('anStop').textContent =
+    (r0.stop_pct === undefined || r0.stop_pct === null) ? '—' : n1(r0.stop_pct) + ' %';
+  document.getElementById('anTocado').textContent =
+    (r0.veces_tocado === undefined || r0.veces_tocado === null) ? '—'
+      : Math.round(r0.veces_tocado) + ' de 100';
+
   pintarRiesgo(+document.getElementById('asisCapital').value);
 
   var bot = a.bot || {};
@@ -2731,6 +2784,7 @@ function pintarRiesgo(capital){
   var stop = +r.stop_pct || 0;
   var perdida = capital * (+r.perdida_pct || 2) / 100;
   var tamano = stop > 0 ? perdida / (stop / 100) : 0;
+  document.getElementById('anPerdida').textContent = dol(perdida);
   document.getElementById('asisRiesgo').innerHTML =
     'Si compraras ahora con <b>' + dol(capital) + '</b> y te saliera mal, el corte natural está <b>'
     + n1(stop) + ' %</b> abajo del precio. Ahí perderías <b>' + dol(perdida) + '</b>, o sea el '
@@ -3187,7 +3241,7 @@ function pintarAyuda(){
 }
 
 /* ==================== preferencias, tema, pantalla ==================== */
-var PREF = { tema:'oscuro', vista:'panel', paraqueOculto:false };
+var PREF = { tema:'oscuro', vista:'panel', paraqueOculto:true, limpio:true };
 try{ var guardado = JSON.parse(localStorage.getItem('helios.pref')||'{}');
      Object.keys(PREF).forEach(function(k){ if(guardado[k]!==undefined) PREF[k]=guardado[k]; }); }catch(e){}
 function salvarPref(){
@@ -4230,6 +4284,7 @@ pintarMarcos();
 pintarAyuda();
 carteraInit();
 aplicarTema();
+aplicarModo();
 irA(PREF.vista || 'panel');
 // Cada bloque carga por su cuenta: si uno falla, los demás se muestran igual.
 // blindado: una función que devuelva undefined o lance al instante ya no corta
