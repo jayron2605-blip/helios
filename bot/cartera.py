@@ -112,6 +112,14 @@ class CarteraManual:
         self.estado = g
         self.estado.setdefault("inicio", int(time.time() * 1000))
         self.estado.setdefault("capital_por_mercado", self.capital)
+        # el capital vive en el archivo: si no se lee, cada pedido vuelve al
+        # valor por defecto y el que eligio el usuario se pierde
+        try:
+            guardado = float(self.estado.get("capital_por_mercado"))
+            if guardado > 0:
+                self.capital = guardado
+        except (TypeError, ValueError):
+            pass
 
     def _cfg(self, m):
         d = m.get("cfg") or {}
@@ -265,6 +273,25 @@ class CarteraManual:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(self.estado, f, ensure_ascii=False, indent=2)
         os.replace(tmp, self.ruta)
+
+    def reiniciar(self, capital):
+        """Empezar de nuevo con otro capital por mercado y la cuenta en cero.
+
+        Se borran las posiciones abiertas a propósito: seguir arrastrando una
+        posición que se abrió con otro capital hace que los números no cierren.
+        Queda anotado en `inicio` para que la pantalla muestre "hace X días".
+        """
+        try:
+            capital = float(capital)
+        except (TypeError, ValueError):
+            raise ValueError("capital inválido")
+        if not (capital > 0 and capital <= 1_000_000):
+            raise ValueError("el capital tiene que estar entre 1 y 1.000.000")
+        self.capital = capital
+        self.estado = {"inicio": int(time.time() * 1000),
+                       "capital_por_mercado": capital, "mercados": {}}
+        self.salvar()
+        return {"capital_por_mercado": capital, "inicio": self.estado["inicio"]}
 
     def _valoracion(self, sim, m, precios):
         precio = precios.get(sim)

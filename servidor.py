@@ -629,6 +629,8 @@ class Atencion(BaseHTTPRequestHandler):
             return self._bot_interruptor(False)
         if camino in ("/api/cartera/orden", "/api/cartera/cerrar"):
             return self._cartera_post(camino)
+        if camino == "/api/cartera/capital":
+            return self._cartera_capital()
         if camino != "/api/cuaderno":
             return self._json({"estado": "no_existe"}, 404)
         if self._post_rechazado():
@@ -733,6 +735,36 @@ class Atencion(BaseHTTPRequestHandler):
         if os.path.exists(ruta):
             os.remove(ruta)
         return self._json({"estado": "ok", "apagado": False})
+
+    def _cartera_capital(self):
+        """Empezar la cuenta de práctica con el dinero que el usuario elija."""
+        import cartera
+        if self._post_rechazado():
+            return
+        if self.headers.get_content_type() != "application/json":
+            return self._json({"estado": "se_requiere_json"}, 415)
+        try:
+            largo = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return self._json({"estado": "cuerpo_invalido"}, 400)
+        if largo < 0 or largo > 4096:
+            return self._json({"estado": "cuerpo_invalido"}, 400)
+        try:
+            cuerpo = json.loads(self.rfile.read(largo).decode("utf-8"))
+        except Exception:
+            return self._json({"estado": "cuerpo_invalido"}, 400)
+        if not isinstance(cuerpo, dict):
+            return self._json({"estado": "cuerpo_invalido"}, 400)
+        try:
+            with BLOQUEO_CARTERA:
+                c = cartera.CarteraManual()
+                datos = c.reiniciar(cuerpo.get("capital"))
+        except ValueError as error:
+            return self._json({"estado": "rechazado", "detalle": str(error)}, 400)
+        except OSError:
+            return self._json({"estado": "error",
+                               "detalle": "No se pudo guardar la cuenta. Revisá el archivo."}, 500)
+        return self._json({"estado": "ok", "detalle": datos})
 
     def _cartera_post(self, camino):
         """Ordenes en papel (C1). POST del panel local o LAN, plata falsa, precios reales.

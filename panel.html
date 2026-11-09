@@ -330,6 +330,13 @@ body.limpio .asisTop{grid-template-columns:1fr}
 .asisNums .l{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ft);margin-top:4px}
 body:not(.limpio) .asisNums{display:none}
 #btnInfo.on{border-color:var(--cy);color:var(--cy);background:rgba(0,209,255,.1)}
+
+/* cuenta de práctica: poner el dinero y ver el resultado */
+.capForm{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+.capForm span{font-size:12px;color:var(--md)}
+.capForm input{width:130px;background:var(--card2);border:1px solid var(--bd);color:var(--tx);
+  border-radius:var(--r1);padding:9px 11px;font-size:15px;font-family:var(--mono)}
+.capForm input:focus{outline:none;border-color:var(--cy)}
 </style>
 <style>
 /* ---------- capa 2: tema, oficio, responsive ---------- */
@@ -1586,6 +1593,17 @@ body[data-tema="claro"] #ajTema button.on,body[data-tema="claro"] #ajParaque but
       <!-- ================= BOT ================= -->
       <section class="view" id="v-bot"><div class="wrap">
         <div class="card" style="margin-bottom:16px">
+          <h3>Tu cuenta de práctica</h3>
+          <div class="row c4" id="cuentaNums" style="margin-top:10px"></div>
+          <div class="capForm">
+            <span>Empezar de nuevo con</span>
+            <input type="number" id="caCapital" value="1000" min="1" max="1000000" step="100" inputmode="numeric">
+            <span>por moneda</span>
+            <button class="btn btn-verde" type="button" onclick="reiniciarCapital()">Aplicar</button>
+          </div>
+          <div class="note" id="cuentaMsg"></div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
           <h3>El bot <span class="pill" id="botModo" style="margin-left:8px">—</span><span class="fe" data-fe="cerebro"></span></h3>
           <div class="note" id="botSub">Sin datos del bot todavía.</div>
           <div class="row c4" id="botPapel" style="margin-top:10px"></div>
@@ -2098,6 +2116,7 @@ function irA(v){
   if(v==='grafico') montarGrande();
   if(v==='panel'){ if(!serieVelas) montar(); }
   if(v==='onchain' && !oc.cadenas) traerOnchain();
+  if(v==='bot'){ traerCuenta(); }
   if(v==='lab' && !lab.lista) { lab.lista = true; labIniciar(); }
   if(v==='noticias') traerNoticias();
   if(v==='cartera'){
@@ -3108,6 +3127,56 @@ function traerLibro(){
     pintarLibro(); pintarProfundidad();
   }).catch(function(){ estado.libro=null; pintarLibro(); pintarProfundidad(); });
 }
+/* ==================== cuenta de práctica ==================== */
+function dolSigno(v){
+  var n = Math.round(+v || 0);
+  return (n >= 0 ? '+$' : '-$') + Math.abs(n).toLocaleString('es-AR');
+}
+function traerCuenta(){
+  return pedir('cartera','').then(function(r){
+    if(r && r.datos) pintarCuenta(r.datos);
+  }).catch(function(){});
+}
+function pintarCuenta(d){
+  var r = (d && d.resumen) || {};
+  var porMercado = d ? d.capital_por_mercado : null;
+  var con = (r.mercados || 0) > 0;
+  var caja = document.getElementById('cuentaNums');
+  if(!caja) return;
+  var celdas = [
+    ['Capital por moneda', porMercado ? dol(porMercado) : '—', ''],
+    ['Valor actual', con ? dol(r.capital_total) : '—', ''],
+    ['Ganancia', con ? dolSigno(r.pnl_neto) : '—', con ? cls(r.pnl_neto) : ''],
+    ['Retorno', con ? (n1(r.retorno * 100) + ' %') : '—', con ? cls(r.retorno) : '']
+  ];
+  caja.innerHTML = celdas.map(function(c){
+    return '<div class="card stat"><div class="lb">' + c[0] + '</div><div class="vl ' + c[2] + '">' + c[1] + '</div></div>';
+  }).join('');
+  var msg = document.getElementById('cuentaMsg');
+  if(msg){
+    msg.textContent = con
+      ? ('Hace ' + n1(r.dias_en_papel) + ' días en papel · ' + (r.operaciones || 0)
+         + ' operaciones · ' + (r.en_posicion || 0) + ' en posición')
+      : 'Todavía no operaste. El capital está disponible; las órdenes se colocan en Cartera.';
+  }
+}
+function reiniciarCapital(){
+  var caja = document.getElementById('caCapital');
+  var v = +caja.value;
+  var msg = document.getElementById('cuentaMsg');
+  if(!(v > 0)){ if(msg) msg.textContent = 'Poné un monto mayor a cero.'; return; }
+  fetch('/api/cartera/capital', {method:'POST', headers:{'Content-Type':'application/json'},
+                                 body: JSON.stringify({capital: v})})
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(j.estado === 'ok'){
+        if(msg) msg.textContent = 'Listo: la cuenta arranca con ' + dol(v) + ' por moneda.';
+        traerCuenta();
+      } else if(msg){ msg.textContent = 'No se pudo: ' + (j.detalle || j.estado); }
+    })
+    .catch(function(){ if(msg) msg.textContent = 'No se pudo conectar con el servidor.'; });
+}
+
 function traerBot(){
   if(LOCAL) return;
   Promise.all([pedir('cerebro','').catch(function(){return{datos:null};}),
@@ -4306,13 +4375,14 @@ function arrancar(){
   paso('velas', traerVelas);
   paso('registro', traerLog);
   paso('bot', traerBot);
+  paso('cuenta', traerCuenta);
   paso('asistente', traerAsistente);
   paso('chispas', traerChispas);
   paso('mundo', traerMundo);
 }
 arrancar();
 setInterval(function(){
-  traerVelas(); traerChispas(); traerMundo(); traerBot(); traerAsistente();
+  traerVelas(); traerChispas(); traerMundo(); traerBot(); traerAsistente(); traerCuenta();
   if(document.getElementById('v-grafico').classList.contains('on')) traerExtra();
   if(document.getElementById('v-onchain').classList.contains('on')) traerOnchain();
   if(document.getElementById('v-noticias').classList.contains('on')) traerNoticias();
