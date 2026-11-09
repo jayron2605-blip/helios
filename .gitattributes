@@ -14,3 +14,7 @@
 *.joblib binary
 *.pkl    binary
 *.png    binary
+
+# Archivos que el servidor lee: si vienen con saltos de linea de Windows no los abre
+*.txt      text eol=lf
+Procfile   text eol=lf
