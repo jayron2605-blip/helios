@@ -623,6 +623,19 @@ class Atencion(BaseHTTPRequestHandler):
         """
         host = self.headers.get("Host") or ""
         nombre = urllib.parse.urlsplit("http://" + host).hostname or ""
+        if EN_HOSTING:
+            # En un hosting la dirección pública la pone la plataforma, así que
+            # no puede estar en la lista de nombres de este equipo. Se acepta el
+            # propio Host, pero el Origin tiene que ser ese mismo dominio: una
+            # página ajena no puede ordenar, anotar ni tocar el bot. Sin Origin
+            # (curl y scripts de prueba) se deja pasar, igual que en local.
+            origen = self.headers.get("Origin")
+            if origen:
+                o = urllib.parse.urlsplit(origen)
+                if (o.hostname or "").lower() != (nombre or "").lower():
+                    self._json({"estado": "origen_rechazado"}, 403)
+                    return True
+            return False
         if nombre not in hosts_locales():
             self._json({"estado": "host_rechazado"}, 403)
             return True

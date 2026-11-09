@@ -112,9 +112,17 @@ def fotos_del_mercado():
 
 
 def velas_publicas(simbolo, limite=1000):
-    """Cuando no hay velas en el disco (repo recien clonado), las pide al exchange. Sin clave."""
-    datos = traer_json("https://api.binance.com/api/v3/klines?symbol=%s&interval=1h&limit=%d"
-                       % (simbolo, limite))
+    """Cuando no hay velas en el disco (hosting, repo recien clonado), las pide al
+    exchange. Sin clave. api.binance.com responde 451 a direcciones de EE.UU., asi
+    que si falla se usa el espejo publico, que sirve lo mismo y no bloquea.
+    """
+    ruta = "/api/v3/klines?symbol=%s&interval=1h&limit=%d" % (simbolo, limite)
+    datos = None
+    for base in ("https://api.binance.com", "https://data-api.binance.vision"):
+        datos = traer_json(base + ruta)
+        if isinstance(datos, list) and datos:
+            break
+        datos = None
     if not isinstance(datos, list):
         return []
     return [{"t": int(k[0]), "o": float(k[1]), "h": float(k[2]), "l": float(k[3]),
