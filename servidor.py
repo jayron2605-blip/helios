@@ -468,12 +468,28 @@ class Atencion(BaseHTTPRequestHandler):
             url = (GECKO + "/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc"
                    "&per_page=40&page=1&sparkline=false&price_change_percentage=1h,24h,7d")
             datos, estado = pedir(url, "cinta", CACHE_SEG["cinta"])
+            if not isinstance(datos, list) or not datos:
+                respaldo, _e = mercados_de_respaldo()
+                if respaldo:
+                    return self._json({"estado": "respaldo:" + estado, "datos": respaldo[:40]})
             return self._json({"estado": estado, "datos": datos})
 
         if ruta.path == "/api/chispas":
             url = (GECKO + "/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc"
                    "&per_page=60&page=1&sparkline=true&price_change_percentage=1h,24h,7d")
             datos, estado = pedir(url, "chispas", CACHE_SEG["chispas"])
+            if not isinstance(datos, list) or not datos:
+                respaldo, _e = mercados_de_respaldo()
+                if respaldo:
+                    datos = [{"symbol": f["symbol"], "name": f["name"],
+                              "current_price": f["current_price"],
+                              "market_cap": f["market_cap"], "total_volume": f["total_volume"],
+                              "price_change_percentage_1h_in_currency": None,
+                              "price_change_percentage_7d_in_currency": None,
+                              "price_change_percentage_24h_in_currency":
+                                  f["price_change_percentage_24h_in_currency"],
+                              "sparkline_in_7d": None} for f in respaldo[:60]]
+                    return self._json({"estado": "respaldo:" + estado, "datos": datos})
             return self._json({"estado": estado, "datos": datos})
 
         if ruta.path == "/api/cadenas":

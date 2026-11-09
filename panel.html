@@ -2961,7 +2961,7 @@ function traerMercados(intento){
     }).filter(function(m){ return m.price && m.cambio!==null; });
     estado.coin = estado.mercados.filter(function(m){return m.sym===estado.nombre})[0] || estado.mercados[0];
     if(estado.coin){ estado.nombre = estado.coin.sym; estado.simbolo = estado.coin.pair || estado.simbolo; }
-    pintarKpis(); pintarHero(); pintarHeat(); pintarDispersin(); pintarLista();
+    pintarKpis(); pintarHero(); pintarHeat(); pintarDispersin(); pintarLista(); pintarCinta();
     cmpLlenar(); cmpPintar();
     ok(r.estado);
   }).catch(function(e){
